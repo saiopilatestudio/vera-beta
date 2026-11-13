@@ -255,5 +255,5 @@ const server = http.createServer(async (req, res) => {
 });
 server.listen(
   Number(process.env.PORT || 8080),
-  process.env.HOST || "127.0.0.1",
+  process.env.HOST || "0.0.0.0",
 );
