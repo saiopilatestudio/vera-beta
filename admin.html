@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Vera · Administración</title
+  ><style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font: 16px/1.5 system-ui;
+      color: #163728;
+      background: #f7f5ed;
+      max-width: 880px;
+      margin: auto;
+      padding: 5vw;
+    }
+    h1,
+    h2 {
+      font-family: Georgia;
+    }
+    h1 {
+      font-size: 46px;
+    }
+    section {
+      border: 1px solid #cdd3c7;
+      padding: 20px;
+      border-radius: 18px;
+      margin: 18px 0;
+      background: #fffdf7;
+    }
+    input,
+    select,
+    button {
+      font: inherit;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #aab5a6;
+      margin: 4px;
+      max-width: 100%;
+    }
+    button {
+      background: #d2ef92;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+    label {
+      display: block;
+    }
+  </style>
+  <h1>Vera · Administración</h1>
+  <section id="access">
+    <label>Clave de administración <input id="secret" type="password" /></label
+    ><button id="open">Entrar</button>
+  </section>
+  <p role="status" id="status"></p>
+  <main hidden id="panel">
+    <button id="close">Cerrar sesión</button>
+    <section>
+      <h2>Actividad de la beta</h2>
+      <p id="stats"></p>
+    </section>
+    <section>
+      <h2>Mercado de catálogos técnicos</h2>
+      <p>
+        Registra negociaciones sobre fichas de maquinaria propias o con licencia
+        para su uso comercial. Los diarios, las fotos de clientes y los datos de
+        salud quedan fuera de este catálogo.
+      </p>
+      <button id="find">Buscar empresas candidatas</button>
+      <pre id="results"></pre>
+      <form id="deal">
+        <label>Empresa <input id="company" required /></label
+        ><label
+          >Operación
+          <select id="direction">
+            <option>Compra</option>
+            <option>Venta</option>
+          </select></label
+        ><label
+          >Estado
+          <select id="stage">
+            <option>Prospecto</option>
+            <option>En evaluación</option>
+            <option>Acordado externamente</option>
+          </select></label
+        ><label
+          >Importe previsto (€)
+          <input id="price" required type="number" min="0" step=".01" /></label
+        ><button>Registrar operación</button>
+      </form>
+      <h2>Operaciones</h2>
+      <div id="list"></div>
+    </section>
+  </main>
+  <script>
+    const el = (x) => document.getElementById(x);
+    let key = "";
+    async function call(path, data = {}) {
+      const r = await fetch("/admin/" + path, {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      if (!r.ok) throw Error((await r.json()).error || "Acceso denegado");
+      return r.json();
+    }
+    async function refresh() {
+      const d = await call("summary");
+      el("stats").textContent =
+        d.accounts +
+        " cuentas · " +
+        d.consultations +
+        " solicitudes contabilizadas";
+      el("list").replaceChildren(
+        ...d.deals.map((x) => {
+          const p = document.createElement("p");
+          p.textContent = [
+            x.direction,
+            x.company,
+            x.stage,
+            x.price + " €",
+          ].join(" · ");
+          return p;
+        }),
+      );
+      el("panel").hidden = false;
+      el("access").hidden = true;
+    }
+    function run(fn) {
+      return async (e) => {
+        e.preventDefault();
+        el("status").textContent = "";
+        try {
+          await fn();
+        } catch (e) {
+          el("status").textContent = e.message;
+        }
+      };
+    }
+    el("open").onclick = run(async () => {
+      key = el("secret").value;
+      await refresh();
+      el("secret").value = "";
+    });
+    el("close").onclick = () => location.reload();
+    el("find").onclick = run(async () => {
+      el("results").textContent = "Buscando fuentes públicas…";
+      try {
+        el("results").textContent = (await call("prospects")).text;
+      } catch (e) {
+        el("results").textContent = "";
+        throw e;
+      }
+    });
+    el("deal").onsubmit = run(async () => {
+      await call("deal", {
+        company: el("company").value,
+        direction: el("direction").value,
+        stage: el("stage").value,
+        price: +el("price").value,
+      });
+      el("deal").reset();
+      await refresh();
+    });
+  </script>
+</html>

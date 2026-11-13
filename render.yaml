@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: vera-beta
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 24
+      - key: HOST
+        value: 0.0.0.0
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: VERA_ADMIN_SECRET
+        generateValue: true
+      - key: VERA_INVITE
+        generateValue: true

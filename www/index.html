@@ -1,0 +1,2466 @@
+<!doctype html>
+<html lang="es">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  /><meta name="theme-color" content="#f6f5ed" /><title>
+    Vera · Entrenamiento
+  </title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f6f5ed;
+      color: #172b20;
+      font:
+        16px/1.48 system-ui,
+        sans-serif;
+    }
+    main,
+    header,
+    nav {
+      max-width: 620px;
+      margin: auto;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: calc(22px + env(safe-area-inset-top)) 22px 10px;
+    }
+    header strong {
+      font: bold 32px Georgia;
+    }
+    main {
+      padding: 0 22px 120px;
+    }
+    h1,
+    h2,
+    h3 {
+      font-family: Georgia, serif;
+      line-height: 1.1;
+    }
+    h1 {
+      font-size: 48px;
+      margin: 20px 0;
+    }
+    h2 {
+      font-size: 27px;
+    }
+    h3 {
+      font-size: 21px;
+      margin: 6px 0;
+    }
+    section,
+    details,
+    article {
+      border: 1px solid #d6d9c9;
+      border-radius: 17px;
+      padding: 17px;
+      background: #fffef8;
+      margin: 12px 0;
+    }
+    article {
+      background: #123623;
+      color: #f9f9e9;
+      padding: 22px;
+    }
+    article small {
+      color: #bded66;
+    }
+    button,
+    input,
+    textarea,
+    select {
+      font: inherit;
+    }
+    button {
+      color: #173222;
+      background: #e4e9d8;
+      border: 0;
+      border-radius: 13px;
+      padding: 11px 15px;
+      cursor: pointer;
+      margin: 3px 3px 3px 0;
+    }
+    button:disabled {
+      opacity: 0.55;
+    }
+    .primary {
+      background: #c8f264;
+      font-weight: 650;
+    }
+    input,
+    textarea,
+    select {
+      width: 100%;
+      padding: 11px;
+      border-radius: 10px;
+      border: 1px solid #b7c1ad;
+      background: white;
+      color: #152b1d;
+    }
+    textarea {
+      min-height: 78px;
+    }
+    label {
+      display: block;
+      margin: 10px 0;
+      font-weight: 600;
+    }
+    nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #f6f5ed;
+      border-top: 1px solid #bec7b6;
+      display: flex;
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+      justify-content: space-around;
+    }
+    nav button {
+      background: transparent;
+      font-size: 14px;
+    }
+    nav .on {
+      background: #d6efa6;
+    }
+    summary {
+      font-weight: 650;
+      cursor: pointer;
+    }
+    small,
+    .sub {
+      color: #53634e;
+    }
+    .pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 14px;
+    }
+    td,
+    th {
+      text-align: left;
+      padding: 8px 3px;
+      border-bottom: 1px solid #dde1d2;
+    }
+    .note {
+      position: sticky;
+      top: 4px;
+      background: #fcf1c8;
+      border-radius: 10px;
+      padding: 10px;
+      z-index: 2;
+    }
+    .note:empty {
+      display: none;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    p {
+      margin: 8px 0 14px;
+    }
+    .bar {
+      height: 5px;
+      background: #629144;
+      border-radius: 3px;
+    }
+    small {
+      display: block;
+    }
+    button:focus-visible {
+      outline: 3px solid #24844b;
+    }
+  </style>
+  <style>
+    :root {
+      --paper: #f8f5ec;
+      --ink: #142f23;
+      --lime: #c5ec76;
+    }
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+    header {
+      background: var(--paper);
+      max-width: 680px;
+      border-bottom: 1px solid #dce0cf;
+      padding: 16px 22px;
+    }
+    header strong {
+      font: 700 39px/0.95 Georgia;
+      letter-spacing: -2px;
+    }
+    header button {
+      background: transparent;
+      font-size: 14px;
+    }
+    main {
+      max-width: 680px;
+      padding: 10px 20px 105px;
+    }
+    h1 {
+      letter-spacing: -1.8px;
+      font-weight: 500;
+    }
+    section,
+    details {
+      box-shadow: none;
+    }
+    nav {
+      background: #fffcf4;
+      max-width: 680px;
+      border-radius: 18px 18px 0 0;
+      border: 1px solid #dce0cf;
+      bottom: 0;
+      padding: 6px 4px max(7px, env(safe-area-inset-bottom));
+      z-index: 4;
+    }
+    nav button {
+      margin: 0;
+      min-width: 60px;
+      display: grid;
+      justify-items: center;
+      gap: 1px;
+      font-size: 12px;
+      padding: 5px 11px;
+    }
+    nav b {
+      font: 23px Georgia;
+    }
+    .gate,
+    .welcome {
+      padding: 24px 3px;
+    }
+    .gate {
+      max-width: 440px;
+      margin: auto;
+    }
+    .gate h1,
+    .welcome h1 {
+      font-size: clamp(38px, 8vw, 57px);
+      margin: 16px 0 10px;
+    }
+    .gate .primary {
+      display: block;
+      width: 100%;
+      margin: 18px 0 8px;
+    }
+    .emblem {
+      display: grid;
+      place-items: center;
+      background: #193c2b;
+      color: #cbef87;
+      width: 53px;
+      height: 53px;
+      border-radius: 16px;
+      font: italic 38px Georgia;
+    }
+    .gate > p,
+    .welcome p {
+      color: #516052;
+    }
+    .check {
+      font-size: 14px;
+    }
+    .check input {
+      display: inline;
+      width: auto;
+    }
+    .welcome {
+      text-align: left;
+      padding: 40px 6px 18px;
+    }
+    .composer {
+      border: 1px solid #c5cfba;
+      border-radius: 23px;
+      background: #fffef8;
+      padding: 12px;
+    }
+    .composer label {
+      font-size: 0;
+      margin: 0;
+    }
+    .composer textarea {
+      border: none;
+      background: transparent;
+      resize: vertical;
+      font: 17px/1.5 system-ui;
+      min-height: 72px;
+    }
+    .composer button {
+      border-radius: 25px;
+    }
+    .thread {
+      border: 0;
+      background: transparent;
+      margin: 0;
+      padding: 8px 0;
+    }
+    .thread > small {
+      display: none;
+    }
+    .thread > p:first-of-type {
+      background: #e8ecdd;
+      border-radius: 19px 19px 4px 19px;
+      margin: 10px 0 19px auto;
+      padding: 12px 16px;
+      width: fit-content;
+      max-width: 86%;
+    }
+    .thread > h3 {
+      font-size: 23px;
+    }
+    .thread > button {
+      font-size: 13px;
+      background: transparent;
+      border: 1px solid #c9d2c1;
+    }
+    .shutter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 11px 15px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 13px;
+      background: #173d29;
+      color: #fff;
+      cursor: pointer;
+    }
+    .shutter.light {
+      background: #e8ecde;
+      color: #173d29;
+    }
+    .shutter input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      width: 100%;
+      cursor: pointer;
+    }
+    .heroimg {
+      display: block;
+      width: 100%;
+      height: 108px;
+      object-fit: cover;
+      object-position: center 38%;
+      border-radius: 17px;
+    }
+    button.primary {
+      background: var(--lime);
+      color: #142f23;
+    }
+    .note {
+      position: relative;
+      top: auto;
+    }
+    .gate form input {
+      font-size: 16px;
+    }
+    .cameraShortcut {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-weight: 600;
+    }
+    .cameraShortcut svg {
+      width: 20px;
+      height: 20px;
+    }
+  </style>
+
+  <header>
+    <strong>Vera</strong>
+    <div id="topTools" class="row">
+      <button class="cameraShortcut" onclick="go('Cámara')">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M3 7h4l2-3h6l2 3h4v13H3z" />
+          <circle cx="12" cy="13" r="3" /></svg
+        >Cámara</button
+      ><button onclick="go('Perfil')">Perfil</button>
+    </div>
+  </header>
+  <main>
+    <div class="note" role="status" id="notice"></div>
+    <div id="view"></div>
+  </main>
+  <nav id="nav"></nav>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const safe = (s) =>
+      String(s ?? "").replace(
+        /[&<>"']/g,
+        (c) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+          })[c],
+      );
+    const day = (d = new Date()) =>
+      [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, "0"),
+        String(d.getDate()).padStart(2, "0"),
+      ].join("-");
+    const initial = () => ({
+      profile: {},
+      logs: [],
+      turns: [],
+      plan: "",
+      memory: [],
+      endpoint: "",
+    });
+    let s =
+      JSON.parse(
+        localStorage.getItem(storageKey()) ||
+          (!sessionStorage.veraUser && localStorage.getItem("vera.v1")) ||
+          "null",
+      ) || initial();
+    let tab = s.profile.name ? "Hoy" : "Perfil",
+      period = 7,
+      kind = "Entrenamiento",
+      metric = "Peso en ayunas",
+      photoData = "",
+      busy = false,
+      recording = null;
+    const units = {
+      Entrenamiento: "",
+      Comida: "kcal",
+      Bebida: "ml",
+      Agua: "ml",
+      Suplemento: "",
+      "Peso en ayunas": "kg",
+      "Otro pesaje": "kg",
+      Cintura: "cm",
+      Sueño: "h",
+      Pasos: "pasos",
+      Cardio: "min",
+      Posing: "min",
+      Sensaciones: "",
+    };
+    const roles = [
+      "Hipertrofia",
+      "Nutrición deportiva",
+      "Medicina deportiva",
+      "Endocrinología",
+      "Fisioterapia deportiva",
+      "Posing",
+      "Psicología deportiva",
+      "Sueño y recuperación",
+      "Maquinaria y biomecánica",
+    ];
+    function save() {
+      markLogs();
+      localStorage.setItem(storageKey(), JSON.stringify(s));
+    }
+    function msg(t) {
+      $("notice").textContent = t;
+    }
+    function go(t) {
+      if (!validSession) {
+        render();
+        return;
+      }
+      if (t === "Máquinas") {
+        machineDraft = null;
+        machinePhoto = "";
+      }
+      if (tab === "Posing" && t !== "Posing") poseStop();
+      if (t === "Plato") {
+        photoData = "";
+        draft = null;
+      }
+      if (recording) {
+        msg("Termina la grabación antes de cambiar de pantalla.");
+        return;
+      }
+      tab = t;
+      msg("");
+      render();
+      scrollTo(0, 0);
+    }
+    function btn(t, fn, primary = false) {
+      return (
+        '<button class="' +
+        (primary ? "primary" : "") +
+        '" onclick="' +
+        fn +
+        '">' +
+        t +
+        "</button>"
+      );
+    }
+    function field(id, label, value = "", type = "text", attrs = "") {
+      return (
+        "<label>" +
+        label +
+        '<input id="' +
+        id +
+        '" type="' +
+        type +
+        '" value="' +
+        safe(value) +
+        '" ' +
+        attrs +
+        "></label>"
+      );
+    }
+    function options(items, selected) {
+      return items
+        .map(
+          (x) =>
+            "<option " +
+            (x === selected ? "selected" : "") +
+            ">" +
+            safe(x) +
+            "</option>",
+        )
+        .join("");
+    }
+    function render() {
+      $("topTools").style.display = validSession ? "flex" : "none";
+      $("nav").style.display = validSession ? "flex" : "none";
+      if (!validSession) {
+        $("view").innerHTML = gate();
+        return;
+      }
+      $("nav").innerHTML = ["Chat", "Hoy", "Equipo", "Progreso"]
+        .map(
+          (t) =>
+            '<button class="' +
+            (t === tab ? "on" : "") +
+            '" onclick="go(\'' +
+            t +
+            '\')"><b aria-hidden="true">' +
+            icons[t] +
+            "</b>" +
+            t +
+            "</button>",
+        )
+        .join("");
+      const pages = {
+        Chat: convo,
+        Hoy: home,
+        Equipo: team,
+        Progreso: progress,
+        Perfil: profile,
+        Registro: entry,
+        Plato: plate,
+        Descanso: sleepPage,
+        Sensaciones: checkPage,
+        Posing: posePage,
+        Máquinas: machinePage,
+        Cámara: cameraPicker,
+      };
+      $("view").innerHTML =
+        (tab === "Chat" ? "" : "<h1>" + safe(tab) + "</h1>") +
+        (pages[tab] || convo)();
+      if (tab === "Chat")
+        for (const section of $("view").querySelectorAll("section"))
+          if (section.firstElementChild?.textContent === "TÚ")
+            section.classList.add("thread");
+    }
+    function profile() {
+      let p = s.profile;
+      return (
+        '<form onsubmit="storeProfile(event)"><section><h2>Tu punto de partida</h2>' +
+        field(
+          "name",
+          "Cómo te llamas",
+          p.name,
+          "text",
+          'required maxlength="80"',
+        ) +
+        field("age", "Edad", p.age, "number", 'required min="18" max="110"') +
+        field(
+          "height",
+          "Altura (cm)",
+          p.height,
+          "number",
+          'min="80" max="250" step=".1"',
+        ) +
+        field(
+          "weight",
+          "Peso inicial (kg)",
+          p.weight,
+          "number",
+          'min="25" max="350" step=".1"',
+        ) +
+        field(
+          "goal",
+          "Tu objetivo",
+          p.goal || "Ganar músculo limitando la ganancia de grasa",
+          "text",
+          "required",
+        ) +
+        field("criteria", "Días, material y experiencia", p.criteria) +
+        field("likes", "Gustos, horarios y restricciones", p.likes) +
+        '<label><input type="checkbox" style="width:auto" id="template" ' +
+        (p.template ? "checked" : "") +
+        '> Usar como referencia el bloque de hipertrofia de cuatro semanas</label><button class="primary">Guardar perfil</button></section></form><details><summary>Mi cuenta</summary>' +
+        accountPanel() +
+        "</details>" +
+        gymPanel() +
+        "<details><summary>Memoria editable</summary>" +
+        field("expiry", "Válida hasta (opcional)", "", "date") +
+        field("memory", "Instrucción que quieres conservar") +
+        btn("Recordar", "remember()") +
+        s.memory
+          .map(
+            (x, i) =>
+              "<p>" +
+              safe(x) +
+              safe((s.expiry || {})[x] ? " · hasta " + s.expiry[x] : "") +
+              " " +
+              btn("Olvidar", "forget(" + i + ")") +
+              "</p>",
+          )
+          .join("") +
+        "</details><details><summary>Datos de salud</summary><p>Importa pasos, sueño y sesiones desde Salud de Apple o Health Connect al diario de este dispositivo.</p>" +
+        btn("Importar desde el móvil", "syncHealth()") +
+        "</details>"
+      );
+    }
+    function storeProfile(e) {
+      e.preventDefault();
+      s.profile = Object.fromEntries(
+        ["name", "age", "height", "weight", "goal", "criteria", "likes"].map(
+          (k) => [k, $(k).value.trim()],
+        ),
+      );
+      s.profile.template = $("template").checked;
+      save();
+      go("Hoy");
+    }
+    function connect() {
+      try {
+        let u = new URL($("endpoint").value || location.origin);
+        if (
+          u.protocol !== "https:" &&
+          !["localhost", "127.0.0.1"].includes(u.hostname)
+        )
+          throw Error();
+        s.endpoint = u.origin;
+        sessionStorage.veraToken = $("token").value.trim();
+        save();
+        msg("Conexión guardada para tus consultas.");
+      } catch {
+        msg("Introduce la dirección HTTPS de tu servidor.");
+      }
+    }
+    function remember() {
+      let t = $("memory").value.trim();
+      if (t && !s.memory.includes(t)) {
+        s.memory.push(t);
+        if ($("expiry")?.value) (s.expiry ??= {})[t] = $("expiry").value;
+        save();
+        render();
+      }
+    }
+    function forget(i) {
+      if (s.expiry) delete s.expiry[s.memory[i]];
+      s.memory.splice(i, 1);
+      save();
+      render();
+    }
+    function home() {
+      return (
+        '<img class="heroimg" alt="" src="data:image/jpeg;base64,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">' +
+        homeCore() +
+        extras()
+      );
+    }
+    function homeCore() {
+      let logs = s.logs.filter((l) => l.date === day());
+      return (
+        "<small>" +
+        safe(
+          new Date().toLocaleDateString("es-ES", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          }),
+        ) +
+        "</small><article><small>PLAN ACTUAL</small><h2>" +
+        safe(
+          s.profile.name ? "Tu sesión, " + s.profile.name : "Tu primera sesión",
+        ) +
+        '</h2><p class="pre">' +
+        safe(
+          s.plan ||
+            "Define tu objetivo y pide a Vera la primera ficha de entrenamiento.",
+        ) +
+        "</p>" +
+        btn(
+          "Preparar mi sesión",
+          "ask('Hoy. Prepara mi ficha y mi plan semanal según mi perfil.')",
+          true,
+        ) +
+        "</article><section><h3>Diario de hoy</h3>" +
+        btn("Añadir registro", "go('Registro')", true) +
+        btn("Fotografiar plato", "go('Plato')") +
+        logs
+          .map(
+            (l) =>
+              logLine(l) +
+              (recordFor(l) ? "<small>" + safe(recordFor(l)) + "</small>" : ""),
+          )
+          .join("") +
+        (!logs.length
+          ? '<p class="sub">Aún no has confirmado registros hoy.</p>'
+          : "") +
+        "</section><section><h3>Revisar el plan</h3>" +
+        btn(
+          "Semana",
+          "ask('Revisión semanal. Compara mis dos últimas semanas y actualiza mi plan.')",
+        ) +
+        btn(
+          "Bloque de 4 semanas",
+          "ask('Revisión mensual. Evalúa mi último bloque y diseña las próximas cuatro semanas.')",
+        ) +
+        "</section>"
+      );
+    }
+    function logLine(l) {
+      return (
+        "<p><b>" +
+        safe(l.kind) +
+        "</b> " +
+        safe(l.value ?? "") +
+        " " +
+        safe(units[l.kind]) +
+        "<small>" +
+        safe(l.note) +
+        " · " +
+        safe(l.date) +
+        "</small></p>"
+      );
+    }
+    function entry() {
+      return (
+        '<form onsubmit="add(event)"><section><label>Tipo<select onchange="kind=this.value;render()">' +
+        options(Object.keys(units), kind) +
+        "</select></label>" +
+        (kind === "Comida"
+          ? macroFields()
+          : kind === "Entrenamiento"
+            ? trainingFields()
+            : "") +
+        field("date", "Fecha", day(), "date", 'required max="' + day() + '"') +
+        (units[kind]
+          ? field(
+              "amount",
+              "Cantidad (" + units[kind] + ")",
+              "",
+              "number",
+              'min="0" step="any" ' + (kind === "Comida" ? "" : "required"),
+            )
+          : "") +
+        (kind === "Entrenamiento"
+          ? field("exercise", "Ejercicio", "", "text", "required") +
+            field(
+              "load",
+              "Carga por repetición (kg)",
+              "",
+              "number",
+              'required min="0" step="any"',
+            ) +
+            field(
+              "reps",
+              "Repeticiones en cada serie (p. ej. 12, 10, 10)",
+              "",
+              "text",
+              'required pattern="[0-9 ,]+"',
+            ) +
+            field(
+              "rir",
+              "Repeticiones en reserva en la última serie",
+              "",
+              "number",
+              'min="0" max="20"',
+            )
+          : "") +
+        '<label>Detalle o sensaciones<textarea id="detail" ' +
+        (["Suplemento", "Sensaciones", "Comida"].includes(kind)
+          ? "required"
+          : "") +
+        '></textarea></label><button class="primary">Confirmar registro</button></section></form>'
+      );
+    }
+    function add(e) {
+      e.preventDefault();
+      let l = {
+        kind,
+        date: $("date").value,
+        note: $("detail").value.trim(),
+        value: $("amount")?.value || null,
+      };
+      if (kind === "Comida")
+        for (const k of ["protein", "carbs", "fat"]) l[k] = $(k).value || null;
+      if (kind === "Entrenamiento") {
+        Object.assign(l, {
+          gym: s.gym || "",
+          machine: $("machine").value,
+          rom: $("rom").value,
+          mode: $("mode").value,
+          group: $("group").value,
+          effort: $("effort").value,
+          pump: $("pump").value,
+          soreness: $("soreness").value,
+        });
+        let reps = $("reps").value.trim().split(/[, ]+/).map(Number);
+        if (reps.some((x) => !Number.isInteger(x) || x <= 0)) {
+          msg("Comprueba las repeticiones de cada serie.");
+          return;
+        }
+        Object.assign(l, {
+          exercise: $("exercise").value.trim(),
+          kg: Number($("load").value),
+          reps,
+          rir: $("rir").value,
+        });
+        l.note = [
+          l.exercise,
+          l.kg + " kg",
+          reps.join(" / ") + " rep.",
+          l.rir ? "RIR " + l.rir : "",
+          l.note,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+      }
+      s.logs.push(l);
+      save();
+      go("Hoy");
+    }
+    async function api(path, data, blob = false) {
+      if (!sessionStorage.veraToken)
+        throw Error(
+          "Entra en Mi perfil → Mi cuenta para usar el equipo de IA.",
+        );
+      const r = await fetch((s.endpoint || location.origin) + "/" + path, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + sessionStorage.veraToken,
+        },
+        body: JSON.stringify(data),
+      });
+      if (r.status === 401) {
+        sessionStorage.removeItem("veraToken");
+        sessionStorage.removeItem("veraUser");
+        validSession = false;
+        render();
+      }
+      if (!r.ok)
+        throw Error(
+          (await r.json().catch(() => ({}))).error ||
+            "El servidor no responde.",
+        );
+      return blob ? r.blob() : r.json();
+    }
+    function chatPage() {
+      return (
+        s.turns
+          .slice(-12)
+          .map(
+            (t, i) =>
+              '<section><small>TÚ</small><p class="pre">' +
+              (t.stale
+                ? " <strong>Datos corregidos · revisar</strong> " +
+                  btn(
+                    "Recalcular",
+                    "ask(s.turns[" + s.turns.indexOf(t) + "].question)",
+                  )
+                : "") +
+              safe(t.question) +
+              '</p><h3>Vera</h3><p class="pre">' +
+              safe(t.answer) +
+              "</p>" +
+              proposals(t) +
+              btn("Escuchar voz IA", "speak(" + s.turns.indexOf(t) + ")") +
+              (t.memory && !s.memory.includes(t.memory)
+                ? btn(
+                    "Recordar esta preferencia",
+                    "adopt(" + s.turns.indexOf(t) + ")",
+                  ) +
+                  "<small>" +
+                  safe(t.memory) +
+                  "</small>"
+                : "") +
+              "</section>",
+          )
+          .join("") +
+        '<section><label>Habla con Vera<textarea id="question" placeholder="¿Qué carga intento hoy?"></textarea></label>' +
+        btn("Enviar", "ask($('question').value)", true) +
+        btn(recording ? "Terminar dictado" : "Dictar mensaje", "dictate()") +
+        "</section>"
+      );
+    }
+    function acceptEntry(i, j) {
+      let e = s.turns[i].entries[j];
+      if (e.saved) return;
+      let v = e.value;
+      let l = {
+        kind: e.kind,
+        date: e.date,
+        note: String(e.note || ""),
+        value:
+          v !== null && v !== "" && Number.isFinite(Number(v))
+            ? Number(v)
+            : null,
+      };
+      s.logs.push(l);
+      e.saved = true;
+      save();
+      render();
+      msg("Registro confirmado en el diario.");
+    }
+    function proposals(t) {
+      return (Array.isArray(t.entries) ? t.entries : [])
+        .map((e, j) =>
+          Object.hasOwn(units, e.kind) && /^\d{4}-\d{2}-\d{2}$/.test(e.date)
+            ? "<p>" +
+              safe(e.kind) +
+              " · " +
+              safe(e.date) +
+              " · " +
+              safe(e.value) +
+              " " +
+              safe(units[e.kind]) +
+              "<small>" +
+              safe(e.note) +
+              "</small>" +
+              (e.saved
+                ? "Confirmado"
+                : btn(
+                    "Confirmar este registro",
+                    "acceptEntry(" + s.turns.indexOf(t) + "," + j + ")",
+                  )) +
+              "</p>"
+            : "",
+        )
+        .join("");
+    }
+    function adopt(i) {
+      let t = s.turns[i];
+      if (t.memory && !s.memory.includes(t.memory)) s.memory.push(t.memory);
+      save();
+      render();
+    }
+    async function ask(question) {
+      if (busy || !question.trim()) return;
+      if (!s.profile.name && !s.profile.introduced) {
+        go("Chat");
+        return intro(question);
+      }
+      busy = true;
+      go("Chat");
+      $("question").value = question;
+      msg("El equipo está revisando tus registros…");
+      try {
+        markLogs();
+        const supplied = s.logs.filter(
+          (x) => x.date >= day(new Date(Date.now() - 56 * 86400000)),
+        );
+        let d = await api("coach", {
+          question,
+          profile: s.profile,
+          memory: activeMem(),
+          gym: s.gym,
+          equipment: (s.gyms || {})[s.gym],
+          machines: (s.machines || []).filter((m) => m.gym === s.gym),
+          recovery: readiness(),
+          logs: s.logs.filter(
+            (x) => x.date >= day(new Date(Date.now() - 56 * 86400000)),
+          ),
+          nutritionCoverage: coverage(),
+          currentPlan: s.plan,
+          reference: s.profile.template
+            ? "Bloque de referencia opcional, adaptable al perfil. L torso A, M pierna A, J torso B, V pierna B, S pecho/hombro/brazos. Descanso X y D. Cardio suave separado. Semanas 1–4: RIR 4,3,2–3,2; sábado mínimo 3. Sube la carga mínima tras dos sesiones comparables en el tope del rango con buena técnica y RIR. Cuatro comidas mediterráneas. Revisar desde día 15 con 4–7 pesajes en ayunas por semana, cintura y marcas. No heredar calorías de otro usuario."
+            : "",
+          history: s.turns
+            .slice(-6)
+            .map(({ question, answer }) => ({ question, answer })),
+          today: day(),
+        });
+        s.turns.push({
+          ...d,
+          date: day(),
+          question,
+          inputIds: supplied.map((l) => l.id),
+        });
+        if (d.plan) s.plan = d.plan;
+        save();
+        go("Chat");
+        msg("Decisión guardada. Puedes consultar las aportaciones en Equipo.");
+      } catch (e) {
+        msg(e.message);
+      } finally {
+        busy = false;
+      }
+    }
+    function team() {
+      return s.turns.length
+        ? s.turns
+            .slice()
+            .reverse()
+            .map(
+              (t) =>
+                "<section><small>" +
+                safe(t.date) +
+                "</small><h3>" +
+                (t.stale
+                  ? " <strong>Datos corregidos · revisar</strong> " +
+                    btn(
+                      "Recalcular",
+                      "ask(s.turns[" + s.turns.indexOf(t) + "].question)",
+                    )
+                  : "") +
+                safe(t.question) +
+                '</h3><p class="pre">' +
+                safe(t.answer) +
+                "</p>" +
+                t.reports
+                  .map(
+                    (r) =>
+                      "<details><summary>" +
+                      safe(r.role) +
+                      "</summary><p>" +
+                      safe(r.text) +
+                      "</p></details>",
+                  )
+                  .join("") +
+                "</section>",
+            )
+            .join("")
+        : "<p>Tras la primera consulta verás la decisión de Vera y la aportación de cada especialidad.</p>" +
+            roles.map((r) => "<section>" + r + "</section>").join("");
+    }
+    async function speak(i) {
+      try {
+        let url = URL.createObjectURL(
+          await api("speak", { text: s.turns[i].answer }, true),
+        );
+        let a = new Audio(url);
+        a.onended = () => URL.revokeObjectURL(url);
+        await a.play();
+      } catch (e) {
+        msg(e.message);
+      }
+    }
+    const readData = (file) =>
+      new Promise((ok, no) => {
+        let r = new FileReader();
+        r.onload = () => ok(r.result);
+        r.onerror = no;
+        r.readAsDataURL(file);
+      });
+    async function dictate() {
+      if (recording) {
+        recording.stop();
+        return;
+      }
+      if (!sessionStorage.veraToken) {
+        msg("Conecta el servidor en Mi perfil para transcribir tu voz.");
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+        let rec = new MediaRecorder(stream),
+          chunks = [];
+        recording = rec;
+        rec.ondataavailable = (e) => chunks.push(e.data);
+        rec.onstop = async () => {
+          stream.getTracks().forEach((t) => t.stop());
+          recording = null;
+          render();
+          try {
+            const audio = await readData(
+              new Blob(chunks, { type: rec.mimeType }),
+            );
+            let r = await api("listen", {
+              data: audio.split(",")[1],
+              mime: rec.mimeType,
+            });
+            if ($("question")) $("question").value = r.text;
+            msg("Revisa el dictado antes de enviarlo.");
+          } catch (e) {
+            msg(e.message);
+          }
+        };
+        rec.start();
+        render();
+        msg("Grabando…");
+        setTimeout(() => {
+          if (rec.state === "recording") rec.stop();
+        }, 60000);
+      } catch (e) {
+        msg("Micrófono no disponible. " + e.message);
+      }
+    }
+    function plate() {
+      return (
+        "<section>" +
+        camControls("preparePhoto") +
+        '<div id="platePreview"></div><label>Ración, aceite, salsas o sobras<textarea id="portion" placeholder="¿Cuánto comiste?"></textarea></label>' +
+        btn("Estimar calorías", "estimate()", true) +
+        '<div id="estimate"></div></section>'
+      );
+    }
+    let draft = null;
+    async function preparePhoto(el) {
+      photoData = "";
+      draft = null;
+      $("estimate").innerHTML = "";
+      if (!el.files[0]) return;
+      try {
+        let img = new Image();
+        img.src = await readData(el.files[0]);
+        await img.decode();
+        let scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+        let c = document.createElement("canvas");
+        c.width = img.width * scale;
+        c.height = img.height * scale;
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        photoData = c.toDataURL("image/jpeg", 0.82);
+        $("platePreview").innerHTML =
+          '<img alt="Plato elegido" style="max-width:100%;max-height:180px" src="' +
+          photoData +
+          '">';
+        msg("Foto preparada. Indica cuánto comiste.");
+      } catch {
+        msg("El formato no se pudo abrir. Prueba con una foto JPEG.");
+      }
+    }
+    async function estimate() {
+      if (!photoData) {
+        msg("Selecciona una foto.");
+        return;
+      }
+      try {
+        msg("Estimando ración e ingredientes…");
+        draft = await api("photo", {
+          image: photoData,
+          note: $("portion").value,
+        });
+        $("estimate").innerHTML =
+          "<h3>" +
+          safe(draft.description) +
+          "</h3><p>" +
+          safe(draft.min) +
+          "–" +
+          safe(draft.max) +
+          " kcal</p><p>" +
+          safe(draft.assumptions) +
+          "</p><p>" +
+          safe(draft.question) +
+          "</p><small>Puedes aclarar la ración y volver a estimar.</small>" +
+          field(
+            "kcal",
+            "Estimación que guardarás (kcal)",
+            Math.round((draft.min + draft.max) / 2),
+            "number",
+            'min="0"',
+          ) +
+          ingredientEditor() +
+          btn("Confirmar comida", "confirmMeal()", true);
+        if (draft.ingredients?.length) ingredientTotal();
+        msg("Estimación pendiente de tu confirmación.");
+      } catch (e) {
+        msg(e.message);
+      }
+    }
+    function confirmMeal() {
+      const v = $("kcal").value;
+      if (!v || +v < 0) return;
+      s.logs.push({
+        kind: "Comida",
+        date: day(),
+        value: +v,
+        ...(draft.ingredients?.length ? ingredientValues() : {}),
+        ingredients: (draft.ingredients || []).map((x, i) => ({
+          ...x,
+          confirmedGrams: Number($("ing" + i).value),
+        })),
+        note:
+          draft.description +
+          " · " +
+          $("portion").value +
+          " · Estimación por foto " +
+          draft.min +
+          "–" +
+          draft.max +
+          " kcal",
+      });
+      draft = null;
+      photoData = "";
+      save();
+      go("Hoy");
+    }
+    function progress() {
+      return macros() + progressCore();
+    }
+    function progressCore() {
+      let end = new Date();
+      end.setHours(0, 0, 0, 0);
+      let from = new Date(end);
+      from.setDate(end.getDate() - period + 1);
+      let old = new Date(from);
+      old.setDate(from.getDate() - period);
+      const macroKey = { Proteína: "protein", Hidratos: "carbs", Grasa: "fat" }[
+        metric
+      ];
+      let all = macroKey
+        ? s.logs
+            .filter(
+              (x) =>
+                x.kind === "Comida" &&
+                x[macroKey] != null &&
+                x[macroKey] !== "",
+            )
+            .map((x) => ({ ...x, value: +x[macroKey] }))
+        : s.logs.filter((x) => x.kind === metric && x.value !== null);
+      const unit = macroKey ? "g" : units[metric];
+      function daily(rows) {
+        if (metric === "Sueño") {
+          const manual = new Set(
+            rows.filter((l) => l.source !== "health").map((l) => l.date),
+          );
+          rows = rows.filter(
+            (l) => l.source !== "health" || !manual.has(l.date),
+          );
+        }
+        if (metric === "Pasos") {
+          let imported = new Set(
+            rows.filter((l) => l.source === "health").map((l) => l.date),
+          );
+          rows = rows.filter(
+            (l) => l.source === "health" || !imported.has(l.date),
+          );
+        }
+        let m = {};
+        for (const l of rows) (m[l.date] ??= []).push(+l.value);
+        return Object.entries(m)
+          .map(([d, v]) => [
+            d,
+            v.reduce((a, b) => a + b, 0) /
+              (["Peso en ayunas", "Cintura"].includes(metric) ? v.length : 1),
+          ])
+          .sort();
+      }
+      let now = daily(
+          all.filter((x) => x.date >= day(from) && x.date <= day(end)),
+        ),
+        prev = daily(
+          all.filter((x) => x.date >= day(old) && x.date < day(from)),
+        );
+      const avg = (rows) => rows.reduce((t, r) => t + r[1], 0) / rows.length;
+      const peak = Math.max(1, ...now.map((x) => x[1]));
+      return (
+        '<section><label>Periodo<select onchange="period=Number(this.value);render()"><option value="7">7 días</option><option value="28" ' +
+        (period === 28 ? "selected" : "") +
+        '>28 días</option></select></label><label>Medida<select onchange="metric=this.value;render()">' +
+        options(
+          [
+            "Peso en ayunas",
+            "Cintura",
+            "Comida",
+            "Proteína",
+            "Hidratos",
+            "Grasa",
+            "Agua",
+            "Sueño",
+            "Pasos",
+            "Cardio",
+          ],
+          metric,
+        ) +
+        "</select></label><h3>" +
+        safe(metric) +
+        "</h3><p>" +
+        now.length +
+        " de " +
+        period +
+        " días con datos · " +
+        (prev.length && now.length
+          ? "Cambio de media diaria: " +
+            (avg(now) - avg(prev)).toFixed(1) +
+            " " +
+            unit
+          : "Sin dos periodos comparables.") +
+        "</p><table><tr><th>Fecha</th><th>" +
+        unit +
+        "</th></tr>" +
+        now
+          .map(
+            ([d, v]) =>
+              "<tr><td>" +
+              d +
+              "</td><td>" +
+              v.toFixed(1) +
+              '<div class="bar" style="width:' +
+              Math.round((100 * v) / peak) +
+              '%"></div></td></tr>',
+          )
+          .join("") +
+        "</table></section><section><h3>Marcas por sesión</h3>" +
+        s.logs
+          .filter((x) => x.exercise && x.date >= day(from))
+          .map(
+            (l) =>
+              logLine(l) +
+              (recordFor(l) ? "<small>" + safe(recordFor(l)) + "</small>" : ""),
+          )
+          .join("") +
+        "</section><details><summary>Historial y correcciones</summary>" +
+        s.logs
+          .map(
+            (l, i) =>
+              logLine(l) +
+              btn("Corregir", "editRecord(" + i + ")") +
+              btn("Eliminar", "removeLog(" + i + ")"),
+          )
+          .join("") +
+        "</details>"
+      );
+    }
+    function removeLog(i) {
+      if (confirm("¿Eliminar este registro del diario?")) {
+        markAffected(s.logs[i]);
+        s.logs.splice(i, 1);
+        save();
+        render();
+      }
+    }
+    async function syncHealth() {
+      if (window.VeraNative) {
+        window.VeraNative.health();
+        return;
+      }
+      try {
+        let h = window.Capacitor?.Plugins?.Health;
+        if (!h || (await h.isAvailable()).available !== true)
+          throw Error(
+            "Abre la versión nativa en un dispositivo con Salud o Health Connect.",
+          );
+        await h.requestAuthorization({
+          read: ["steps", "workouts", "sleep"],
+          write: [],
+        });
+        let start = new Date();
+        start.setHours(0, 0, 0, 0);
+        let range = {
+          startDate: start.toISOString(),
+          endDate: new Date().toISOString(),
+        };
+        let a = await h.queryAggregated({
+          ...range,
+          dataType: "steps",
+          bucket: "day",
+          aggregation: "sum",
+        });
+        let w = await h.queryWorkouts(range);
+        const sleep = await h.readSamples({
+          dataType: "sleep",
+          startDate: new Date(+start - 86400000).toISOString(),
+          endDate: range.endDate,
+          limit: 1000,
+        });
+        const segments = sleep.samples
+          .filter((x) =>
+            ["asleep", "light", "deep", "rem", "core"].includes(x.sleepState),
+          )
+          .map((x) => [+new Date(x.startDate), +new Date(x.endDate), []])
+          .filter((x) => x[1] > +start)
+          .map(([a, b, c]) => [Math.max(a, +start), b, c]);
+        let values = a.samples.map((x) => x.value);
+        let imported = [];
+        if (values.length)
+          imported.push({
+            kind: "Pasos",
+            value: values.reduce((a, b) => a + b, 0),
+            note: "Total del sistema",
+          });
+        for (let x of w.workouts)
+          imported.push({
+            kind: "Entrenamiento",
+            note: x.workoutType + " · " + x.startDate,
+          });
+        s.logs = s.logs
+          .filter((l) => !(l.source === "health" && l.date === day()))
+          .concat(
+            imported.map((l) => ({ ...l, source: "health", date: day() })),
+          );
+        if (segments.length) healthImport("sleep", segments);
+        save();
+        msg(
+          imported.length +
+            " registros importados. Si faltan datos, revisa tus permisos.",
+        );
+      } catch (e) {
+        msg(e.message);
+      }
+    }
+    const ACCOUNT_HOST = ""; // Configure the commercial API origin before distributing a connected build.
+    function accountPanel() {
+      if (sessionStorage.veraToken)
+        return (
+          "<p>Sesión iniciada. Tu diario se guarda en este móvil.</p>" +
+          btn("Cerrar sesión", "signOut()")
+        );
+      return (
+        "<p>El diario funciona sin cuenta. Inicia sesión para consultar al equipo, dictar mensajes y analizar fotos. El servicio recibirá los registros que necesite para responder.</p>" +
+        field("email", "Correo", "", "email") +
+        field("pass", "Contraseña", "", "password") +
+        field("invite", "Invitación de beta (si procede)") +
+        btn("Crear cuenta", "signIn('register')") +
+        btn("Entrar", "signIn('login')") +
+        (ACCOUNT_HOST
+          ? ""
+          : "<details><summary>Servidor de esta beta</summary>" +
+            field(
+              "endpoint",
+              "Dirección HTTPS",
+              localStorage.veraHost || "",
+              "url",
+            ) +
+            "</details>")
+      );
+    }
+    async function signIn(action) {
+      try {
+        let host =
+          ACCOUNT_HOST ||
+          $("endpoint")?.value ||
+          localStorage.veraHost ||
+          (location.hostname !== "localhost" ? location.origin : "");
+        if (!host)
+          throw Error(
+            "Introduce el enlace HTTPS del servidor de tu invitación.",
+          );
+        let u = new URL(host);
+        if (
+          u.protocol !== "https:" &&
+          !["127.0.0.1", "localhost"].includes(u.hostname)
+        )
+          throw Error("Se necesita HTTPS.");
+        let res = await fetch(u.origin + "/" + action, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: $("email").value,
+            password: $("pass").value,
+            notice: "beta-3",
+            adult: !!$("adult")?.checked,
+            invite: $("invite")?.value || "",
+          }),
+        });
+        let data = await res.json();
+        if (!res.ok) throw Error(data.error);
+        localStorage.veraHost = u.origin;
+        sessionStorage.veraToken = data.token;
+        sessionStorage.veraUser = u.origin + "/" + data.id;
+        s =
+          JSON.parse(localStorage.getItem(storageKey()) || "null") || initial();
+        s.endpoint = u.origin;
+        save();
+        validSession = true;
+        go("Chat");
+        msg("Has entrado en tu espacio personal.");
+      } catch (e) {
+        msg(e.message);
+      }
+    }
+    async function signOut() {
+      if (busy || recording) {
+        msg("Espera a que termine la consulta o la grabación.");
+        return;
+      }
+      try {
+        await api("logout", {});
+      } catch {}
+      sessionStorage.removeItem("veraToken");
+      sessionStorage.removeItem("veraUser");
+      location.reload();
+    }
+    function storageKey() {
+      return "vera.v2." + (sessionStorage.veraUser || "guest");
+    }
+    const uid = () =>
+      crypto.randomUUID?.() ||
+      Date.now().toString(36) + Math.random().toString(36).slice(2);
+    function markLogs() {
+      for (const l of s.logs) if (!l.id) l.id = uid();
+    }
+    function activeMem() {
+      return s.memory.filter(
+        (x) => !(s.expiry || {})[x] || s.expiry[x] >= day(),
+      );
+    }
+    function gymPanel() {
+      return (
+        "<details><summary>Mis gimnasios y material</summary>" +
+        field("gymname", "Gimnasio", s.gym || "") +
+        field("gear", "Máquinas y material", (s.gyms || {})[s.gym] || "") +
+        btn("Guardar gimnasio activo", "saveGym()") +
+        Object.keys(s.gyms || {})
+          .map((v, i) => btn(safe(v), "selectGym(" + i + ")"))
+          .join("") +
+        "</details>"
+      );
+    }
+    function saveGym() {
+      const k = $("gymname").value.trim();
+      if (!k || ["__proto__", "constructor", "prototype"].includes(k)) return;
+      (s.gyms ??= {})[k] = $("gear").value.trim();
+      s.gym = k;
+      save();
+      render();
+    }
+    function selectGym(i) {
+      s.gym = Object.keys(s.gyms)[i];
+      save();
+      render();
+    }
+    function extras() {
+      return (
+        "<section><h3>Sueño y recuperación</h3><p>" +
+        safe(readiness().text) +
+        "</p>" +
+        btn("Registrar descanso", "go('Descanso')", true) +
+        btn("Valorar un músculo", "go('Sensaciones')") +
+        btn(
+          "Consultar al especialista",
+          "ask('Revisa mi sueño y recuperación por músculo. Indica qué información cambiaría tu decisión de hoy.')",
+        ) +
+        "</section><section><h3>Entrenar hoy</h3>" +
+        btn(
+          "Tengo 35 minutos",
+          "ask('Adapta mi sesión a 35 minutos con el equipo de mi gimnasio. Identifica prioridades y qué accesorios retiras.')",
+        ) +
+        btn("Práctica de posing", "go('Posing')") +
+        "</section>"
+      );
+    }
+    function localtime(d) {
+      return (
+        day(d) +
+        "T" +
+        String(d.getHours()).padStart(2, "0") +
+        ":" +
+        String(d.getMinutes()).padStart(2, "0")
+      );
+    }
+    function checkPage() {
+      return (
+        '<form onsubmit="checkSave(event)"><section>' +
+        field("group", "Grupo muscular", "", "text", "required") +
+        field(
+          "sore",
+          "Agujetas (0–10)",
+          "",
+          "number",
+          'min="0" max="10" required',
+        ) +
+        field(
+          "tired",
+          "Fatiga general (0–10)",
+          "",
+          "number",
+          'min="0" max="10" required',
+        ) +
+        "<button>Guardar valoración</button></section></form>"
+      );
+    }
+    function checkSave(e) {
+      e.preventDefault();
+      s.logs.push({
+        kind: "Sensaciones",
+        date: day(),
+        group: $("group").value.trim(),
+        sore: +$("sore").value,
+        tired: +$("tired").value,
+        note:
+          $("group").value +
+          " · agujetas " +
+          $("sore").value +
+          "/10 · fatiga " +
+          $("tired").value +
+          "/10",
+      });
+      save();
+      go("Hoy");
+    }
+    function sleepPage() {
+      const end = new Date(),
+        start = new Date(+end - 8 * 3600000);
+      return (
+        '<form onsubmit="sleepSave(event)"><section><h3>Noche o siesta</h3>' +
+        field(
+          "start",
+          "Me dormí",
+          localtime(start),
+          "datetime-local",
+          "required",
+        ) +
+        field(
+          "end",
+          "Me desperté",
+          localtime(end),
+          "datetime-local",
+          "required",
+        ) +
+        field(
+          "awake",
+          "Minutos despierto durante ese intervalo",
+          0,
+          "number",
+          'min="0" required',
+        ) +
+        field(
+          "need",
+          "Objetivo personal de sueño (h)",
+          s.need || 8,
+          "number",
+          'min="4" max="14" step=".25" required',
+        ) +
+        '<label>Tipo<select id="restType"><option>Noche</option><option>Siesta</option></select></label>' +
+        field("muscle", "Grupo muscular que evalúas", "", "text", "required") +
+        field(
+          "sore",
+          "Agujetas en ese grupo (0–10)",
+          "",
+          "number",
+          'min="0" max="10" required',
+        ) +
+        field(
+          "tired",
+          "Fatiga al despertar (0–10)",
+          "",
+          "number",
+          'min="0" max="10" required',
+        ) +
+        '<button class="primary">Guardar descanso</button></section></form><section><h3>Estimación de hoy</h3><p>' +
+        safe(readiness().text) +
+        "</p><small>Orientación experimental basada en los registros. Los umbrales sirven para revisar la carga y no miden la reparación del tejido.</small></section>"
+      );
+    }
+    function sleepSave(e) {
+      e.preventDefault();
+      let start = +new Date($("start").value),
+        end = +new Date($("end").value);
+      let minutes = (end - start) / 60000 - Number($("awake").value);
+      if (
+        !Number.isFinite(minutes) ||
+        minutes <= 0 ||
+        end > Date.now() + 60000 ||
+        end - start > 86400000
+      ) {
+        msg("Comprueba las horas y el tiempo despierto.");
+        return;
+      }
+      if (
+        s.logs.some((l) => l.start < end && l.end > start && l.kind === "Sueño")
+      ) {
+        msg(
+          "Ya hay sueño registrado en ese intervalo. Corrige el registro anterior.",
+        );
+        return;
+      }
+      s.need = +$("need").value;
+      s.logs.push({
+        kind: "Sueño",
+        date: day(new Date(end)),
+        start,
+        end,
+        value: minutes / 60,
+        group: $("muscle").value.trim(),
+        sore: +$("sore").value,
+        tired: +$("tired").value,
+        note: $("restType").value + " · " + minutes + " min",
+      });
+      save();
+      go("Hoy");
+    }
+    function readiness() {
+      let rows = s.logs.filter((l) => l.kind === "Sueño" && l.date === day());
+      let manual = rows.filter((l) => l.source !== "health");
+      let used = manual.length ? manual : rows;
+      const h = used.reduce((n, l) => n + (+l.value || 0), 0),
+        check = s.logs
+          .filter(
+            (l) =>
+              l.date === day() &&
+              l.group &&
+              ["Sueño", "Sensaciones"].includes(l.kind),
+          )
+          .at(-1);
+      if (!h) return { text: "Aún falta registrar el sueño de hoy." };
+      let text =
+        h.toFixed(1) + " h registradas · objetivo " + (s.need || 8) + " h. ";
+      if (!check)
+        return {
+          hours: h,
+          text:
+            text +
+            "Faltan sensaciones del grupo muscular para valorar la sesión.",
+        };
+      let recent = s.logs.filter(
+        (l) =>
+          l.exercise &&
+          l.group?.toLowerCase() === check.group.toLowerCase() &&
+          l.date >= day(new Date(Date.now() - 2 * 86400000)),
+      );
+      const caution =
+        h < (s.need || 8) - 1 ||
+        check.sore >= 6 ||
+        check.tired >= 6 ||
+        recent.some((l) => +l.effort >= 8 && check.sore >= 4);
+      return {
+        hours: h,
+        group: check.group,
+        text:
+          text +
+          check.group +
+          " · agujetas " +
+          check.sore +
+          "/10, fatiga " +
+          check.tired +
+          "/10, " +
+          recent.length +
+          " ejercicios recientes registrados. " +
+          (caution
+            ? "Revisa la carga prevista antes de empezar."
+            : "Los datos declarados permiten probar el calentamiento y reevaluar."),
+      };
+    }
+    function healthImport(type, rows) {
+      const date = day(),
+        source = "health";
+      let entries = [];
+      if (type === "steps")
+        entries = rows.map((value) => ({
+          kind: "Pasos",
+          value,
+          note: "Total del sistema",
+        }));
+      if (type === "workouts")
+        entries = rows.map((t) => ({
+          kind: "Entrenamiento",
+          note: "Sesión importada · " + t,
+        }));
+      if (type === "sleep") {
+        let spans = [];
+        for (const [a, b, awake] of rows) {
+          let p = a;
+          for (const [x, y] of awake.sort((l, r) => l[0] - r[0])) {
+            if (x > p) spans.push([p, Math.min(x, b)]);
+            p = Math.max(p, y);
+          }
+          if (b > p) spans.push([p, b]);
+        }
+        let total = 0,
+          last = 0;
+        for (const [a, b] of spans.sort((x, y) => x[0] - y[0])) {
+          total += Math.max(0, b - Math.max(last, a));
+          last = Math.max(last, b);
+        }
+        if (total)
+          entries = [
+            {
+              kind: "Sueño",
+              value: total / 3600000,
+              note: "Sesiones terminadas hoy · duración menos vigilia identificada",
+            },
+          ];
+      }
+      s.logs = s.logs
+        .filter(
+          (l) =>
+            !(
+              l.source === source &&
+              l.date === date &&
+              l.kind ===
+                { steps: "Pasos", workouts: "Entrenamiento", sleep: "Sueño" }[
+                  type
+                ]
+            ),
+        )
+        .concat(entries.map((l) => ({ ...l, date, source })));
+      save();
+      msg("Datos de salud actualizados.");
+    }
+    let poseTimer = null,
+      poseIndex = 0,
+      poseSeconds = 0,
+      poseList = [];
+    function posePage() {
+      return (
+        '<section><h3>Secuencia guiada</h3><label>Rutina<select id="routine"><option>Giros de cuarto</option><option>Poses de musculación</option></select></label>' +
+        field(
+          "duration",
+          "Segundos por posición",
+          15,
+          "number",
+          'min="3" max="90"',
+        ) +
+        '<h2 id="cue">Preparado</h2>' +
+        btn("Empezar", "poseStart()", true) +
+        btn("Detener", "poseStop()") +
+        "</section>"
+      );
+    }
+    function sayCue(t) {
+      if (window.VeraNative) window.VeraNative.say(t);
+      else if (window.speechSynthesis) {
+        let u = new SpeechSynthesisUtterance(t);
+        u.lang = "es-ES";
+        speechSynthesis.speak(u);
+      }
+    }
+    function poseStop() {
+      clearInterval(poseTimer);
+      poseTimer = null;
+      if ($("cue")) $("cue").textContent = "Sesión detenida";
+    }
+    function poseStart() {
+      poseStop();
+      const hold = Number($("duration").value);
+      if (hold < 3 || hold > 90) return;
+      poseList = $("routine").selectedIndex
+        ? [
+            "Doble bíceps frontal",
+            "Pecho de lado",
+            "Doble bíceps de espalda",
+            "Abdominales y piernas",
+          ]
+        : ["Frente", "Perfil derecho", "Espalda", "Perfil izquierdo"];
+      let i = 0,
+        remaining = hold;
+      sayCue(poseList[i]);
+      const tick = () => {
+        $("cue").textContent = poseList[i] + " · " + remaining + " s";
+      };
+      tick();
+      poseTimer = setInterval(() => {
+        remaining--;
+        if (!remaining) {
+          i++;
+          if (i === poseList.length) {
+            poseStop();
+            $("cue").textContent = "Secuencia completada";
+            sayCue("Secuencia completada");
+            s.logs.push({
+              kind: "Posing",
+              date: day(),
+              value: (hold * poseList.length) / 60,
+              note: poseList.join(" · "),
+            });
+            save();
+            return;
+          }
+          remaining = hold;
+          sayCue(poseList[i]);
+        }
+        tick();
+      }, 1000);
+    }
+    function trainingFields() {
+      return (
+        field("machine", "Máquina o variante") +
+        field("rom", "Recorrido o ajuste del asiento") +
+        '<label>Medida de la carga<select id="mode"><option>Carga externa</option><option>Por lado</option><option>Asistencia</option></select></label>' +
+        field("group", "Grupo muscular") +
+        field(
+          "effort",
+          "Esfuerzo percibido (0–10)",
+          "",
+          "number",
+          'min="0" max="10"',
+        ) +
+        field("pump", "Congestión (0–10)", "", "number", 'min="0" max="10"') +
+        field(
+          "soreness",
+          "Agujetas antes de empezar (0–10)",
+          "",
+          "number",
+          'min="0" max="10"',
+        )
+      );
+    }
+    function comparable(l) {
+      return JSON.stringify(
+        [l.exercise, l.gym, l.machine, l.rom, l.mode].map((x) =>
+          String(x || "")
+            .trim()
+            .toLowerCase(),
+        ),
+      );
+    }
+    function recordFor(l) {
+      if (!l.exercise || !l.reps?.length) return "";
+      const prior = s.logs.filter(
+        (p) =>
+          p !== l &&
+          p.date <= l.date &&
+          s.logs.indexOf(p) < s.logs.indexOf(l) &&
+          comparable(p) === comparable(l) &&
+          p.reps?.length,
+      );
+      if (!prior.length) return "Primera referencia";
+      const reps = Math.max(...l.reps),
+        same = prior.filter((p) => p.kg === l.kg);
+      if (
+        same.length &&
+        reps > Math.max(...same.map((p) => Math.max(...p.reps)))
+      )
+        return "Récord de repeticiones a igual carga";
+      let matched = prior.filter((p) => Math.max(...p.reps) === reps);
+      if (
+        matched.length &&
+        (l.mode === "Asistencia"
+          ? l.kg < Math.min(...matched.map((p) => p.kg))
+          : l.kg > Math.max(...matched.map((p) => p.kg)))
+      )
+        return l.mode === "Asistencia"
+          ? "Menor asistencia a repeticiones comparables"
+          : "Récord de carga a repeticiones comparables";
+      return "";
+    }
+    function macroFields() {
+      return ["protein", "carbs", "fat"]
+        .map((k, i) =>
+          field(
+            k,
+            ["Proteína", "Hidratos", "Grasa"][i] + " (g)",
+            "",
+            "number",
+            'min="0" step="any"',
+          ),
+        )
+        .join("");
+    }
+    function coverage() {
+      const weeks = [0, 7].map((offset) => {
+        const since = new Date(),
+          until = new Date();
+        since.setDate(since.getDate() - 6 - offset);
+        until.setDate(until.getDate() - offset);
+        const rows = s.logs.filter(
+          (l) => l.date >= day(since) && l.date <= day(until),
+        );
+        return {
+          weights: new Set(
+            rows
+              .filter((l) => l.kind === "Peso en ayunas" && l.value > 0)
+              .map((l) => l.date),
+          ).size,
+          foodDays: new Set(
+            rows
+              .filter((l) => l.kind === "Comida" && l.value > 0)
+              .map((l) => l.date),
+          ).size,
+        };
+      });
+      return {
+        weeks,
+        limited: weeks.some((w) => w.weights < 4 || w.foodDays < 4),
+      };
+    }
+    function macros() {
+      const meals = s.logs.filter(
+        (l) => l.kind === "Comida" && l.date === day(),
+      );
+      return (
+        "<section><h3>Macros registrados hoy</h3><p>" +
+        (coverage().limited
+          ? "Revisión calórica en espera: faltan días de peso en ayunas o de comidas registradas en las dos últimas semanas."
+          : "Cobertura mínima de las dos semanas alcanzada. Revisa si cada día está completo.") +
+        "</p><p>" +
+        ["protein", "carbs", "fat"]
+          .map((k, i) => {
+            let have = meals.filter((l) => l[k] != null && l[k] !== "");
+            return (
+              ["Proteína", "Hidratos", "Grasa"][i] +
+              ": " +
+              (have.length
+                ? have.reduce((n, l) => n + Number(l[k]), 0).toFixed(1) + " g"
+                : "sin datos") +
+              " (" +
+              have.length +
+              "/" +
+              meals.length +
+              " comidas)"
+            );
+          })
+          .join("<br>") +
+        "</p></section>"
+      );
+    }
+    function ingredientEditor() {
+      if (!draft?.ingredients?.length) return "";
+      return (
+        "<section><h3>Ingredientes estimados</h3>" +
+        draft.ingredients
+          .map((x, i) =>
+            field(
+              "ing" + i,
+              safe(x.name) + " (g)",
+              x.grams,
+              "number",
+              'min="0" step="any" oninput="ingredientTotal()"',
+            ),
+          )
+          .join("") +
+        '<p id="ingtotal"></p></section>'
+      );
+    }
+    function ingredientValues() {
+      let sums = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
+      for (const [i, x] of (draft?.ingredients || []).entries()) {
+        const f =
+          Math.max(0, +($("ing" + i)?.value || 0)) / Math.max(0.01, +x.grams);
+        for (const k in sums) sums[k] += Math.max(0, Number(x[k]) || 0) * f;
+      }
+      return sums;
+    }
+    function ingredientTotal() {
+      const n = ingredientValues();
+      $("kcal").value = Math.round(n.kcal);
+      $("ingtotal").textContent =
+        "Proteína " +
+        n.protein.toFixed(1) +
+        " g · hidratos " +
+        n.carbs.toFixed(1) +
+        " g · grasa " +
+        n.fat.toFixed(1) +
+        " g";
+    }
+    function effects(l) {
+      return s.turns.filter((t) => t.inputIds?.includes(l.id));
+    }
+    function editRecord(i) {
+      const l = s.logs[i];
+      $("view").innerHTML =
+        "<h1>Corregir registro</h1><section>" +
+        field("correctNote", "Detalle", l.note) +
+        (units[l.kind]
+          ? field(
+              "correctValue",
+              "Cantidad (" + units[l.kind] + ")",
+              l.value,
+              "number",
+              'min="0" step="any"',
+            )
+          : "") +
+        (l.kind === "Comida"
+          ? ["protein", "carbs", "fat"]
+              .map((k, i) =>
+                field(
+                  k,
+                  ["Proteína", "Hidratos", "Grasa"][i] + " (g)",
+                  l[k],
+                  "number",
+                  'min="0" step="any"',
+                ),
+              )
+              .join("")
+          : "") +
+        "<p>" +
+        effects(l).length +
+        " decisiones consultaron este registro.</p>" +
+        btn("Guardar corrección", "applyEdit(" + i + ")", true) +
+        "</section>";
+    }
+    function applyEdit(i) {
+      let l = s.logs[i];
+      if ($("correctValue") && Number($("correctValue").value) < 0) return;
+      l.note = $("correctNote").value;
+      if ($("correctValue")) l.value = $("correctValue").value || null;
+      if (l.kind === "Comida")
+        for (const k of ["protein", "carbs", "fat"]) l[k] = $(k).value || null;
+      markAffected(l);
+      save();
+      go("Equipo");
+      msg("Registro corregido. Las revisiones afectadas están señaladas.");
+    }
+    function markAffected(l) {
+      for (const t of effects(l)) t.stale = true;
+    }
+
+    let validSession = false,
+      registering = false,
+      machinePhoto = "",
+      machineDraft = null,
+      machinePair = null,
+      introDraft = null;
+    const noticeText =
+      "Vera guarda tu cuenta en el servidor y tu diario en este dispositivo. Cuando consultas al equipo, envía el contexto de entrenamiento al proveedor de IA. Las fotos se envían al solicitar su análisis. El administrador ve el número de cuentas y solicitudes. El catálogo comercial contiene fichas técnicas con licencia independiente. Tus fotos, conversaciones, entrenamientos y datos de salud no se ofrecen a compradores.";
+    function gate() {
+      return (
+        '<div class="gate"><div class="emblem">V</div><h1>' +
+        (registering ? "Crea tu cuenta" : "Bienvenido a Vera") +
+        "</h1><p>Tu entrenamiento empieza con una conversación.</p><form onsubmit=\"event.preventDefault();signIn(registering?'register':'login')\">" +
+        field(
+          "email",
+          "Correo electrónico",
+          "",
+          "email",
+          'required autocomplete="email"',
+        ) +
+        field(
+          "pass",
+          "Contraseña",
+          "",
+          "password",
+          'required minlength="10" autocomplete="' +
+            (registering ? "new-password" : "current-password") +
+            '"',
+        ) +
+        (registering
+          ? field("invite", "Invitación de la beta") +
+            '<label class="check"><input id="adult" type="checkbox" required> Tengo 18 años o más y he leído el aviso sobre mis datos.</label>'
+          : "") +
+        '<button class="primary">' +
+        (registering ? "Crear cuenta" : "Entrar") +
+        "</button></form>" +
+        btn(
+          registering ? "Ya tengo cuenta" : "Crear una cuenta",
+          "registering=!registering;render()",
+        ) +
+        "<details " +
+        (registering ? "open" : "") +
+        "><summary>Cómo se usan tus datos</summary><p>" +
+        noticeText +
+        "</p></details>" +
+        (!ACCOUNT_HOST &&
+        (!location.hostname ||
+          location.hostname === "localhost" ||
+          localStorage.veraHost)
+          ? "<details " +
+            (!localStorage.veraHost ? "open" : "") +
+            "><summary>Conexión a la beta</summary>" +
+            field(
+              "endpoint",
+              "Enlace del servidor de la invitación",
+              localStorage.veraHost || "",
+              "url",
+            ) +
+            "</details>"
+          : "") +
+        "</div>"
+      );
+    }
+    const icons = { Chat: "✦", Hoy: "◷", Equipo: "◎", Progreso: "▥" };
+    function cameraPicker() {
+      return (
+        '<section class="camera"><h3>¿Qué quieres fotografiar?</h3>' +
+        btn("Máquina del gimnasio", "go('Máquinas')", true) +
+        btn("Plato de comida", "go('Plato')") +
+        "</section>"
+      );
+    }
+    function camControls(fn) {
+      return (
+        '<div class="row"><label class="shutter">Abrir cámara<input type="file" accept="image/*" capture="environment" onchange="' +
+        fn +
+        '(this)"></label><label class="shutter light">Elegir foto<input type="file" accept="image/*" onchange="' +
+        fn +
+        '(this)"></label></div>'
+      );
+    }
+    function machinePage() {
+      let all = s.machines || [];
+      return (
+        '<p class="sub">Fotografía la máquina y procura que se lea la placa.</p><section>' +
+        field("gymNow", "Gimnasio", s.gym || "") +
+        camControls("machineFile") +
+        '<div id="machinePreview"></div>' +
+        btn("Identificar máquina", "identify()", true) +
+        btn("Registrar a mano", "manualMachine()") +
+        '<div id="machineResult"></div></section><section><h3>Inventario por gimnasio</h3>' +
+        all
+          .map(
+            (m, i) =>
+              "<details><summary>" +
+              safe(
+                m.gym +
+                  " · " +
+                  [m.brand, m.model, m.type].filter(Boolean).join(" "),
+              ) +
+              "</summary><p>" +
+              safe(
+                [m.operation, m.fit, m.muscles, m.uncertainty]
+                  .filter(Boolean)
+                  .join(" · "),
+              ) +
+              "</p>" +
+              btn("Usar en el entrenamiento", "trainMachine(" + i + ")") +
+              "</details>",
+          )
+          .join("") +
+        (all.length > 1
+          ? '<label>Máquina A<select id="m1">' +
+            all
+              .map(
+                (m, i) =>
+                  '<option value="' +
+                  i +
+                  '">' +
+                  safe(m.gym + " · " + m.type + " " + m.model) +
+                  "</option>",
+              )
+              .join("") +
+            '</select></label><label>Máquina B<select id="m2">' +
+            all
+              .map(
+                (m, i) =>
+                  '<option value="' +
+                  i +
+                  '" ' +
+                  (i === 1 ? "selected" : "") +
+                  ">" +
+                  safe(m.gym + " · " + m.type + " " + m.model) +
+                  "</option>",
+              )
+              .join("") +
+            "</select></label>" +
+            btn("Comparar máquinas", "compareMachines()")
+          : "") +
+        "</section>"
+      );
+    }
+    async function machineFile(el) {
+      if (!el.files[0]) return;
+      machinePhoto = "";
+      machineDraft = null;
+      $("machineResult").innerHTML = "";
+      try {
+        let img = new Image();
+        img.src = await readData(el.files[0]);
+        await img.decode();
+        let c = document.createElement("canvas"),
+          f = Math.min(1, 1600 / Math.max(img.width, img.height));
+        c.width = img.width * f;
+        c.height = img.height * f;
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        machinePhoto = c.toDataURL("image/jpeg", 0.85);
+        $("machinePreview").innerHTML =
+          '<img alt="Foto seleccionada" style="max-height:190px;max-width:100%" src="' +
+          machinePhoto +
+          '">';
+        msg("Foto lista.");
+      } catch {
+        msg("No se pudo abrir la foto. Prueba JPEG.");
+      }
+    }
+    async function identify() {
+      if (!machinePhoto) return msg("Toma una foto o elige una de la galería.");
+      try {
+        msg("Leyendo la máquina y la placa…");
+        machineDraft = await api("machine", { image: machinePhoto });
+        showMachine();
+        msg("Comprueba la marca y el modelo antes de guardarlos.");
+      } catch (e) {
+        msg(e.message);
+      }
+    }
+    function manualMachine() {
+      machineDraft = {};
+      showMachine();
+    }
+    function showMachine() {
+      let d = machineDraft;
+      $("machineResult").innerHTML =
+        "<p>" +
+        safe(d.evidence) +
+        " " +
+        safe(d.uncertainty) +
+        "</p>" +
+        [
+          ["type", "Tipo de máquina"],
+          ["brand", "Marca (si se conoce)"],
+          ["model", "Modelo (si se conoce)"],
+          ["operation", "Funcionamiento"],
+          ["fit", "Ajustes, comodidad y límites"],
+          ["muscles", "Músculos implicados"],
+        ]
+          .map(([k, l]) => field("m_" + k, l, d[k] || ""))
+          .join("") +
+        btn("Confirmar y guardar en este gimnasio", "keepMachine()", true);
+    }
+    function keepMachine() {
+      let gym = $("gymNow").value.trim();
+      if (!gym || !$("m_type").value.trim())
+        return msg("Indica gimnasio y tipo de máquina.");
+      const m = { ...machineDraft, id: uid(), gym };
+      for (let k of ["type", "brand", "model", "operation", "fit", "muscles"])
+        m[k] = $("m_" + k).value.trim();
+      s.gym = gym;
+      (s.machines ??= []).push(m);
+      save();
+      go("Máquinas");
+      msg("Máquina guardada.");
+    }
+    function trainMachine(i) {
+      let m = s.machines[i];
+      kind = "Entrenamiento";
+      s.gym = m.gym;
+      save();
+      go("Registro");
+      $("exercise").value = m.type;
+      $("machine").value = [m.brand, m.model, m.id].filter(Boolean).join(" · ");
+      $("group").value = m.muscles || "";
+    }
+    function compareMachines() {
+      let a = s.machines[$("m1").value],
+        b = s.machines[$("m2").value];
+      if (a === b) return msg("Elige dos máquinas distintas.");
+      ask(
+        "Compara funcionamiento, ajustes, comodidad, musculatura y progreso de estas dos máquinas según sus fichas y mis series. Indica qué falta para recomendar una. No atribuyas hipertrofia a la foto. " +
+          JSON.stringify([a, b]),
+      );
+    }
+    function greeting() {
+      return '<div class="welcome"><div class="emblem">V</div><h1>¿Cómo entrenamos hoy?</h1><p>Cuéntame qué buscas, qué has hecho hoy o cómo te encuentras. Vamos paso a paso.</p></div>';
+    }
+    function convo() {
+      const body = chatPage();
+      return (
+        (!s.turns.length ? greeting() : "") +
+        body
+          .replace(
+            "<section><label>Habla con Vera",
+            '<section class="composer"><label>Habla con Vera',
+          )
+          .replace("¿Qué carga intento hoy?", "Cuéntaselo a Vera…")
+          .replace("Dictar mensaje", "Micrófono")
+          .replace("Enviar</button>", "Enviar ↑</button>") +
+        (introDraft
+          ? "<section><h3>¿Lo he entendido bien?</h3><p>" +
+            safe(introDraft.reply) +
+            "</p><p>" +
+            safe(
+              Object.entries(introDraft.profile || {})
+                .filter(([, v]) => v)
+                .map(
+                  ([k, v]) =>
+                    (({
+                      name: "Nombre",
+                      goal: "Objetivo",
+                      criteria: "Entrenamiento",
+                      likes: "Preferencias",
+                      age: "Edad",
+                      height: "Altura",
+                      weight: "Peso",
+                    })[k] || k) +
+                    " · " +
+                    v,
+                )
+                .join(" / "),
+            ) +
+            "</p>" +
+            btn("Guardar y continuar", "confirmIntro()", true) +
+            btn("Corregir", "correctIntro()") +
+            "</section>"
+          : "")
+      );
+    }
+    function correctIntro() {
+      const previous = introDraft.original;
+      introDraft = null;
+      render();
+      $("question").value = previous;
+      $("question").focus();
+    }
+    function confirmIntro() {
+      for (let [k, v] of Object.entries(introDraft.profile || {}))
+        if (
+          [
+            "name",
+            "goal",
+            "criteria",
+            "likes",
+            "age",
+            "height",
+            "weight",
+          ].includes(k) &&
+          v
+        )
+          s.profile[k] = String(v);
+      s.profile.introduced = true;
+      s.turns.push({
+        date: day(),
+        question: introDraft.original,
+        answer: introDraft.reply,
+        reports: [],
+      });
+      introDraft = null;
+      save();
+      go("Chat");
+    }
+    async function intro(text) {
+      busy = true;
+      try {
+        let d;
+        try {
+          d = await api("intro", { message: text, profile: s.profile });
+        } catch (e) {
+          if (!/todavía no está activado/.test(e.message)) throw e;
+          d = {
+            profile: { criteria: text },
+            reply:
+              "He apuntado tus palabras como contexto de entrenamiento. Podrás ampliarlas desde el chat cuando se active la IA.",
+          };
+        }
+        introDraft = { ...d, original: text };
+        render();
+        msg("Revisa lo que Vera propone guardar.");
+      } catch (e) {
+        msg(e.message);
+      } finally {
+        busy = false;
+      }
+    }
+    async function verifySession() {
+      if (!sessionStorage.veraToken) return;
+      try {
+        await api("session", {});
+        validSession = true;
+        tab = "Chat";
+        render();
+      } catch (e) {
+        msg(e.message);
+      }
+    }
+
+    render();
+    verifySession();
+  </script>
+</html>
