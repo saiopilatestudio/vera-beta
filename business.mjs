@@ -18,8 +18,31 @@ export async function business(path, d) {
       consultations: (
         await rows("SELECT coalesce(sum(n),0) AS n FROM quota")
       )[0].n,
+      catalogItems: await rows(
+        "SELECT brand,model,source,rights,created FROM catalog_items ORDER BY created DESC",
+      ),
       deals: await rows("SELECT * FROM deals ORDER BY created DESC LIMIT 100"),
     };
+  if (path === "/admin/catalog") {
+    const source = new URL(d.source);
+    if (
+      !["https:", "http:"].includes(source.protocol) ||
+      !d.brand?.trim() ||
+      !d.model?.trim() ||
+      !["Material propio", "Licencia comercial documentada"].includes(d.rights)
+    )
+      throw Error("Completa la ficha y sus derechos de uso.");
+    await rows(
+      "INSERT INTO catalog_items VALUES(?,?,?,?,?,?)",
+      randomUUID(),
+      d.brand.slice(0, 120),
+      d.model.slice(0, 150),
+      source.href.slice(0, 600),
+      d.rights,
+      new Date().toISOString(),
+    );
+    return { ok: true };
+  }
   if (path === "/admin/deal") {
     if (
       !["Compra", "Venta"].includes(d.direction) ||

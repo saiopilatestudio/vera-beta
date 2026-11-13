@@ -383,6 +383,158 @@
     }
   </style>
 
+  <style>
+    body {
+      background: #f5f1ea;
+      color: #11291a;
+    }
+    main {
+      padding-bottom: 36px;
+    }
+    header {
+      border: 0;
+      padding: 20px 20px 8px;
+      background: transparent;
+    }
+    header strong {
+      font-weight: 700;
+      font-size: 40px;
+    }
+    nav {
+      position: static;
+      display: flex;
+      border: 0;
+      border-bottom: 1px solid #cecfc0;
+      border-radius: 0;
+      background: transparent;
+      justify-content: flex-start;
+      gap: 6px;
+      padding: 2px 16px 8px;
+    }
+    nav button {
+      font: 600 14px system-ui;
+      padding: 8px 12px;
+      color: #4d594b;
+      background: transparent;
+      border-radius: 7px;
+    }
+    nav button.primary {
+      background: #173a25;
+      color: white;
+    }
+    h1 {
+      font: bold 48px/0.99 Georgia;
+      margin: 24px 0 15px;
+      letter-spacing: -1.7px;
+    }
+    .heroimg {
+      height: 128px;
+      object-position: center 42%;
+      border-radius: 12px;
+    }
+    .session {
+      background: linear-gradient(120deg, #102818, #234728);
+      border: 0;
+      border-radius: 14px;
+      padding: 17px;
+      margin: 9px 0;
+      color: #fffcf2;
+    }
+    .session h2 {
+      margin: 8px 0 15px;
+      font-size: 31px;
+    }
+    .session button {
+      width: 100%;
+      background: #cafa65;
+    }
+    .tile {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      width: 100%;
+      min-height: 62px;
+      margin: 4px 0;
+      background: #fffcf5;
+      border: 1px solid #dedbd0;
+      border-radius: 12px;
+      padding: 12px 15px;
+      box-shadow: 0 2px 3px #17271908;
+    }
+    .tile svg,
+    .veraCenter svg {
+      width: 23px;
+      height: 23px;
+      flex-shrink: 0;
+    }
+    .tile span {
+      flex: 1;
+    }
+    .tile strong {
+      font: 700 21px Georgia;
+    }
+    .tile small {
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 2px;
+    }
+    .tile i {
+      font: 22px Georgia;
+      color: #687662;
+    }
+    .veraCenter {
+      display: flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: #193b26;
+      color: #faf9e8;
+      font-weight: 650;
+      padding: 12px;
+    }
+    .roster summary {
+      font: 700 21px Georgia;
+    }
+    .roster small {
+      font: 13px system-ui;
+      margin: 4px 0;
+    }
+    .photoChip {
+      position: relative;
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid #b5c1ae;
+      border-radius: 24px;
+      padding: 8px 16px;
+      font: 600 15px system-ui !important;
+      vertical-align: middle;
+    }
+    .photoChip input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .check {
+      display: inline-flex;
+      gap: 6px;
+      margin: 6px 12px 6px 0;
+    }
+    .check input {
+      width: auto;
+    }
+    fieldset {
+      border: 1px solid #d7dacb;
+      border-radius: 12px;
+    }
+  </style>
+  <script src="local.js"></script>
+  <script src="ocr.js"></script>
   <header>
     <strong>Vera</strong>
     <div id="topTools" class="row">
@@ -400,11 +552,11 @@
       ><button onclick="go('Perfil')">Perfil</button>
     </div>
   </header>
+  <nav id="nav"></nav>
   <main>
     <div class="note" role="status" id="notice"></div>
     <div id="view"></div>
   </main>
-  <nav id="nav"></nav>
   <script>
     const $ = (id) => document.getElementById(id);
     const safe = (s) =>
@@ -473,6 +625,7 @@
       "Maquinaria y biomecánica",
     ];
     function save() {
+      delete s.profile.template;
       markLogs();
       localStorage.setItem(storageKey(), JSON.stringify(s));
     }
@@ -547,24 +700,17 @@
         $("view").innerHTML = gate();
         return;
       }
-      $("nav").innerHTML = ["Chat", "Hoy", "Equipo", "Progreso"]
-        .map(
-          (t) =>
-            '<button class="' +
-            (t === tab ? "on" : "") +
-            '" onclick="go(\'' +
-            t +
-            '\')"><b aria-hidden="true">' +
-            icons[t] +
-            "</b>" +
-            t +
-            "</button>",
+      $("nav").innerHTML = ["Hoy", "Equipo", "Chat", "Progreso"]
+        .map((t) =>
+          btn(t === "Chat" ? "Vera" : t, "go('" + t + "')", tab === t),
         )
         .join("");
       const pages = {
         Chat: convo,
         Hoy: home,
-        Equipo: team,
+        Equipo: roster,
+        Sueño: areaPage,
+        ...Object.fromEntries(Object.keys(areas).map((k) => [k, areaPage])),
         Progreso: progress,
         Perfil: profile,
         Registro: entry,
@@ -586,44 +732,11 @@
     function profile() {
       let p = s.profile;
       return (
-        '<form onsubmit="storeProfile(event)"><section><h2>Tu punto de partida</h2>' +
-        field(
-          "name",
-          "Cómo te llamas",
-          p.name,
-          "text",
-          'required maxlength="80"',
-        ) +
-        field("age", "Edad", p.age, "number", 'required min="18" max="110"') +
-        field(
-          "height",
-          "Altura (cm)",
-          p.height,
-          "number",
-          'min="80" max="250" step=".1"',
-        ) +
-        field(
-          "weight",
-          "Peso inicial (kg)",
-          p.weight,
-          "number",
-          'min="25" max="350" step=".1"',
-        ) +
-        field(
-          "goal",
-          "Tu objetivo",
-          p.goal || "Ganar músculo limitando la ganancia de grasa",
-          "text",
-          "required",
-        ) +
-        field("criteria", "Días, material y experiencia", p.criteria) +
-        field("likes", "Gustos, horarios y restricciones", p.likes) +
-        '<label><input type="checkbox" style="width:auto" id="template" ' +
-        (p.template ? "checked" : "") +
-        '> Usar como referencia el bloque de hipertrofia de cuatro semanas</label><button class="primary">Guardar perfil</button></section></form><details><summary>Mi cuenta</summary>' +
+        prefs() +
+        "<details><summary>Mi cuenta</summary>" +
         accountPanel() +
         "</details>" +
-        gymPanel() +
+        gymLookup() +
         "<details><summary>Memoria editable</summary>" +
         field("expiry", "Válida hasta (opcional)", "", "date") +
         field("memory", "Instrucción que quieres conservar") +
@@ -646,12 +759,23 @@
     }
     function storeProfile(e) {
       e.preventDefault();
-      s.profile = Object.fromEntries(
-        ["name", "age", "height", "weight", "goal", "criteria", "likes"].map(
-          (k) => [k, $(k).value.trim()],
-        ),
+      for (const k of [
+        "goal",
+        "level",
+        "days",
+        "time",
+        "name",
+        "age",
+        "height",
+        "weight",
+      ])
+        s.profile[k] = $(k).value.trim();
+      s.profile.eq = Array.from(
+        document.querySelectorAll('input[name="eq"]:checked'),
+        (c) => c.value,
       );
-      s.profile.template = $("template").checked;
+      s.profile.introduced = true;
+      delete s.profile.template;
       save();
       go("Hoy");
     }
@@ -689,8 +813,7 @@
     function home() {
       return (
         '<img class="heroimg" alt="" src="data:image/jpeg;base64,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">' +
-        homeCore() +
-        extras()
+        todayIndex()
       );
     }
     function homeCore() {
@@ -761,9 +884,37 @@
     }
     function entry() {
       return (
-        '<form onsubmit="add(event)"><section><label>Tipo<select onchange="kind=this.value;render()">' +
-        options(Object.keys(units), kind) +
-        "</select></label>" +
+        '<form onsubmit="add(event)"><section><h3>' +
+        safe(kind) +
+        "</h3>" +
+        (kind === "Suplemento"
+          ? selectField(
+              "supp",
+              "Producto",
+              [
+                "Creatina",
+                "Proteína whey",
+                "BCAA + glutamina",
+                "Multivitamínico",
+                "Otro",
+              ],
+              "",
+            ) +
+            field(
+              "dose",
+              "Cantidad y unidad",
+              "",
+              "text",
+              'placeholder="Ej. 5 g" required',
+            )
+          : kind === "Cardio"
+            ? selectField(
+                "sport",
+                "Actividad",
+                ["Caminar", "Correr", "Bicicleta", "Elíptica", "Remo", "Otra"],
+                "",
+              )
+            : "") +
         (kind === "Comida"
           ? macroFields()
           : kind === "Entrenamiento"
@@ -804,9 +955,7 @@
             )
           : "") +
         '<label>Detalle o sensaciones<textarea id="detail" ' +
-        (["Suplemento", "Sensaciones", "Comida"].includes(kind)
-          ? "required"
-          : "") +
+        (["Sensaciones", "Comida"].includes(kind) ? "required" : "") +
         '></textarea></label><button class="primary">Confirmar registro</button></section></form>'
       );
     }
@@ -818,6 +967,12 @@
         note: $("detail").value.trim(),
         value: $("amount")?.value || null,
       };
+      if (kind === "Suplemento")
+        l.note = [$("supp").value, $("dose").value, l.note]
+          .filter(Boolean)
+          .join(" · ");
+      if (kind === "Cardio")
+        l.note = [$("sport").value, l.note].filter(Boolean).join(" · ");
       if (kind === "Comida")
         for (const k of ["protein", "carbs", "fat"]) l[k] = $(k).value || null;
       if (kind === "Entrenamiento") {
@@ -861,7 +1016,7 @@
         throw Error(
           "Entra en Mi perfil → Mi cuenta para usar el equipo de IA.",
         );
-      const r = await fetch((s.endpoint || location.origin) + "/" + path, {
+      const r = await fetch(ACCOUNT_HOST + "/" + path, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -971,8 +1126,10 @@
       save();
       render();
     }
-    async function ask(question) {
+    async function ask(question, specialty) {
       if (busy || !question.trim()) return;
+      if (specialty || attached || s.preferLocal)
+        return localAnswer(question, specialty);
       if (!s.profile.name && !s.profile.introduced) {
         go("Chat");
         return intro(question);
@@ -988,7 +1145,7 @@
         );
         let d = await api("coach", {
           question,
-          profile: s.profile,
+          profile: { ...s.profile, template: undefined },
           memory: activeMem(),
           gym: s.gym,
           equipment: (s.gyms || {})[s.gym],
@@ -999,9 +1156,6 @@
           ),
           nutritionCoverage: coverage(),
           currentPlan: s.plan,
-          reference: s.profile.template
-            ? "Bloque de referencia opcional, adaptable al perfil. L torso A, M pierna A, J torso B, V pierna B, S pecho/hombro/brazos. Descanso X y D. Cardio suave separado. Semanas 1–4: RIR 4,3,2–3,2; sábado mínimo 3. Sube la carga mínima tras dos sesiones comparables en el tope del rango con buena técnica y RIR. Cuatro comidas mediterráneas. Revisar desde día 15 con 4–7 pesajes en ayunas por semana, cintura y marcas. No heredar calorías de otro usuario."
-            : "",
           history: s.turns
             .slice(-6)
             .map(({ question, answer }) => ({ question, answer })),
@@ -1018,7 +1172,11 @@
         go("Chat");
         msg("Decisión guardada. Puedes consultar las aportaciones en Equipo.");
       } catch (e) {
-        msg(e.message);
+        if (/no está activado|no esta activado/i.test(e.message)) {
+          s.preferLocal = true;
+          busy = false;
+          await localAnswer(question, specialty);
+        } else msg(e.message);
       } finally {
         busy = false;
       }
@@ -1061,6 +1219,10 @@
             roles.map((r) => "<section>" + r + "</section>").join("");
     }
     async function speak(i) {
+      if (s.turns[i]?.engine === "local" && window.VeraNative) {
+        window.VeraNative.say(s.turns[i].answer);
+        return;
+      }
       try {
         let url = URL.createObjectURL(
           await api("speak", { text: s.turns[i].answer }, true),
@@ -1224,6 +1386,9 @@
       go("Hoy");
     }
     function progress() {
+      return tile("Mediciones", "Peso, cintura y sensaciones") + progressBody();
+    }
+    function progressBody() {
       return macros() + progressCore();
     }
     function progressCore() {
@@ -1427,7 +1592,7 @@
         msg(e.message);
       }
     }
-    const ACCOUNT_HOST = ""; // Configure the commercial API origin before distributing a connected build.
+    const ACCOUNT_HOST = "https://vera-beta.onrender.com"; // Configure the commercial API origin before distributing a connected build.
     function accountPanel() {
       if (sessionStorage.veraToken)
         return (
@@ -1491,7 +1656,7 @@
         s.endpoint = u.origin;
         save();
         validSession = true;
-        go("Chat");
+        go("Hoy");
         msg("Has entrado en tu espacio personal.");
       } catch (e) {
         msg(e.message);
@@ -2198,6 +2363,7 @@
     function machinePage() {
       let all = s.machines || [];
       return (
+        gymLookup() +
         '<p class="sub">Fotografía la máquina y procura que se lea la placa.</p><section>' +
         field("gymNow", "Gimnasio", s.gym || "") +
         camControls("machineFile") +
@@ -2275,7 +2441,7 @@
           '<img alt="Foto seleccionada" style="max-height:190px;max-width:100%" src="' +
           machinePhoto +
           '">';
-        msg("Foto lista.");
+        await identify();
       } catch {
         msg("No se pudo abrir la foto. Prueba JPEG.");
       }
@@ -2288,7 +2454,28 @@
         showMachine();
         msg("Comprueba la marca y el modelo antes de guardarlos.");
       } catch (e) {
-        msg(e.message);
+        try {
+          const label = await readLabel(machinePhoto);
+          const lines = label
+            .split(/\n/)
+            .map((t) => t.trim())
+            .filter(Boolean);
+          machineDraft = {
+            type: "",
+            brand:
+              lines.find((t) =>
+                /life fitness|technogym|matrix|precor|hammer strength/i.test(t),
+              ) || "",
+            model: lines.find((t) => /model|modelo/i.test(t)) || "",
+            evidence: label.slice(0, 300),
+            uncertainty:
+              "Lectura de la placa. Confirma el tipo y los datos antes de guardar.",
+          };
+          showMachine();
+          msg("Placa analizada en el móvil.");
+        } catch {
+          msg(e.message);
+        }
       }
     }
     function manualMachine() {
@@ -2323,7 +2510,15 @@
       for (let k of ["type", "brand", "model", "operation", "fit", "muscles"])
         m[k] = $("m_" + k).value.trim();
       s.gym = gym;
-      (s.machines ??= []).push(m);
+      const existing = (s.machines || []).find(
+        (x) =>
+          x.gym === gym &&
+          x.type.toLowerCase() === m.type.toLowerCase() &&
+          x.brand === m.brand &&
+          x.model === m.model,
+      );
+      if (existing) Object.assign(existing, m, { id: existing.id });
+      else (s.machines ??= []).push(m);
       save();
       go("Máquinas");
       msg("Máquina guardada.");
@@ -2354,6 +2549,16 @@
       const body = chatPage();
       return (
         (!s.turns.length ? greeting() : "") +
+        "<details><summary>Motor de conversación</summary>" +
+        btn(
+          "IA local gratuita",
+          "s.preferLocal=true;save();msg(\'IA local seleccionada. Envía tu pregunta.\')",
+        ) +
+        btn(
+          "Equipo del servidor",
+          "s.preferLocal=false;save();msg(\'Equipo del servidor seleccionado.\')",
+        ) +
+        "</details>" +
         body
           .replace(
             "<section><label>Habla con Vera",
@@ -2361,6 +2566,10 @@
           )
           .replace("¿Qué carga intento hoy?", "Cuéntaselo a Vera…")
           .replace("Dictar mensaje", "Micrófono")
+          .replace(
+            /<\/button><\/section>$/,
+            '</button><label class="photoChip">Foto<input type="file" accept="image/*" onchange="attachChat(this)"></label><div id="attachment"></div></section>',
+          )
           .replace("Enviar</button>", "Enviar ↑</button>") +
         (introDraft
           ? "<section><h3>¿Lo he entendido bien?</h3><p>" +
@@ -2426,38 +2635,423 @@
       go("Chat");
     }
     async function intro(text) {
-      busy = true;
-      try {
-        let d;
-        try {
-          d = await api("intro", { message: text, profile: s.profile });
-        } catch (e) {
-          if (!/todavía no está activado/.test(e.message)) throw e;
-          d = {
-            profile: { criteria: text },
-            reply:
-              "He apuntado tus palabras como contexto de entrenamiento. Podrás ampliarlas desde el chat cuando se active la IA.",
-          };
-        }
-        introDraft = { ...d, original: text };
-        render();
-        msg("Revisa lo que Vera propone guardar.");
-      } catch (e) {
-        msg(e.message);
-      } finally {
-        busy = false;
-      }
+      s.profile.introduced = true;
+      save();
+      return ask(text);
     }
     async function verifySession() {
       if (!sessionStorage.veraToken) return;
       try {
         await api("session", {});
         validSession = true;
-        tab = "Chat";
+        tab = "Hoy";
         render();
       } catch (e) {
         msg(e.message);
       }
+    }
+
+    const areas = {
+      Alimentación: ["Comida", "Agua", "Bebida"],
+      Suplementación: ["Suplemento"],
+      Entrenamiento: ["Entrenamiento"],
+      Cardio: ["Cardio", "Pasos"],
+      Mediciones: ["Peso en ayunas", "Otro pesaje", "Cintura", "Sensaciones"],
+    };
+    const paths = {
+      Entrenamiento: "M3 9v6m3-10v14m12-14v14m3-10v6M6 12h12",
+      Alimentación: "M4 3v6q0 4 4 4V3m-2 9v9M18 3q-5 3-4 10h4m0-10v18",
+      Suplementación:
+        "M5 18a5 5 0 0 1 0-7l6-6a5 5 0 0 1 7 7l-6 6a5 5 0 0 1-7 0zm3-10 7 7",
+      Sueño: "M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11z",
+      Cardio: "M2 13h5l3-8 4 14 3-7h5",
+      Equipo:
+        "M3 20q0-7 6-7t6 7m-9-13a3 3 0 1 0 6 0 3 3 0 1 0-6 0m10 6q5 0 5 6",
+      Progreso: "M3 20h18M6 17v-5m5 5V8m5 9V4",
+      Chat: "M3 4h18v13H9l-6 4z",
+      Máquinas: "M2 20h20M6 20V5h11v7M8 15h8",
+      Mediciones: "M3 7h18v10H3zm4 0v5m5-5v3m5-3v5",
+    };
+    function mark(t) {
+      return (
+        '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="' +
+        (paths[t] || paths.Equipo) +
+        '"/></svg>'
+      );
+    }
+    function tile(t, sub, dest = t) {
+      return (
+        '<button class="tile" onclick="go(\'' +
+        dest +
+        "')\">" +
+        mark(t) +
+        "<span><strong>" +
+        safe(t) +
+        "</strong><small>" +
+        safe(sub) +
+        "</small></span><i>›</i></button>"
+      );
+    }
+    function todayIndex() {
+      const logs = s.logs.filter((x) => x.date === day());
+      function count(types) {
+        const n = logs.filter((x) => types.includes(x.kind)).length;
+        return n ? n + " registros hoy" : "Sin registrar hoy";
+      }
+      return (
+        '<article class="session"><small>' +
+        safe(s.gym || "MI ENTRENAMIENTO") +
+        "</small><h2>" +
+        safe(s.plan ? s.plan.split("\n")[0].slice(0, 46) : "Sesión de hoy") +
+        "</h2>" +
+        btn("Abrir entrenamiento", "go('Entrenamiento')", true) +
+        "</article>" +
+        tile("Entrenamiento", count(areas.Entrenamiento)) +
+        tile("Alimentación", count(areas.Alimentación)) +
+        tile("Suplementación", count(areas.Suplementación)) +
+        '<button class="veraCenter" onclick="go(\'Chat\')">' +
+        mark("Chat") +
+        " Hablar con Vera</button>" +
+        tile("Sueño", readiness().text) +
+        tile("Cardio", count(areas.Cardio)) +
+        tile("Equipo", "Especialistas e indicaciones") +
+        tile("Progreso", "Tablas, medidas y registros") +
+        tile("Máquinas", s.gym || "Gimnasios e inventario")
+      );
+    }
+    function areaPage() {
+      if (tab === "Sueño")
+        return sleepPage() + btn("Valorar recuperación", "go('Sensaciones')");
+      const list = areas[tab];
+      if (!list.includes(kind)) kind = list[0];
+      return (
+        '<div class="chips">' +
+        list
+          .map((k) => btn(k, "kind='" + k + "';render()", k === kind))
+          .join("") +
+        "</div>" +
+        (tab === "Alimentación"
+          ? btn("Fotografiar plato", "go('Plato')")
+          : "") +
+        (tab === "Entrenamiento"
+          ? btn("Elegir máquina", "go('Máquinas')") +
+            btn("Rutina de posing", "go('Posing')")
+          : "") +
+        entry() +
+        s.logs
+          .filter((x) => list.includes(x.kind) && x.date === day())
+          .map(logLine)
+          .join("")
+      );
+    }
+    const selectField = (k, label, choices, val) =>
+      "<label>" +
+      label +
+      '<select id="' +
+      k +
+      '">' +
+      options(choices, val) +
+      "</select></label>";
+    function prefs() {
+      const p = s.profile;
+      return (
+        '<form onsubmit="storeProfile(event)"><section><h3>Preferencias de entrenamiento</h3>' +
+        selectField(
+          "goal",
+          "Objetivo",
+          [
+            "Seleccionar",
+            "Ganar músculo",
+            "Ganar fuerza",
+            "Mejorar resistencia",
+            "Mantener forma",
+            "Recomposición corporal",
+          ].concat(
+            p.goal &&
+              ![
+                "Ganar músculo",
+                "Ganar fuerza",
+                "Mantener forma",
+                "Recomposición corporal",
+                "Mejorar resistencia",
+              ].includes(p.goal)
+              ? [p.goal]
+              : [],
+          ),
+          p.goal,
+        ) +
+        selectField(
+          "level",
+          "Experiencia",
+          [
+            "Seleccionar",
+            "Empiezo ahora",
+            "Retomo el entrenamiento",
+            "Entreno habitualmente",
+            "Avanzada",
+          ],
+          p.level,
+        ) +
+        selectField(
+          "days",
+          "Sesiones por semana",
+          ["Seleccionar", "1", "2", "3", "4", "5", "6", "7"],
+          p.days,
+        ) +
+        selectField(
+          "time",
+          "Horario",
+          ["Flexible", "Mañana", "Tarde", "Noche"],
+          p.time,
+        ) +
+        "<fieldset><legend>Material habitual</legend>" +
+        ["Máquinas", "Peso libre", "Poleas", "Bandas", "Peso corporal"]
+          .map(
+            (v) =>
+              '<label class="check"><input type="checkbox" name="eq" value="' +
+              v +
+              '" ' +
+              (p.eq?.includes(v) ? "checked" : "") +
+              "> " +
+              v +
+              "</label>",
+          )
+          .join("") +
+        "</fieldset><details><summary>Medidas y nombre</summary>" +
+        field("name", "Nombre", p.name) +
+        field("age", "Edad", p.age, "number", 'min="18" max="110"') +
+        field(
+          "height",
+          "Altura (cm)",
+          p.height,
+          "number",
+          'min="80" max="250"',
+        ) +
+        field(
+          "weight",
+          "Peso (kg)",
+          p.weight,
+          "number",
+          'min="25" max="350" step=".1"',
+        ) +
+        '</details><button class="primary">Guardar preferencias</button></section></form>'
+      );
+    }
+    function roster() {
+      const last = s.turns.filter((t) => t.reports?.length).at(-1);
+      return (
+        '<article class="session"><small>DECISIÓN DE VERA</small><p>' +
+        safe(last?.answer || "Las decisiones aparecerán al consultar a Vera.") +
+        "</p></article>" +
+        roles
+          .map((r) => {
+            const info = [...s.turns]
+              .reverse()
+              .find((t) => t.reports?.some((x) => x.role === r));
+            return (
+              '<details class="roster"><summary>' +
+              safe(r) +
+              "<small>" +
+              safe(
+                info
+                  ? "Última indicación · " + info.date
+                  : "Sin consulta completada",
+              ) +
+              "</small></summary><p>" +
+              safe(
+                info?.reports.find((x) => x.role === r)?.text ||
+                  "Puedes consultar esta especialidad desde aquí.",
+              ) +
+              "</p>" +
+              btn(
+                "Consultar especialista",
+                "ask('Consulta de " +
+                  r +
+                  ": '+(prompt('¿Qué quieres consultar?')||''),'" +
+                  r +
+                  "')",
+              ) +
+              "</details>"
+            );
+          })
+          .join("")
+      );
+    }
+    let attached = null,
+      ocrEngine = null,
+      activeLocalRole = "",
+      places = [];
+    async function readLabel(file) {
+      if (!ocrEngine)
+        ocrEngine = Tesseract.createWorker("eng", 1, {
+          workerPath: new URL("ocr-worker.js", location.href).href,
+          corePath: new URL("ocr-core.js", location.href).href,
+          langPath: location.origin + "/",
+          workerBlobURL: true,
+        }).catch((e) => {
+          ocrEngine = null;
+          throw e;
+        });
+      const w = await ocrEngine;
+      return (await w.recognize(file)).data.text.trim();
+    }
+    async function attachChat(el) {
+      if (!el.files[0]) return;
+      msg("Leyendo texto visible en la foto…");
+      try {
+        const img = new Image();
+        img.src = await readData(el.files[0]);
+        await img.decode();
+        const c = document.createElement("canvas"),
+          f = Math.min(1, 1400 / Math.max(img.width, img.height));
+        c.width = img.width * f;
+        c.height = img.height * f;
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        attached = { src: c.toDataURL("image/jpeg", 0.78), text: "" };
+        $("attachment").innerHTML =
+          '<img width="84" alt="Foto adjunta" src="' +
+          attached.src +
+          '">' +
+          btn("Quitar", "attached=null;render()");
+        attached.text = await readLabel(attached.src);
+        msg(
+          attached.text
+            ? "Foto adjunta. Se ha leído el texto visible."
+            : "Foto adjunta. El modo local puede leer etiquetas; esta foto no tiene texto reconocible.",
+        );
+      } catch (e) {
+        msg("No se pudo completar la lectura de la foto.");
+      }
+    }
+    async function localAnswer(question, specialty) {
+      if (!s.localModelOK) {
+        if (
+          !confirm(
+            "Activar la IA gratuita en este dispositivo requiere descargar una vez unos 491 MB. ¿Descargar ahora?",
+          )
+        )
+          return;
+        s.localModelOK = true;
+        save();
+      }
+      busy = true;
+      go("Chat");
+      msg("Abriendo el modelo local…");
+      try {
+        const role = specialty || "Hipertrofia";
+        const ctx = JSON.stringify({
+          especialidad: role,
+          perfil: s.profile,
+          ultimo: s.logs.slice(-4),
+          maquinas: s.machines?.slice(-2),
+          textoFoto: attached?.text?.slice(0, 420),
+          historial: s.turns.at(-1)?.answer?.slice(0, 240),
+        });
+        let answer = await window.veraGenerate(question, ctx, msg);
+        if (!String(answer).trim()) throw Error("Respuesta vacía");
+        s.turns.push({
+          date: day(),
+          question: question + (attached ? " · Foto adjunta" : ""),
+          answer,
+          reports: [{ role, text: answer }],
+          inputIds: s.logs.slice(-4).map((l) => l.id),
+          engine: "local",
+        });
+        attached = null;
+        save();
+        go("Chat");
+        msg("Respuesta generada en este dispositivo · Qwen.");
+      } catch (e) {
+        msg("No se pudo ejecutar el modelo local: " + e.message);
+      } finally {
+        busy = false;
+      }
+    }
+    function gymLookup() {
+      return (
+        "<section><h3>Buscar gimnasio</h3>" +
+        field("gymquery", "Nombre y ciudad", s.gym || "") +
+        btn("Buscar sede", "findGym()", true) +
+        btn("Abrir Google Maps", "openMaps()") +
+        '<div id="places"></div></section>'
+      );
+    }
+    function openMaps() {
+      const q = $("gymquery").value.trim();
+      if (q)
+        location.href =
+          "https://www.google.com/maps/search/?api=1&query=" +
+          encodeURIComponent(q);
+    }
+    const featuredGym = {
+      name: "Featness Gym Jerez",
+      address: "Calle Santo Domingo, 7, Jerez de la Frontera",
+      reference: "https://featnessgym.com/clubs/jerez/",
+      equipment: ["Cinta de correr", "Elíptica", "Bicicleta estática"],
+    };
+    async function findGym() {
+      const q = $("gymquery").value.trim();
+      if (!q) return;
+      places = [];
+      if (/featness|fe[a]?tness/i.test(q) && /jerez/i.test(q))
+        places.push(featuredGym);
+      else {
+        try {
+          let d = await api("places", { query: q });
+          places = d.places || [];
+        } catch {}
+      }
+      $("places").innerHTML =
+        places
+          .map(
+            (p, i) =>
+              "<p><b>" +
+              safe(p.name) +
+              "</b><br>" +
+              safe(p.address) +
+              "</p>" +
+              btn("Elegir esta sede", "choosePlace(" + i + ")"),
+          )
+          .join("") ||
+        "<p>Comprueba la dirección en Google Maps y guárdala.</p>" +
+          field("address", "Dirección exacta") +
+          btn("Guardar sede", "manualPlace()");
+    }
+    function manualPlace() {
+      if (!$("address").value.trim()) return;
+      places = [
+        {
+          name: $("gymquery").value.trim(),
+          address: $("address").value.trim(),
+        },
+      ];
+      choosePlace(0);
+    }
+    function choosePlace(i) {
+      const p = places[i];
+      s.gym = p.name + " · " + p.address;
+      (s.locations ??= {})[s.gym] = p;
+      for (const type of p.equipment || []) {
+        if (!(s.machines || []).some((m) => m.gym === s.gym && m.type === type))
+          (s.machines ??= []).push({
+            gym: s.gym,
+            id: uid(),
+            type,
+            brand: p === featuredGym ? "Life Fitness" : "",
+            model: "",
+            operation: "",
+            fit: "",
+            muscles: "",
+            evidence: p.reference,
+          });
+      }
+      save();
+      go("Máquinas");
+      msg(
+        "Sede seleccionada. " +
+          (p.equipment?.length || 0) +
+          " tipos de material documentados.",
+      );
     }
 
     render();

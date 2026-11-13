@@ -15,6 +15,7 @@ await db.batch(
     "CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY,uid TEXT,expires INTEGER)",
     "CREATE TABLE IF NOT EXISTS quota(uid TEXT,day TEXT,n INTEGER,PRIMARY KEY(uid,day))",
     "CREATE TABLE IF NOT EXISTS notices(uid TEXT PRIMARY KEY,version TEXT,accepted INTEGER)",
+    "CREATE TABLE IF NOT EXISTS catalog_items(id TEXT PRIMARY KEY,brand TEXT,model TEXT,source TEXT,rights TEXT,created TEXT)",
     "CREATE TABLE IF NOT EXISTS deals(id TEXT PRIMARY KEY,direction TEXT,company TEXT,catalog TEXT,stage TEXT,price REAL,created TEXT)",
   ],
   "write",

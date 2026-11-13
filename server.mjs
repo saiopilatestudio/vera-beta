@@ -1,3 +1,4 @@
+import { ownerLogin, ownerAccess, ownerLogout } from "./owner.mjs";
 import { adminAllowed, business } from "./business.mjs";
 import http from "node:http";
 import { readFile } from "node:fs/promises";
@@ -125,6 +126,20 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
   try {
+    const assets = {
+      "local.js": "application/javascript",
+      "local.wasm": "application/wasm",
+      "ocr.js": "application/javascript",
+      "ocr-core.js": "application/javascript",
+      "ocr-worker.js": "application/javascript",
+      "eng.traineddata.gz": "application/octet-stream",
+    };
+    if (req.method === "GET" && Object.hasOwn(assets, req.url.slice(1))) {
+      res.setHeader("Content-Type", assets[req.url.slice(1)]);
+      return res.end(
+        await readFile(new URL("./www" + req.url, import.meta.url)),
+      );
+    }
     if (req.method === "GET" && req.url === "/admin") {
       res.setHeader("Content-Type", "text/html;charset=utf-8");
       return res.end(await readFile(new URL("./admin.html", import.meta.url)));
@@ -141,6 +156,10 @@ const server = http.createServer(async (req, res) => {
     if (
       req.method !== "POST" ||
       ![
+        "/owner-login",
+        "/places",
+        "/admin/end",
+        "/admin/catalog",
         "/machine",
         "/intro",
         "/session",
@@ -159,9 +178,13 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(404);
       return res.end();
     }
-    const authRoute = ["/register", "/login"].includes(req.url);
+    const authRoute = ["/register", "/login", "/owner-login"].includes(req.url);
     const admin = req.url.startsWith("/admin/");
-    if (admin && !adminAllowed(req.headers.authorization)) {
+    if (
+      admin &&
+      !ownerAccess(req.headers.authorization) &&
+      !adminAllowed(req.headers.authorization)
+    ) {
       res.writeHead(403);
       return res.end(JSON.stringify({ error: "Acceso restringido." }));
     }
@@ -185,6 +208,62 @@ const server = http.createServer(async (req, res) => {
       chunks.push(chunk);
     }
     const d = JSON.parse(Buffer.concat(chunks));
+    if (req.url === "/owner-login")
+      return res.end(
+        JSON.stringify(await ownerLogin(d, req.socket.remoteAddress)),
+      );
+    if (req.url === "/admin/end") {
+      ownerLogout(req.headers.authorization);
+      return res.end("{}");
+    }
+    if (req.url === "/places") {
+      if (!process.env.GOOGLE_PLACES_KEY)
+        throw Error("Usa Google Maps para verificar la sede.");
+      const q = String(d.query || "")
+        .trim()
+        .slice(0, 170);
+      if (!q) throw Error("Introduce nombre y ciudad.");
+      const r = await fetch(
+        "https://places.googleapis.com/v1/places:searchText",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": process.env.GOOGLE_PLACES_KEY,
+            "X-Goog-FieldMask":
+              "places.id,places.displayName,places.formattedAddress,places.googleMapsUri,places.editorialSummary",
+          },
+          body: JSON.stringify({
+            textQuery: q,
+            includedType: "gym",
+            languageCode: "es",
+            maxResultCount: 5,
+          }),
+          signal: AbortSignal.timeout(12000),
+        },
+      );
+      if (!r.ok) throw Error("Google Places no responde.");
+      const result = await r.json();
+      return res.end(
+        JSON.stringify({
+          places: (result.places || []).map((p) => ({
+            id: p.id,
+            name: p.displayName?.text,
+            address: p.formattedAddress,
+            reference: p.googleMapsUri,
+            equipment: [
+              "elíptica",
+              "cinta de correr",
+              "bicicleta estática",
+              "banco de pesas",
+              "prensa de piernas",
+            ].filter((x) =>
+              (p.editorialSummary?.text || "").toLowerCase().includes(x),
+            ),
+          })),
+        }),
+      );
+    }
     if (admin) return res.end(JSON.stringify(await business(req.url, d)));
     if (req.url === "/session") return res.end(JSON.stringify({ ok: true }));
     if (authRoute) {
@@ -253,7 +332,4 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({ error: e.message }));
   }
 });
-server.listen(
-  Number(process.env.PORT || 8080),
-  process.env.HOST || "127.0.0.1",
-);
+server.listen(Number(process.env.PORT || 8080), process.env.HOST || "0.0.0.0");

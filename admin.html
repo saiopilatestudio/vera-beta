@@ -52,7 +52,9 @@
   </style>
   <h1>Vera · Administración</h1>
   <section id="access">
-    <label>Clave de administración <input id="secret" type="password" /></label
+    <label
+      >Correo <input type="email" id="email" autocomplete="username" /></label
+    ><label>Contraseña <input id="secret" type="password" /></label
     ><button id="open">Entrar</button>
   </section>
   <p role="status" id="status"></p>
@@ -69,6 +71,24 @@
         para su uso comercial. Los diarios, las fotos de clientes y los datos de
         salud quedan fuera de este catálogo.
       </p>
+      <details>
+        <summary>Añadir ficha al catálogo</summary>
+        <form id="catalog">
+          <label>Marca <input id="brand" required /></label
+          ><label>Modelo <input id="model" required /></label
+          ><label
+            >Fuente o licencia <input id="source" type="url" required /></label
+          ><label
+            >Derechos
+            <select id="rights">
+              <option>Material propio</option>
+              <option>Licencia comercial documentada</option>
+            </select></label
+          ><button>Guardar ficha</button>
+        </form>
+      </details>
+      <p id="catalogStats"></p>
+      <button id="exportCatalog">Descargar catálogo técnico JSON</button>
       <button id="find">Buscar empresas candidatas</button>
       <pre id="results"></pre>
       <form id="deal">
@@ -117,6 +137,20 @@
         " cuentas · " +
         d.consultations +
         " solicitudes contabilizadas";
+      el("catalogStats").textContent =
+        (d.catalogItems || []).length + " fichas documentadas";
+      el("exportCatalog").onclick = () => {
+        const url = URL.createObjectURL(
+          new Blob([JSON.stringify(d.catalogItems || [], null, 2)], {
+            type: "application/json",
+          }),
+        );
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "catalogo-tecnico.json";
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      };
       el("list").replaceChildren(
         ...d.deals.map((x) => {
           const p = document.createElement("p");
@@ -144,11 +178,24 @@
       };
     }
     el("open").onclick = run(async () => {
-      key = el("secret").value;
+      const r = await fetch("/owner-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: el("email").value,
+          password: el("secret").value,
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error);
+      key = data.token;
       await refresh();
       el("secret").value = "";
     });
-    el("close").onclick = () => location.reload();
+    el("close").onclick = async () => {
+      await call("end");
+      location.reload();
+    };
     el("find").onclick = run(async () => {
       el("results").textContent = "Buscando fuentes públicas…";
       try {
@@ -157,6 +204,16 @@
         el("results").textContent = "";
         throw e;
       }
+    });
+    el("catalog").onsubmit = run(async () => {
+      await call(
+        "catalog",
+        Object.fromEntries(
+          ["brand", "model", "source", "rights"].map((k) => [k, el(k).value]),
+        ),
+      );
+      el("catalog").reset();
+      await refresh();
     });
     el("deal").onsubmit = run(async () => {
       await call("deal", {
