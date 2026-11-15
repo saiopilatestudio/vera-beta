@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 : "${BUILDTOOLS:?Ruta a Android build-tools 35}" "${ANDROID_JAR:?Ruta al android.jar de API 35}" "${ECJ:?Ruta al compilador ecj.jar}"
 mode=${1:-signed}
 case "$mode" in
- signed) : "${BETA_KEYSTORE:?Firma original de 1.0.2 necesaria}" "${BETA_PASS:?Contraseña de firma necesaria}";;
+ signed) : "${BETA_KEYSTORE:?Clave de distribución de 1.0.3 necesaria}" "${BETA_PASS:?Contraseña de firma necesaria}";;
  unsigned) ;;
  *) echo "Modo válido: signed o unsigned" >&2; exit 2;;
 esac

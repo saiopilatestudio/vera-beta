@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Compilar para revisión o firmar con la clave original
+        description: Compilar para revisión o firmar con la clave de distribución 1.0.3
         type: choice
         options: [unsigned, signed]
         default: unsigned

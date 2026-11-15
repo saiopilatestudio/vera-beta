@@ -18,7 +18,7 @@ assert "versionName='1.0.3" in manifest
 assert "name='app.vera.coach.visionbeta'" in manifest and "versionCode='13'" in manifest
 if args.mode == "signed":
     cert = check_output([args.tools / "apksigner", "verify", "--print-certs", args.apk], text=True)
-    assert "54fc449c3399b2facb0f556024361e2d02653c938196bc046a9b71b1bb228786" in cert
+    assert "e816105533d0800d388a44f802a6b90a74573242eec531ee69eaa73a4a826d71" in cert
 else:
     verification = run([args.tools / "apksigner", "verify", args.apk], capture_output=True)
     assert verification.returncode != 0 and b"DOES NOT VERIFY" in verification.stderr, verification.stderr
