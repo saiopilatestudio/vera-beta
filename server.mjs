@@ -1,8 +1,13 @@
-import { ownerLogin, ownerAccess, ownerLogout } from "./owner.mjs";
+import {partnerAction,partnerPaths} from "./partners.mjs";
+import {specialists} from "./routing.mjs";
+import { ownerLogin, ownerSession, ownerLogout, ownerCookie, allowed } from "./owner.mjs";
 import { adminAllowed, business } from "./business.mjs";
+import {journal} from "./journal.mjs";
 import http from "node:http";
-import { readFile } from "node:fs/promises";
-import { account, authorize, logout, consume } from "./accounts.mjs";
+import { readFile, stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { pipeline } from "node:stream/promises";
+import { account, authorize, logout, consume, releaseQuota, nickname } from "./accounts.mjs";
 
 const roles = {
   "Sueño y recuperación":
@@ -58,14 +63,14 @@ async function chat(system, user, json = false) {
 async function coach(d) {
   const context = JSON.stringify(d);
   const reports = await Promise.all(
-    Object.entries(roles).map(async ([role, scope]) => ({
+    specialists(d.question).map(async role => ({
       role,
       text: await chat(
         guard +
           " Tu función: " +
           role +
           ". " +
-          scope +
+          roles[role] +
           " Responde en 1–3 frases con tu propuesta, dato observado y limitación. Si no procede, indícalo.",
         context,
       ),
@@ -125,20 +130,18 @@ const server = http.createServer(async (req, res) => {
     });
     return res.end();
   }
+  let reservation;
   try {
-    const assets = {
-      "local.js": "application/javascript",
-      "local.wasm": "application/wasm",
-      "ocr.js": "application/javascript",
-      "ocr-core.js": "application/javascript",
-      "ocr-worker.js": "application/javascript",
-      "eng.traineddata.gz": "application/octet-stream",
-    };
-    if (req.method === "GET" && Object.hasOwn(assets, req.url.slice(1))) {
-      res.setHeader("Content-Type", assets[req.url.slice(1)]);
-      return res.end(
-        await readFile(new URL("./www" + req.url, import.meta.url)),
-      );
+    const path = new URL(req.url, 'http://localhost').pathname;
+    const asset = /^\/([a-z0-9_-]+(?:\.[a-z0-9_-]+)*)\.(js|css|wasm|onnx|gguf|gz|json|png)$/i.exec(path);
+    if (req.method === "GET" && asset) {
+      const file = new URL("./www"+path, import.meta.url);
+      const info = await stat(file).catch(() => null);
+      if (!info?.isFile()) { res.writeHead(404); return res.end(); }
+      const mime = {js:"application/javascript",css:"text/css",wasm:"application/wasm",json:"application/json",png:"image/png"}[asset[2]] || "application/octet-stream";
+      res.writeHead(200, {"Content-Type":mime,"Content-Length":info.size});
+      await pipeline(createReadStream(file), res).catch(() => res.destroy());
+      return;
     }
     if (req.method === "GET" && req.url === "/admin") {
       res.setHeader("Content-Type", "text/html;charset=utf-8");
@@ -157,11 +160,15 @@ const server = http.createServer(async (req, res) => {
       req.method !== "POST" ||
       ![
         "/owner-login",
+        ...partnerPaths,
         "/places",
         "/admin/end",
         "/admin/catalog",
         "/machine",
+        "/label",
         "/intro",
+        "/nickname",
+        "/diario",
         "/session",
         "/admin/summary",
         "/admin/prospects",
@@ -180,11 +187,9 @@ const server = http.createServer(async (req, res) => {
     }
     const authRoute = ["/register", "/login", "/owner-login"].includes(req.url);
     const admin = req.url.startsWith("/admin/");
-    if (
-      admin &&
-      !ownerAccess(req.headers.authorization) &&
-      !adminAllowed(req.headers.authorization)
-    ) {
+    const session=admin?ownerSession(req):null;
+    const role=session?.role||(admin&&process.env.VERA_LEGACY_ADMIN_API==="true"&&adminAllowed(req.headers.authorization)?"propietario":null);
+    if (admin && !allowed(role,req.url)) {
       res.writeHead(403);
       return res.end(JSON.stringify({ error: "Acceso restringido." }));
     }
@@ -204,17 +209,19 @@ const server = http.createServer(async (req, res) => {
     const chunks = [];
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 12e6) throw Error("Archivo demasiado grande.");
+      if (size > 12e6) throw Object.assign(Error("Archivo demasiado grande."),{status:413});
       chunks.push(chunk);
     }
     const d = JSON.parse(Buffer.concat(chunks));
-    if (req.url === "/owner-login")
-      return res.end(
-        JSON.stringify(await ownerLogin(d, req.socket.remoteAddress)),
-      );
-    if (req.url === "/admin/end") {
-      ownerLogout(req.headers.authorization);
-      return res.end("{}");
+    if(req.url==="/owner-login"){
+      const out=await ownerLogin(d,req.socket.remoteAddress);
+      if(d.mode==="browser"){
+        res.setHeader("Set-Cookie",ownerCookie(req,out.token));delete out.token;
+      }
+      res.setHeader("Cache-Control","no-store");return res.end(JSON.stringify(out));
+    }
+    if(req.url==="/admin/end"){
+      ownerLogout(session);res.setHeader("Set-Cookie",ownerCookie(req,""));return res.end("{}");
     }
     if (req.url === "/places") {
       if (!process.env.GOOGLE_PLACES_KEY)
@@ -264,15 +271,18 @@ const server = http.createServer(async (req, res) => {
         }),
       );
     }
-    if (admin) return res.end(JSON.stringify(await business(req.url, d)));
-    if (req.url === "/session") return res.end(JSON.stringify({ ok: true }));
+    if (admin) return res.end(JSON.stringify(await business(req.url, d, role)));
+    if(partnerPaths.has(req.url))return res.end(JSON.stringify(await partnerAction(req.url,uid,d)));
+    if(req.url==="/nickname")return res.end(JSON.stringify(await nickname(uid,d.nick)));
+    if(req.url==="/diario")return res.end(JSON.stringify(await journal(uid,d)));
+    if (req.url === "/session") return res.end(JSON.stringify({ ok: true, id:uid }));
     if (authRoute) {
       const out = await account(req.url, d, req.socket.remoteAddress);
       return res.end(JSON.stringify(out));
     }
     if (!process.env.OPENAI_API_KEY)
       throw Error("El servicio de IA todavía no está activado.");
-    await consume(uid);
+    reservation=await consume(uid);
     let result;
     if (req.url === "/intro")
       result = await chat(
@@ -284,15 +294,21 @@ const server = http.createServer(async (req, res) => {
     if (req.url === "/machine") {
       if (!/^data:image\/(jpeg|png|webp);base64,/.test(d.image || ""))
         throw Error("Se necesita una imagen.");
+      if(d.plate && !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d.plate))throw Error("Formato de placa no compatible.");
       result = await chat(
         guard +
           " Eres especialista en máquinas de gimnasio. Analiza solo el aparato y placa visibles. Devuelve JSON {type,brand,model,evidence,operation,fit,muscles,uncertainty}. Cada valor es texto. Si la marca o modelo no están legibles, deja esos campos vacíos y pide foto de la placa. No inventes certificaciones ni calidades; distingue ergonomía observable, límites e hipótesis. Si no hay máquina, type vacío.",
         [
-          { type: "text", text: "Identifica esta máquina" },
+          { type: "text", text: "Primera foto: máquina completa. Segunda, si se adjunta: placa. Distingue el código de modelo del número de serie. Un QR de una página de ejercicios no verifica un modelo exacto." },
           { type: "image_url", image_url: { url: d.image } },
+          ...(d.plate?[{type:"image_url",image_url:{url:d.plate}}]:[]),
         ],
         true,
       );
+    }
+    if(req.url==="/label"){
+      if(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d.image||""))throw Error("Selecciona una foto de la etiqueta.");
+      result=await chat(guard+" Lee exclusivamente los caracteres visibles de la etiqueta de suplemento. Devuelve JSON {brand,product,form}. Usa cadenas vacías para texto ilegible. No inventes composición ni dosis.",[{type:"image_url",image_url:{url:d.image}}],true);
     }
     if (req.url === "/coach") result = await coach(d);
     if (req.url === "/photo") result = await photo(d);
@@ -328,7 +344,8 @@ const server = http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify(result));
   } catch (e) {
-    res.writeHead(400, { "Content-Type": "application/json" });
+    if(reservation)await releaseQuota(reservation).catch(()=>{});
+    res.writeHead(e.status||400, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: e.message }));
   }
 });
