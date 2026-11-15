@@ -28,8 +28,6 @@ export async function account(action, d, ip) {
   if (action === "/register") {
     if (d.notice !== "beta-3" || d.adult !== true)
       throw Error("Lee el aviso y confirma la mayoría de edad.");
-    if (process.env.VERA_INVITE && d.invite !== process.env.VERA_INVITE)
-      throw Error("Invitación de beta incorrecta.");
     const id = randomBytes(16).toString("hex"),
       salt = randomBytes(16).toString("hex"),
       hash = (await derive(pw, salt, 64)).toString("hex");
@@ -40,6 +38,7 @@ export async function account(action, d, ip) {
             sql: "INSERT INTO users VALUES(?,?,?,?)",
             args: [id, email, salt, hash],
           },
+          {sql:"INSERT INTO nicknames VALUES(?,?)",args:[id,"vera_"+id.slice(0,19)]},
           {
             sql: "INSERT INTO notices VALUES(?,?,?)",
             args: [id, "beta-3", now],
@@ -64,7 +63,7 @@ export async function account(action, d, ip) {
     u.id,
     now + 30 * 86400000,
   );
-  return { token, id: u.id };
+  return { token, id: u.id, nick:(await rows("SELECT nick FROM nicknames WHERE uid=?",u.id))[0]?.nick };
 }
 export async function authorize(header) {
   if (!header) return null;
@@ -84,11 +83,19 @@ export async function logout(header) {
 }
 export async function consume(uid) {
   const day = new Date().toISOString().slice(0, 10);
-  const r = await rows(
-    "INSERT INTO quota VALUES(?,?,1) ON CONFLICT(uid,day) DO UPDATE SET n=n+1 RETURNING n",
-    uid,
-    day,
-  );
-  if (r[0].n > Number(process.env.VERA_DAILY_LIMIT || 30))
-    throw Error("Límite diario alcanzado.");
+  const limit=Number(process.env.VERA_DAILY_LIMIT||30);
+  const result=await rows("INSERT INTO quota(uid,day,n) SELECT ?,?,1 WHERE ?>0 ON CONFLICT(uid,day) DO UPDATE SET n=n+1 WHERE n<? RETURNING n",uid,day,limit,limit);
+  if(!result.length)throw Object.assign(Error("Límite diario alcanzado."),{status:429});
+  return {uid,day};
+}
+export async function releaseQuota({uid,day}){
+ await rows("UPDATE quota SET n=n-1 WHERE uid=? AND day=? AND n>0",uid,day);
+}
+
+export async function nickname(uid,input){
+ const nick=String(input||"").trim().replace(/^@/,"");
+ if(!/^[a-zA-Z0-9_]{3,24}$/.test(nick))throw Error("Usa de 3 a 24 letras, números o guiones bajos.");
+ try{await rows("INSERT INTO nicknames(uid,nick) VALUES(?,?) ON CONFLICT(uid) DO UPDATE SET nick=excluded.nick",uid,nick);}
+ catch(e){if(String(e).includes("UNIQUE"))throw Error("Este nick ya está en uso.");throw e;}
+ return {nick};
 }

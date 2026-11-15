@@ -1,0 +1,23 @@
+:root{color-scheme:light}body{background:#f6f5ed;color:#12211b;font:16px/1.45 system-ui,sans-serif}header strong{font:800 23px system-ui;letter-spacing:-1px}h1,h2,h3{font-family:system-ui,sans-serif;letter-spacing:-.04em}header,main,nav{max-width:720px}nav{display:flex;overflow:auto;position:static;gap:4px}#nav button{font-size:14px;flex:1;min-height:46px}.hero6{background:#12211b;color:white;padding:24px;border-radius:20px}.hero6 h2{color:white;font-size:32px}.hero6 button,.primary{background:#c8f264;color:#12211b}.metrics6{display:flex;gap:12px;margin:15px 0}.metrics6 div{flex:1;padding:12px;border-radius:12px;background:#263d32}.metrics6 b{display:block;font-size:24px}.tiles6{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:16px}.tiles6 button{text-align:left;padding:15px;background:white;border:1px solid #c9d2c9;border-radius:12px}button,input,select{min-height:44px}.answer{overflow-wrap:anywhere}
+:root{color-scheme:dark;--paper:#091913;--ink:#f2f5e9;--lime:#c8f558}
+body,header,main,#nav{background:#091913;color:#f2f5e9}header,#nav{border-color:#34463d}.brand7{width:134px;height:auto}
+h1,h2,h3,summary,legend,label,header button,#nav button{color:#eef3e9}h1{font:600 clamp(1.8rem,8vw,2.7rem)/1.12 Georgia,serif}
+section,details,article,.gate,.welcome,.session,.thread,.card,.composer,.stat-grid>div,.metrics6 div,.tiles6 button,.thread>p:first-of-type{background:#172c24;color:#f0f3ea;border:1px solid #31443a;border-radius:15px}
+section,details,.tiles6 button{padding:15px}input,textarea,select,fieldset{background:#10221b;color:#eff3e9;border:1px solid #536259;border-radius:10px}button,.shutter.light{background:#243b2f;color:#edf2e7}button.primary,#nav button.active{background:#c8f558;color:#102017}
+#nav{border-radius:0;justify-content:flex-start;padding:6px 12px;scrollbar-width:none}#nav button{display:inline-flex;justify-content:center;align-items:center;flex:0 0 auto;width:auto;min-width:max-content;white-space:nowrap;padding:8px 13px}
+small,.muted,summary small,.sub{color:#c1cfc4}.roster .status7{display:block;width:fit-content;color:#d1f98a;background:#293e2c;border-radius:12px;padding:2px 9px;margin:6px 0}.roster summary p{font:400 15px/1.45 system-ui;margin:7px 0;color:#d9e2d9}
+.hero6{background:radial-gradient(ellipse at top right,#3d5842,transparent 60%),#10271e}.hero6 h2{font:600 34px Georgia,serif}.hero6 small{text-transform:uppercase;letter-spacing:.09em}.tiles6 button{min-height:62px}.note:not(:empty){background:#304335;color:#fff}a{color:#c8f558}
+.compare{border-collapse:collapse;width:100%;font-size:.88rem}.compare caption,.compare th{text-align:left}.compare caption{font-weight:700;padding:14px 0}.compare td,.compare th{padding:8px 3px;border-bottom:1px solid #344c40;overflow-wrap:anywhere}.compare button{padding:6px 9px}.hero6 progress{width:100%;accent-color:#c8f558}.hero6 label{display:block;margin:10px 0;font-size:.9rem}
+:root{--lime:#c2ff43}.hero6{border-top:3px solid #c2ff43;background:radial-gradient(ellipse at top right,#41652e,transparent 75%),#11241a}.hero6 small,.metrics6 b,.compare caption{color:#d0ff77}#nav button.active,button.primary{background:#c2ff43;color:#14230b}.tiles6 button{border-left:3px solid #a4d74d}.roster .status7{border:1px solid #72933e}
+.hero6{background:linear-gradient(130deg,#173829 30%,#487422);border-top:4px solid #c6ff39}.hero6 h2{color:#ddffa0}#nav button.active{box-shadow:inset 0 -3px #84b519}#eye12{font-size:.86rem;color:#d1ff7a;background:transparent}.shutter,.tiles6 button:focus-visible{background:#c6ff39;color:#102411}.compare caption{border-left:4px solid #bcfb31;padding-left:10px}
+
+:root{--focus-lime:#d5ff82;--action-lime:#c3ff43}
+:focus-visible{outline:3px solid var(--focus-lime);outline-offset:3px}
+button.primary,#nav button.active{background:var(--action-lime);color:#102211}
+.series13 summary{color:var(--focus-lime)}.series13 small:empty{display:none}
+.series13 small{display:block;margin:.4rem 0;color:#d1e6d3}
+.loadPair13{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+.loadPair13 label,.loadPair13 input,.loadPair13 select{min-width:0;width:100%;box-sizing:border-box}
+.rest13{margin-top:1.2rem;padding-top:1rem;border-top:1px solid #536c59}
+.rest13 output{display:block;font-size:1.45rem;font-variant-numeric:tabular-nums;color:var(--focus-lime)}
+@media(max-width:370px){.loadPair13{grid-template-columns:1fr}}

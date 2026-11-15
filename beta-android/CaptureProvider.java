@@ -1,4 +1,4 @@
-package app.vera.coach.beta;
+package app.vera.coach.visionbeta;
 import android.content.*;import android.net.Uri;import android.database.Cursor;import android.database.MatrixCursor;import android.os.ParcelFileDescriptor;import android.provider.OpenableColumns;import java.io.*;
 public class CaptureProvider extends ContentProvider{
  public boolean onCreate(){return true;}

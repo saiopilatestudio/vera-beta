@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera · Entrenamiento
+    Vera 1.0.3 beta
   </title>
   <style>
     * {
@@ -533,10 +533,30 @@
       border-radius: 12px;
     }
   </style>
-  <script src="local.js"></script>
+
+  <style>
+  .stat-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}
+  .stat-grid > div {background:#eff5e8;padding:13px 8px;border-radius:14px;text-align:center}
+  .stat-grid b {font-size:clamp(18px,5vw,27px);display:block;letter-spacing:-.4px}
+  .stat-grid small {font-size:11px;line-height:1.35}
+  .chart {background:#f0f5eb;border-radius:16px;padding:9px;margin:13px 0}
+  .chart svg {display:block;width:100%;height:auto}
+  .chart-dates {display:flex;justify-content:space-between;font-size:12px;color:#49674e;padding:0 8px 4px}
+  .bar-chart {display:flex;align-items:flex-end;gap:5px;height:140px;max-width:100%;overflow-x:auto;border-bottom:1px solid #b4c7b4;margin:10px 0 18px}
+  .bar-column {display:flex;flex:1;flex-direction:column;align-items:center;justify-content:flex-end;min-width:13px;max-width:53px;height:100%;font-size:10px;color:#47604b}
+  .bar-stick {width:100%;background:#6ea84f;border-radius:5px 5px 0 0;min-height:2px}
+  .photo-sources {display:flex;gap:8px;flex-wrap:wrap;background:#eef4e9;border-radius:14px;padding:10px;margin-top:8px}
+  .photo-sources[hidden]{display:none}.photo-sources label{margin:0;flex:1;min-width:135px}
+  .photo-sources input{font-size:12px}
+  button:focus-visible, input:focus-visible, select:focus-visible,textarea:focus-visible{outline:3px solid #36844f;outline-offset:2px}
+  @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
+  @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+  </style>
+  <meta name="vera-build" content="1.0.3 beta" />
+  <script src="ort.js"></script><script src="ai5.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="diario5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script><script src="local.js"></script>
   <script src="ocr.js"></script>
   <header>
-    <strong>Vera</strong>
+    <img src="brand.png" class="brand7" alt="VERA Performance">
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -639,7 +659,7 @@
       }
       if (t === "Máquinas") {
         machineDraft = null;
-        machinePhoto = "";
+        machinePhoto = "";machinePlate="";++machineRevision;
       }
       if (tab === "Posing" && t !== "Posing") poseStop();
       if (t === "Plato") {
@@ -694,18 +714,20 @@
         .join("");
     }
     function render() {
+      VeraPartners.stop();
       $("topTools").style.display = validSession ? "flex" : "none";
       $("nav").style.display = validSession ? "flex" : "none";
       if (!validSession) {
         $("view").innerHTML = gate();
         return;
       }
-      $("nav").innerHTML = ["Hoy", "Equipo", "Chat", "Progreso"]
+      $("nav").innerHTML = ["Hoy","Entrenamiento","Alimentación","Chat","Juntos","Equipo","Progreso"]
         .map((t) =>
-          btn(t === "Chat" ? "Vera" : t, "go('" + t + "')", tab === t),
+          btn(({Chat:"Vera",Entrenamiento:"Entrenar",Alimentación:"Nutrición"}[t]||t), "go('" + t + "')", tab === t),
         )
         .join("");
       const pages = {
+        Juntos: VeraPartners.page,
         Chat: convo,
         Hoy: home,
         Equipo: roster,
@@ -729,10 +751,44 @@
           if (section.firstElementChild?.textContent === "TÚ")
             section.classList.add("thread");
     }
+
+    function versionInfo() {
+      const origin = location.origin || "desconocido";
+      const engine = typeof window.veraGenerate === "function" ? "motor JS cargado (modelo no verificado)" : "motor local NO cargado";
+      const ocr = typeof window.Tesseract !== "undefined" ? "OCR JS disponible" : "OCR JS no disponible";
+      return '<details><summary>Diagnóstico técnico · Vera 1.0.3 beta</summary><p>Build: 13</p><p>Origen: '+safe(origin)+
+        '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>'+safe(engine)+'</p><p>'+safe(ocr)+'</p><p>Sesión autenticada: '+
+        (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>Los datos de entrenamiento siguen guardándose localmente en cada navegador/dispositivo, no se sincronizan aún.</p></details>';
+    }
+    function exportVera() {
+      const payload={format:'vera-local-backup',version:1,created:new Date().toISOString(),state:s};
+      if(window.VeraNative?.exportBackup){VeraNative.exportBackup(JSON.stringify(payload));return;}
+      const file = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(file),a=document.createElement('a');
+      a.href=url;a.download='vera-respaldo-'+day()+'.json';document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      msg('Exportación generada en este dispositivo. Contiene información personal y de salud: guárdala en privado.');
+    }
+    async function importVera(input) {
+      if (!input.files?.[0])return;
+      try{
+        if(input.files[0].size>10*1024*1024)throw Error('El respaldo supera 10 MB.');
+        const d=JSON.parse(await input.files[0].text());
+        if(d.format!=='vera-local-backup'||d.version!==1||!d.state||!Array.isArray(d.state.logs)||!Array.isArray(d.state.turns)||typeof d.state.profile!=='object')
+          throw Error('Formato de respaldo no válido.');
+        if(!confirm('¿Reemplazar los datos LOCALES de este dispositivo por el respaldo? Esto no fusiona registros.'))return;
+        s=d.state;save();render();msg('Datos locales restaurados.');
+      }catch(e){msg('No se pudo restaurar: '+e.message);}
+      finally{input.value='';}
+    }
     function profile() {
       let p = s.profile;
       return (
-        prefs() +
+        nickPanel()+VeraJournal.panel()+VeraPrivacy6.panel()+prefs() +
+        versionInfo() + btn("Probar IA local","veraTestAI(msg).then(r=>msg(r.answer)).catch(e=>msg(e.message))") + (window.VeraNative?.chooseVoice?btn("Elegir voz","VeraNative.chooseVoice()"):"")+
+        '<details><summary>Respaldo de mis datos</summary><p>Exporta tus datos antes de reinstalar la aplicación. No hay sincronización automática entre la APK y la web.</p>'+
+        btn("Exportar respaldo JSON", "exportVera()")+
+        '<label>Restaurar respaldo<input type="file" accept="application/json,.json" onchange="importVera(this)"></label></details>' +
         "<details><summary>Mi cuenta</summary>" +
         accountPanel() +
         "</details>" +
@@ -753,7 +809,7 @@
           )
           .join("") +
         "</details><details><summary>Datos de salud</summary><p>Importa pasos, sueño y sesiones desde Salud de Apple o Health Connect al diario de este dispositivo.</p>" +
-        btn("Importar desde el móvil", "syncHealth()") +
+        btn("Sincronizar Google Fit / Salud conectada", "syncHealth()")+'<p>En Google Fit, activa Perfil → Ajustes → Sincronizar Fit con Salud conectada. Autoriza la lectura en Vera.</p>' +
         "</details>"
       );
     }
@@ -787,6 +843,7 @@
           !["localhost", "127.0.0.1"].includes(u.hostname)
         )
           throw Error();
+        if(data.nick)s.profile.nick=data.nick;
         s.endpoint = u.origin;
         sessionStorage.veraToken = $("token").value.trim();
         save();
@@ -879,7 +936,7 @@
         safe(l.note) +
         " · " +
         safe(l.date) +
-        "</small></p>"
+        "</small>"+(l.kind==="Suplemento"?btn("Editar","editSupplement("+s.logs.indexOf(l)+")"):"")+"</p>"
       );
     }
     function entry() {
@@ -1012,6 +1069,10 @@
       go("Hoy");
     }
     async function api(path, data, blob = false) {
+      if(["coach","intro","photo","machine","label","listen","speak"].includes(path)){
+        if(!VeraPrivacy6.allowed("cloud"))throw Error("Activa el análisis remoto desde Privacidad.");
+        await VeraPrivacy6.ensureRemote();
+      }
       if (!sessionStorage.veraToken)
         throw Error(
           "Entra en Mi perfil → Mi cuenta para usar el equipo de IA.",
@@ -1023,10 +1084,11 @@
           Authorization: "Bearer " + sessionStorage.veraToken,
         },
         body: JSON.stringify(data),
+        signal: AbortSignal.timeout(path==="places"?5500:90000),
       });
       if (r.status === 401) {
         sessionStorage.removeItem("veraToken");
-        sessionStorage.removeItem("veraUser");
+        // Keep the diary bound to its owner after the bearer expires.
         validSession = false;
         render();
       }
@@ -1052,10 +1114,10 @@
                   )
                 : "") +
               safe(t.question) +
-              '</p><h3>Vera</h3><p class="pre">' +
-              safe(t.answer) +
-              "</p>" +
-              proposals(t) +
+              '</p><h3>Vera</h3><div class="answer">' +
+              VeraActions.markdown(t.answer) +
+              "</div>" +
+              VeraActions.review(t) + proposals(t) +
               btn("Escuchar voz IA", "speak(" + s.turns.indexOf(t) + ")") +
               (t.memory && !s.memory.includes(t.memory)
                 ? btn(
@@ -1088,6 +1150,7 @@
             ? Number(v)
             : null,
       };
+      if(e.exercise)Object.assign(l,{exercise:e.exercise,reps:e.reps,kg:e.kg});
       s.logs.push(l);
       e.saved = true;
       save();
@@ -1128,8 +1191,11 @@
     }
     async function ask(question, specialty) {
       if (busy || !question.trim()) return;
-      if (specialty || attached || s.preferLocal)
-        return localAnswer(question, specialty);
+      if (!specialty && await VeraActions.handle(question)) return;
+      if(attached && /comida|plato|alimento|caloría/i.test(question))return sessionStorage.veraToken&&VeraPrivacy6.allowed("cloud")&&s.preferLocal!==true?analyzeChatImage(question,specialty):chatPlate();
+      if (attached) return analyzeChatImage(question, specialty);
+      if(!specialty){const answer=VeraDiary.recall(question,s.logs),entries=answer?[]:VeraDiary.parse(question);if(answer||entries.length){s.turns.push({date:day(),question,answer:answer||"Revisa las fechas y confirma los registros.",entries,reports:[],engine:"local"});save();go("Chat");return;}}
+      if (s.preferLocal===true || !VeraPrivacy6.allowed("cloud") || !sessionStorage.veraToken) return localAnswer(question, specialty);
       if (!s.profile.name && !s.profile.introduced) {
         go("Chat");
         return intro(question);
@@ -1144,7 +1210,7 @@
           (x) => x.date >= day(new Date(Date.now() - 56 * 86400000)),
         );
         let d = await api("coach", {
-          question,
+          question: specialty ? specialty+" · "+question : question,
           profile: { ...s.profile, template: undefined },
           memory: activeMem(),
           gym: s.gym,
@@ -1172,11 +1238,7 @@
         go("Chat");
         msg("Decisión guardada. Puedes consultar las aportaciones en Equipo.");
       } catch (e) {
-        if (/no está activado|no esta activado/i.test(e.message)) {
-          s.preferLocal = true;
-          busy = false;
-          await localAnswer(question, specialty);
-        } else msg(e.message);
+        msg(e.message + " · Elige el motor local si lo tienes disponible.");
       } finally {
         busy = false;
       }
@@ -1242,6 +1304,7 @@
         r.readAsDataURL(file);
       });
     async function dictate() {
+      if(window.VeraNative?.dictate){VeraNative.dictate();return;}
       if (recording) {
         recording.stop();
         return;
@@ -1290,8 +1353,8 @@
       return (
         "<section>" +
         camControls("preparePhoto") +
-        '<div id="platePreview"></div><label>Ración, aceite, salsas o sobras<textarea id="portion" placeholder="¿Cuánto comiste?"></textarea></label>' +
-        btn("Estimar calorías", "estimate()", true) +
+        '<div id="platePreview"></div><div id="foodReview"></div><label>Ración, aceite, salsas o sobras<textarea id="portion" placeholder="¿Cuánto comiste?"></textarea></label>' +
+        btn("Analizar ingredientes con OpenAI", "estimate()", true) +
         '<div id="estimate"></div></section>'
       );
     }
@@ -1315,7 +1378,7 @@
           '<img alt="Plato elegido" style="max-width:100%;max-height:180px" src="' +
           photoData +
           '">';
-        msg("Foto preparada. Indica cuánto comiste.");
+        if(sessionStorage.veraToken && VeraPrivacy6.allowed("cloud") && s.preferLocal!==true) await estimate(); else await foodReview(photoData);
       } catch {
         msg("El formato no se pudo abrir. Prueba con una foto JPEG.");
       }
@@ -1327,10 +1390,13 @@
       }
       try {
         msg("Estimando ración e ingredientes…");
-        draft = await api("photo", {
+        const source=photoData,target=$("estimate");
+        const analysis = await api("photo", {
           image: photoData,
           note: $("portion").value,
         });
+        if(!target.isConnected||source!==photoData)return;
+        draft=analysis;
         $("estimate").innerHTML =
           "<h3>" +
           safe(draft.description) +
@@ -1355,7 +1421,7 @@
         if (draft.ingredients?.length) ingredientTotal();
         msg("Estimación pendiente de tu confirmación.");
       } catch (e) {
-        msg(e.message);
+        msg(e.message+" · Se muestran sugerencias locales."); await foodReview(photoData);
       }
     }
     function confirmMeal() {
@@ -1385,11 +1451,34 @@
       save();
       go("Hoy");
     }
+
+    function sparkline(rows, unit) {
+      if (rows.length < 2) return '<p class="sub">Se necesitan al menos dos días registrados para dibujar la tendencia.</p>';
+      const values=rows.map(x=>x[1]);
+      const lo=Math.min(...values),hi=Math.max(...values),span=Math.max(0.001,hi-lo);
+      const x=i=>12+(i/(rows.length-1))*496;
+      const y=v=>132-((v-lo)/span)*108;
+      const dots=rows.map(([d,v],i)=>`<circle cx="${x(i).toFixed(2)}" cy="${y(v).toFixed(2)}" r="3" fill="#214e34"><title>${safe(d)}: ${v.toFixed(1)} ${safe(unit)}</title></circle>`).join('');
+      const line=rows.map(([d,v],i)=>(i?'L':'M')+x(i).toFixed(2)+','+y(v).toFixed(2)).join(' ');
+      return '<div class="chart"><svg viewBox="0 0 520 150" role="img" aria-label="Evolución de '+safe(unit)+' en '+rows.length+' días con medición"><path d="'+line+'" fill="none" stroke="#31754a" stroke-width="3" stroke-linecap="round"/>'+dots+'</svg><div class="chart-dates"><span>'+safe(rows[0][0])+'</span><span>'+safe(rows.at(-1)[0])+'</span></div></div>';
+    }
+    function barChart(rows,unit) {
+      if (!rows.length) return '<p class="sub">Sin registros suficientes para mostrar barras.</p>';
+      const peak=Math.max(1,...rows.map(x=>x[1]));
+      return '<div class="bar-chart" role="img" aria-label="Gráfico de barras de '+safe(unit)+'">'+rows.map(([d,v])=>'<div class="bar-column" title="'+safe(d)+': '+v.toFixed(1)+' '+safe(unit)+'"><div class="bar-stick" style="height:'+Math.max(2,Math.round(100*v/peak))+'%"></div><span>'+safe(d.slice(5))+'</span></div>').join('')+'</div>';
+    }
+    function strengthSummary() {
+      const trained=s.logs.filter(l=>l.kind==='Entrenamiento' && l.exercise && l.date>=day(new Date(Date.now()-28*86400000)));
+      const sets=trained.reduce((n,l)=>n+(Array.isArray(l.reps)?l.reps.length:0),0);
+      const volume=trained.reduce((n,l)=>n+((Number(l.kg)||0)*(Array.isArray(l.reps)?l.reps.reduce((a,v)=>a+(Number(v)||0),0):0)),0);
+      const exercises=new Set(trained.map(l=>l.exercise));
+      return '<section class="stats"><h3>Fuerza · últimos 28 días</h3><div class="stat-grid"><div><b>'+sets+'</b><small>Series anotadas</small></div><div><b>'+Math.round(volume).toLocaleString('es-ES')+'</b><small>Volumen registrado · kg</small></div><div><b>'+exercises.size+'</b><small>Ejercicios distintos</small></div></div><p class="sub">Volumen = suma de carga × repeticiones. No sustituye a la intensidad o la recuperación.</p></section>';
+    }
     function progress() {
       return tile("Mediciones", "Peso, cintura y sensaciones") + progressBody();
     }
     function progressBody() {
-      return macros() + progressCore();
+      return strengthSummary() + macros() + progressCore();
     }
     function progressCore() {
       let end = new Date();
@@ -1479,7 +1568,7 @@
             " " +
             unit
           : "Sin dos periodos comparables.") +
-        "</p><table><tr><th>Fecha</th><th>" +
+        "</p>" + sparkline(now,unit) + barChart(now,unit) + "<table><tr><th>Fecha</th><th>" +
         unit +
         "</th></tr>" +
         now
@@ -1525,7 +1614,7 @@
     }
     async function syncHealth() {
       if (window.VeraNative) {
-        window.VeraNative.health();
+        s.autoHealth=true;save();window.VeraNative.health();
         return;
       }
       try {
@@ -1592,7 +1681,7 @@
         msg(e.message);
       }
     }
-    const ACCOUNT_HOST = "https://vera-beta.onrender.com"; // Configure the commercial API origin before distributing a connected build.
+    const ACCOUNT_HOST = window.VeraNative ? "https://vera-beta.onrender.com" : location.origin; // Origen único para beta web + Android. Cambiar solo durante despliegue.
     function accountPanel() {
       if (sessionStorage.veraToken)
         return (
@@ -1603,7 +1692,6 @@
         "<p>El diario funciona sin cuenta. Inicia sesión para consultar al equipo, dictar mensajes y analizar fotos. El servicio recibirá los registros que necesite para responder.</p>" +
         field("email", "Correo", "", "email") +
         field("pass", "Contraseña", "", "password") +
-        field("invite", "Invitación de beta (si procede)") +
         btn("Crear cuenta", "signIn('register')") +
         btn("Entrar", "signIn('login')") +
         (ACCOUNT_HOST
@@ -1627,7 +1715,7 @@
           (location.hostname !== "localhost" ? location.origin : "");
         if (!host)
           throw Error(
-            "Introduce el enlace HTTPS del servidor de tu invitación.",
+            "No se ha configurado el servidor de Vera.",
           );
         let u = new URL(host);
         if (
@@ -1635,6 +1723,7 @@
           !["127.0.0.1", "localhost"].includes(u.hostname)
         )
           throw Error("Se necesita HTTPS.");
+        const email=$("email").value.trim(),password=$("pass").value,remember=!!$("remember12")?.checked;
         let res = await fetch(u.origin + "/" + action, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1643,16 +1732,21 @@
             password: $("pass").value,
             notice: "beta-3",
             adult: !!$("adult")?.checked,
-            invite: $("invite")?.value || "",
+            invite: "",
           }),
         });
         let data = await res.json();
         if (!res.ok) throw Error(data.error);
+        if(action==="login"){
+          if(remember){localStorage.veraLoginEmail=email;window.VeraNative?.rememberLogin(email,data.token);}
+          else{localStorage.removeItem("veraLoginEmail");window.VeraNative?.forgetLogin();}
+        }
         localStorage.veraHost = u.origin;
         sessionStorage.veraToken = data.token;
-        sessionStorage.veraUser = u.origin + "/" + data.id;
+        sessionStorage.veraUser = u.origin + "/" + data.id; localStorage.veraRememberedUser=sessionStorage.veraUser;
         s =
           JSON.parse(localStorage.getItem(storageKey()) || "null") || initial();
+        if(data.nick)s.profile.nick=data.nick;
         s.endpoint = u.origin;
         save();
         validSession = true;
@@ -1671,7 +1765,7 @@
         await api("logout", {});
       } catch {}
       sessionStorage.removeItem("veraToken");
-      sessionStorage.removeItem("veraUser");
+      sessionStorage.removeItem("veraUser"); localStorage.removeItem("veraRememberedUser");
       location.reload();
     }
     function storageKey() {
@@ -1926,6 +2020,7 @@
       };
     }
     function healthImport(type, rows) {
+      if(!validSession)return;
       const date = day(),
         source = "health";
       let entries = [];
@@ -2281,59 +2376,56 @@
 
     let validSession = false,
       registering = false,
-      machinePhoto = "",
+      machinePhoto = "", machinePlate="", machineRevision=0,
       machineDraft = null,
       machinePair = null,
       introDraft = null;
     const noticeText =
       "Vera guarda tu cuenta en el servidor y tu diario en este dispositivo. Cuando consultas al equipo, envía el contexto de entrenamiento al proveedor de IA. Las fotos se envían al solicitar su análisis. El administrador ve el número de cuentas y solicitudes. El catálogo comercial contiene fichas técnicas con licencia independiente. Tus fotos, conversaciones, entrenamientos y datos de salud no se ofrecen a compradores.";
     function gate() {
+      const remembered=(!registering&&(window.VeraNative?.savedEmail?.()||localStorage.veraLoginEmail))||"";
+      const savedSession=remembered&&window.VeraNative?.hasSavedSession?.();
       return (
         '<div class="gate"><div class="emblem">V</div><h1>' +
         (registering ? "Crea tu cuenta" : "Bienvenido a Vera") +
-        "</h1><p>Tu entrenamiento empieza con una conversación.</p><form onsubmit=\"event.preventDefault();signIn(registering?'register':'login')\">" +
+        "</h1><p>Tu entrenamiento empieza con una conversación.</p><form onsubmit=\"event.preventDefault();submitLogin12(registering?'register':'login')\">" +
         field(
           "email",
           "Correo electrónico",
-          "",
+          remembered,
           "email",
-          'required autocomplete="email"',
+          'required autocomplete="username" oninput="if(document.getElementById(' + "'pass'" + ').dataset.saved){document.getElementById(' + "'pass'" + ').value=' + "''" + ';delete document.getElementById(' + "'pass'" + ').dataset.saved;}"',
         ) +
         field(
           "pass",
           "Contraseña",
-          "",
+          savedSession?"••••••••••••":"",
           "password",
-          'required minlength="10" autocomplete="' +
+          (savedSession?'data-saved="yes" oninput="delete this.dataset.saved" ':'')+'required minlength="10" autocomplete="' +
             (registering ? "new-password" : "current-password") +
             '"',
         ) +
+        '<button id="eye12" type="button" onclick="togglePass12(this)">'+(savedSession?"Usar contraseña":"Ver contraseña")+'</button>'+(!registering?'<label class="check"><input type="checkbox" id="remember12" '+(remembered?'checked':'')+'> Recordarme en este dispositivo</label>':'')+
         (registering
-          ? field("invite", "Invitación de la beta") +
-            '<label class="check"><input id="adult" type="checkbox" required> Tengo 18 años o más y he leído el aviso sobre mis datos.</label>'
+          ? '<label class="check"><input id="adult" type="checkbox" required> Tengo 18 años o más y he leído el aviso sobre mis datos.</label>'
           : "") +
         '<button class="primary">' +
-        (registering ? "Crear cuenta" : "Entrar") +
-        "</button></form>" +
+        (registering ? "Crear cuenta" : "Iniciar sesión") +
+        "</button></form>" + (window.VeraNative?.unlock&&localStorage.veraRememberedUser?btn("Abrir mi diario sin conexión","VeraNative.unlock()"):"") +
         btn(
           registering ? "Ya tengo cuenta" : "Crear una cuenta",
           "registering=!registering;render()",
         ) +
-        "<details " +
-        (registering ? "open" : "") +
-        "><summary>Cómo se usan tus datos</summary><p>" +
-        noticeText +
-        "</p></details>" +
         (!ACCOUNT_HOST &&
         (!location.hostname ||
           location.hostname === "localhost" ||
           localStorage.veraHost)
           ? "<details " +
             (!localStorage.veraHost ? "open" : "") +
-            "><summary>Conexión a la beta</summary>" +
+            "><summary>Conexión (desarrollo)</summary>" +
             field(
               "endpoint",
-              "Enlace del servidor de la invitación",
+              "Dirección del servidor (solo desarrollo)",
               localStorage.veraHost || "",
               "url",
             ) +
@@ -2367,7 +2459,7 @@
         '<p class="sub">Fotografía la máquina y procura que se lea la placa.</p><section>' +
         field("gymNow", "Gimnasio", s.gym || "") +
         camControls("machineFile") +
-        '<div id="machinePreview"></div>' +
+        '<div id="machinePreview"></div><h3>Placa o QR de la máquina</h3><p>Añade un primer plano con la marca y el modelo legibles.</p>' + camControls('plate12') +
         btn("Identificar máquina", "identify()", true) +
         btn("Registrar a mano", "manualMachine()") +
         '<div id="machineResult"></div></section><section><h3>Inventario por gimnasio</h3>' +
@@ -2424,7 +2516,7 @@
     }
     async function machineFile(el) {
       if (!el.files[0]) return;
-      machinePhoto = "";
+      machinePhoto = "";machinePlate="";++machineRevision;
       machineDraft = null;
       $("machineResult").innerHTML = "";
       try {
@@ -2448,31 +2540,36 @@
     }
     async function identify() {
       if (!machinePhoto) return msg("Toma una foto o elige una de la galería.");
+      const source=machinePhoto,plate=machinePlate,rev=++machineRevision,target=$("machineResult");
       try {
         msg("Leyendo la máquina y la placa…");
-        machineDraft = await api("machine", { image: machinePhoto });
+        if(s.preferLocal===true || !VeraPrivacy6.allowed("cloud"))throw Error("Análisis local.");
+        const response=await api("machine", { image: source,plate });
+        if(!target.isConnected||machinePhoto!==source||rev!==machineRevision)return;machineDraft={...response,qr:machineDraft?.qr||"",brand:machineDraft?.brand||response.brand,model:machineDraft?.model||response.model};
         showMachine();
         msg("Comprueba la marca y el modelo antes de guardarlos.");
       } catch (e) {
         try {
-          const label = await readLabel(machinePhoto);
+          const [label,candidates]=await Promise.all([readLabel(plate||source).catch(()=>""),visualCandidates(machinePhoto,"machine").catch(()=>[])]);
+          if(!target.isConnected||source!==machinePhoto||rev!==machineRevision)return;
           const lines = label
             .split(/\n/)
             .map((t) => t.trim())
             .filter(Boolean);
           machineDraft = {
-            type: "",
-            brand:
+            ...(machineDraft||{}),
+            type: candidates.length>1&&candidates[0].score>.22&&candidates[0].score-candidates[1].score>.018?candidates[0].name:"",
+            brand: machineDraft?.brand ||
               lines.find((t) =>
                 /life fitness|technogym|matrix|precor|hammer strength/i.test(t),
               ) || "",
-            model: lines.find((t) => /model|modelo/i.test(t)) || "",
+            model: machineDraft?.model || lines.find((t) => /model|modelo/i.test(t)) || "",
             evidence: label.slice(0, 300),
             uncertainty:
               "Lectura de la placa. Confirma el tipo y los datos antes de guardar.",
           };
           showMachine();
-          msg("Placa analizada en el móvil.");
+          msg("Revisa la ficha. Si el tipo queda vacío, prueba una foto lateral que muestre asiento, plataforma y recorrido, o introdúcelo manualmente.");
         } catch {
           msg(e.message);
         }
@@ -2513,7 +2610,7 @@
       const existing = (s.machines || []).find(
         (x) =>
           x.gym === gym &&
-          x.type.toLowerCase() === m.type.toLowerCase() &&
+          (!m.qr||!x.qr||m.qr===x.qr) && x.type.toLowerCase() === m.type.toLowerCase() &&
           x.brand === m.brand &&
           x.model === m.model,
       );
@@ -2568,7 +2665,7 @@
           .replace("Dictar mensaje", "Micrófono")
           .replace(
             /<\/button><\/section>$/,
-            '</button><label class="photoChip">Foto<input type="file" accept="image/*" onchange="attachChat(this)"></label><div id="attachment"></div></section>',
+            '</button><button type="button" onclick="const a=document.getElementById(&quot;chatSources&quot;);a.hidden=!a.hidden">Adjuntar foto</button><div id="chatSources" class="photo-sources" hidden><label>Usar cámara<input type="file" accept="image/*" capture="environment" onchange="attachChat(this)"></label><label>Elegir de galería<input type="file" accept="image/*" onchange="attachChat(this)"></label></div><div id="attachment"></div></section>',
           )
           .replace("Enviar</button>", "Enviar ↑</button>") +
         (introDraft
@@ -2722,9 +2819,14 @@
     function areaPage() {
       if (tab === "Sueño")
         return sleepPage() + btn("Valorar recuperación", "go('Sensaciones')");
+      const catalogType={Entrenamiento:"exercise",Suplementación:"supplement",Alimentación:"food"}[tab];
+      if(catalogType){
+        const photo=tab==="Alimentación"?btn("Fotografiar comida","go('Plato')"):tab==="Suplementación"?camControls("labelSearch11")+'<div id="suppResult"></div>':btn("Mi gimnasio","go('Máquinas')");
+        return (catalogType==="exercise"?setPanel13():"")+VeraCatalog.panel(catalogType)+(tab==="Suplementación"?btn("Buscar otras marcas en Google","searchSupplementWeb()")+btn("Añadir desde la etiqueta","supplementForm({})"):"")+photo+(tab==="Alimentación"?btn("Registrar agua","kind='Agua';go('Registro')"):"")+s.logs.filter(l=>areas[tab].includes(l.kind)&&(tab==="Suplementación"||l.date===day())).map(logLine).join("");
+      }
       const list = areas[tab];
       if (!list.includes(kind)) kind = list[0];
-      return (
+      return ((tab==="Suplementación"?camControls("labelSearch11")+'<div id="suppResult"></div>':"")+
         '<div class="chips">' +
         list
           .map((k) => btn(k, "kind='" + k + "';render()", k === kind))
@@ -2838,44 +2940,10 @@
       );
     }
     function roster() {
-      const last = s.turns.filter((t) => t.reports?.length).at(-1);
-      return (
-        '<article class="session"><small>DECISIÓN DE VERA</small><p>' +
-        safe(last?.answer || "Las decisiones aparecerán al consultar a Vera.") +
-        "</p></article>" +
-        roles
-          .map((r) => {
-            const info = [...s.turns]
-              .reverse()
-              .find((t) => t.reports?.some((x) => x.role === r));
-            return (
-              '<details class="roster"><summary>' +
-              safe(r) +
-              "<small>" +
-              safe(
-                info
-                  ? "Última indicación · " + info.date
-                  : "Sin consulta completada",
-              ) +
-              "</small></summary><p>" +
-              safe(
-                info?.reports.find((x) => x.role === r)?.text ||
-                  "Puedes consultar esta especialidad desde aquí.",
-              ) +
-              "</p>" +
-              btn(
-                "Consultar especialista",
-                "ask('Consulta de " +
-                  r +
-                  ": '+(prompt('¿Qué quieres consultar?')||''),'" +
-                  r +
-                  "')",
-              ) +
-              "</details>"
-            );
-          })
-          .join("")
-      );
+      return roles.map((role,i)=>{
+        const [state,opinion]=teamOpinion(role);
+        return '<details class="roster"><summary>'+safe(role)+'<small class="status7">'+safe(state)+'</small><p>'+safe(opinion)+'</p></summary><form onsubmit="event.preventDefault(); ask(this.elements.question.value,roles['+i+'])"><label>Preguntar a este especialista<input name="question" required></label><button>Enviar pregunta</button></form></details>';
+      }).join('');
     }
     let attached = null,
       ocrEngine = null,
@@ -2913,6 +2981,7 @@
           attached.src +
           '">' +
           btn("Quitar", "attached=null;render()");
+        $("attachment").innerHTML+=btn("Identificar comida","chatPlate()");
         attached.text = await readLabel(attached.src);
         msg(
           attached.text
@@ -2923,16 +2992,43 @@
         msg("No se pudo completar la lectura de la foto.");
       }
     }
-    async function localAnswer(question, specialty) {
-      if (!s.localModelOK) {
-        if (
-          !confirm(
-            "Activar la IA gratuita en este dispositivo requiere descargar una vez unos 491 MB. ¿Descargar ahora?",
-          )
-        )
-          return;
-        s.localModelOK = true;
+
+    async function analyzeChatImage(question, specialty) {
+      const current = attached;
+      const food = /comida|alimento|plato|calor[ií]a|macros|prote[ií]na|almuerzo|cena|desayuno/i.test(question);
+      const machine = /m[aá]quina|aparato|gimnasio|biomec[aá]nica|ejercicio|equipamiento/i.test(question);
+      if (!food && !machine) {
+        msg("Para reconocer visualmente la foto, pregunta por la comida o por la máquina que aparece. El OCR local solo detecta texto, no identifica objetos.");
+        return;
+      }
+      if (!sessionStorage.veraToken) {
+        msg("Inicia sesión para analizar la imagen con la IA visual del servidor.");
+        return;
+      }
+      busy = true;
+      msg("Analizando imagen con el servidor (requiere conexión)…");
+      try {
+        const endpoint = food ? "photo" : "machine";
+        const d = await api(endpoint, food ? { image: current.src, note: question } : { image: current.src });
+        const answer = food
+          ? [d.description, `Estimación aproximada: ${d.min}–${d.max} kcal`, d.assumptions, d.question,
+              "Confirma ingredientes y raciones en Alimentación → Fotografiar plato antes de guardar."].filter(Boolean).join("\n")
+          : [d.type, d.brand, d.model, d.operation, d.fit, d.muscles, d.uncertainty].filter(Boolean).join(" · ");
+        if (!answer.trim()) throw Error("No se ha podido identificar la imagen.");
+        s.turns.push({date:day(),question:question+" · Foto adjunta",answer,
+          reports:[{role: food ? "Nutrición deportiva" : "Maquinaria y biomecánica",text:answer}],
+          engine:"remote-vision",inputIds:[]});
+        attached=null;
         save();
+        go("Chat");
+        msg("Análisis visual realizado en el servidor. No se ha guardado una comida sin confirmarla.");
+      } catch(e) { msg("No se pudo analizar la foto: " + e.message); }
+      finally {busy=false;}
+    }
+    async function localAnswer(question, specialty) {
+      if (typeof window.veraGenerate !== "function") {
+        msg("Motor local no cargado. Comprueba que local.js y local.wasm existen y que Android sirve los assets correctamente. Puedes seleccionar Equipo del servidor; no se enviarán datos sin elegirlo.");
+        return;
       }
       busy = true;
       go("Chat");
@@ -2948,7 +3044,8 @@
           historial: s.turns.at(-1)?.answer?.slice(0, 240),
         });
         let answer = await window.veraGenerate(question, ctx, msg);
-        if (!String(answer).trim()) throw Error("Respuesta vacía");
+        if (typeof answer !== "string" || !answer.trim()) throw Error("Respuesta vacía del modelo");
+        s.localModelOK = true;
         s.turns.push({
           date: day(),
           question: question + (attached ? " · Foto adjunta" : ""),
@@ -2962,7 +3059,9 @@
         go("Chat");
         msg("Respuesta generada en este dispositivo · Qwen.");
       } catch (e) {
-        msg("No se pudo ejecutar el modelo local: " + e.message);
+        s.localModelOK = false;
+        save();
+        msg("Fallo real de inferencia local: " + e.message + ". La IA del servidor es una alternativa distinta (requiere conexión y envía el contexto al servicio).");
       } finally {
         busy = false;
       }
@@ -2983,39 +3082,27 @@
           "https://www.google.com/maps/search/?api=1&query=" +
           encodeURIComponent(q);
     }
-    const featuredGym = {
-      name: "Featness Gym Jerez",
-      address: "Calle Santo Domingo, 7, Jerez de la Frontera",
-      reference: "https://featnessgym.com/clubs/jerez/",
-      equipment: ["Cinta de correr", "Elíptica", "Bicicleta estática"],
-    };
-    async function findGym() {
-      const q = $("gymquery").value.trim();
-      if (!q) return;
-      places = [];
-      if (/featness|fe[a]?tness/i.test(q) && /jerez/i.test(q))
-        places.push(featuredGym);
-      else {
-        try {
-          let d = await api("places", { query: q });
-          places = d.places || [];
-        } catch {}
+    let gymTicket=0;
+    async function findGym(){
+      const query=$("gymquery").value.trim(),target=$("places"),ticket=++gymTicket;
+      if(!query)return;
+      places=[];
+      const manual=field("address","Dirección exacta",query)+btn("Guardar sede","manualPlace()");
+      target.innerHTML='<div id="placeMatches" role="status">Buscando sedes…</div>'+manual;
+      const list=$("placeMatches");
+      let results=[];
+      try{results=(await api("places",{query})).places||[];}catch{}
+      if(!results.length){
+        try{
+          const url=new URL("https://photon.komoot.io/api/");
+          url.searchParams.set("q",query);url.searchParams.set("limit","5");
+          const response=await fetch(url,{signal:AbortSignal.timeout(6500)});
+          if(response.ok)results=(await response.json()).features.map(({properties:p})=>({name:p.name||p.street||query,address:[p.street,p.housenumber,p.postcode,p.city,p.country].filter(Boolean).join(", "),reference:"OpenStreetMap"}));
+        }catch{}
       }
-      $("places").innerHTML =
-        places
-          .map(
-            (p, i) =>
-              "<p><b>" +
-              safe(p.name) +
-              "</b><br>" +
-              safe(p.address) +
-              "</p>" +
-              btn("Elegir esta sede", "choosePlace(" + i + ")"),
-          )
-          .join("") ||
-        "<p>Comprueba la dirección en Google Maps y guárdala.</p>" +
-          field("address", "Dirección exacta") +
-          btn("Guardar sede", "manualPlace()");
+      if(!list.isConnected||ticket!==gymTicket||$("gymquery").value.trim()!==query)return;
+      places=results.filter(x=>x.name&&x.address);
+      list.innerHTML=places.map((p,i)=>"<p><b>"+safe(p.name)+"</b><br>"+safe(p.address)+"</p>"+btn("Elegir esta sede","choosePlace("+i+")")).join("")||"Sin sedes verificadas. Puedes guardar la dirección manualmente.";
     }
     function manualPlace() {
       if (!$("address").value.trim()) return;
@@ -3029,7 +3116,7 @@
     }
     function choosePlace(i) {
       const p = places[i];
-      s.gym = p.name + " · " + p.address;
+      s.gym = p.name===p.address?p.name:p.name + " · " + p.address;
       (s.locations ??= {})[s.gym] = p;
       for (const type of p.equipment || []) {
         if (!(s.machines || []).some((m) => m.gym === s.gym && m.type === type))
@@ -3037,7 +3124,7 @@
             gym: s.gym,
             id: uid(),
             type,
-            brand: p === featuredGym ? "Life Fitness" : "",
+            brand: "",
             model: "",
             operation: "",
             fit: "",
@@ -3055,6 +3142,7 @@
     }
 
     render();
-    verifySession();
+    if(!window.VeraNative)verifySession();
   </script>
+<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script>
 </html>

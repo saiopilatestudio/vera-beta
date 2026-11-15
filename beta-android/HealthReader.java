@@ -1,4 +1,4 @@
-package app.vera.coach.beta;
+package app.vera.coach.visionbeta;
 import android.health.connect.*;
 import android.health.connect.datatypes.*;
 import android.os.OutcomeReceiver;

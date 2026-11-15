@@ -3,7 +3,7 @@ services:
     name: vera-beta
     runtime: node
     plan: free
-    buildCommand: npm ci --omit=dev
+    buildCommand: npm ci --omit=dev && sh scripts/restore-models.sh
     startCommand: node server.mjs
     healthCheckPath: /health
     envVars:
@@ -17,5 +17,7 @@ services:
         sync: false
       - key: VERA_ADMIN_SECRET
         generateValue: true
-      - key: VERA_INVITE
-        generateValue: true
+      - key: VERA_OWNER_EMAIL
+        value: saiopilatestudio@gmail.com
+      - key: VERA_OWNER_PASSWORD
+        sync: false

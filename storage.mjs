@@ -12,6 +12,8 @@ export const rows = async (sql, ...args) =>
 await db.batch(
   [
     "CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE,salt TEXT,hash TEXT)",
+    "CREATE TABLE IF NOT EXISTS nicknames(uid TEXT PRIMARY KEY,nick TEXT NOT NULL UNIQUE COLLATE NOCASE)",
+    "INSERT OR IGNORE INTO nicknames SELECT id, 'vera_' || substr(id,1,19) FROM users",
     "CREATE TABLE IF NOT EXISTS sessions(hash TEXT PRIMARY KEY,uid TEXT,expires INTEGER)",
     "CREATE TABLE IF NOT EXISTS quota(uid TEXT,day TEXT,n INTEGER,PRIMARY KEY(uid,day))",
     "CREATE TABLE IF NOT EXISTS notices(uid TEXT PRIMARY KEY,version TEXT,accepted INTEGER)",

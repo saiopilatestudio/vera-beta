@@ -10,18 +10,22 @@ export function adminAllowed(header) {
     )
   );
 }
-export async function business(path, d) {
+export async function business(path, d, role="propietario") {
   const catalog = "Fichas técnicas de maquinaria con licencia independiente";
   if (path === "/admin/summary")
     return {
+      operations:{build:"1.0.3-beta",database:"consulta completada",openAIConfigured:Boolean(process.env.OPENAI_API_KEY),placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY)},
+      nickCount:(await rows("SELECT count(*) AS n FROM nicknames WHERE nick != 'vera_' || substr(uid,1,19)"))[0].n,
+      rooms:await rows("SELECT state,count(*) AS n FROM partner_rooms GROUP BY state"),
+      week:await rows("SELECT day,sum(n) AS n FROM quota WHERE day>=date('now','-6 days') GROUP BY day ORDER BY day"),
       accounts: (await rows("SELECT count(*) AS n FROM users"))[0].n,
       consultations: (
         await rows("SELECT coalesce(sum(n),0) AS n FROM quota")
       )[0].n,
-      catalogItems: await rows(
+      catalogItems: role==="analista"?[]:await rows(
         "SELECT brand,model,source,rights,created FROM catalog_items ORDER BY created DESC",
       ),
-      deals: await rows("SELECT * FROM deals ORDER BY created DESC LIMIT 100"),
+      deals: role==="propietario"?await rows("SELECT * FROM deals ORDER BY created DESC LIMIT 100"):[],
     };
   if (path === "/admin/catalog") {
     const source = new URL(d.source);

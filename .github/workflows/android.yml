@@ -1,0 +1,44 @@
+name: Vera Android
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Compilar para revisión o firmar con la clave original
+        type: choice
+        options: [unsigned, signed]
+        default: unsigned
+        required: true
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Recuperar modelos y comprobar integridad
+        run: sh scripts/restore-models.sh
+      - name: Compilar y verificar
+        env:
+          MODE: ${{ inputs.mode }}
+          KEY: ${{ secrets.VERA_KEYSTORE_BASE64 }}
+          BETA_PASS: ${{ secrets.VERA_KEYSTORE_PASSWORD }}
+        run: |
+          umask 077
+          export ECJ="$RUNNER_TEMP/ecj.jar" BETA_KEYSTORE="$RUNNER_TEMP/vera.p12"
+          export BUILDTOOLS="$ANDROID_HOME/build-tools/35.0.0" ANDROID_JAR="$ANDROID_HOME/platforms/android-35/android.jar"
+          export APK_OUTPUT="$GITHUB_WORKSPACE/Vera-1.0.3-$MODE.apk"
+          curl -fsSL https://repo.maven.apache.org/maven2/org/eclipse/jdt/ecj/3.38.0/ecj-3.38.0.jar -o "$ECJ"
+          echo "97c566b120009c203a2fc8b291f4a9adbc171cf1ccb70f06f6b4e1828c00ce8e  $ECJ" | sha256sum -c -
+          if [ "$MODE" = signed ]; then echo "$KEY" | base64 -d > "$BETA_KEYSTORE"; fi
+          sh beta-android/build.sh "$MODE"
+          sha256sum Vera-1.0.3-$MODE.apk > SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Vera-1.0.3
+          path: |
+            Vera-1.0.3-*.apk
+            SHA256.txt

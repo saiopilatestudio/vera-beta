@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+process.env.VERA_DB=mkdtempSync(tmpdir()+'/vera-diary-')+'/db';
+const {journal}=await import('../journal.mjs');
+const record={id:'sesion_1',kind:'Entrenamiento',date:'2026-11-15',kg:40};
+const save=(rev,record)=>journal('uno',{updates:[{id:'sesion_1',rev,record}]});
+assert.equal((await save(0,record)).accepted[0].rev,1);
+assert.equal((await save(0,record)).accepted[0].rev,1);
+assert.equal((await journal('otro',{})).records.length,0);
+assert.equal((await save(1,{...record,kg:42})).accepted[0].rev,2);
+assert.equal((await save(1,{...record,kg:43})).conflicts[0].record.kg,42);
+assert.equal((await save(2,null)).records[0].record,null);
+await assert.rejects(save(3,{...record,source:'health'}));
+console.log('PASS · diario privado, reintentos, conflictos y borrado.');
