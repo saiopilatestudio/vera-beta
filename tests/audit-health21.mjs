@@ -8,7 +8,7 @@ context.today=today;context.googleLinked23=()=>false;call('requestHealth21(true,
 call("requestHealth21();healthImport21(healthTicket21.id,'permissions',['nutrition']);healthImport21(healthTicket21.id,'nutrition',[{id:'meal-1',date:today,value:400,protein:20,carbs:40,fat:10,nutrients:{iron_mg:4}}]);");
 assert.equal(context.s.logs.length,1);assert.equal(context.s.logs[0].healthKey,'health_nutrition_meal-1');assert.equal(context.s.logs[0].nutrients.iron_mg,4);assert.equal(saves,1);
 call("healthImport21(healthTicket21.id,'nutrition',[{id:'meal-1',date:today,value:400,protein:20,carbs:40,fat:10,nutrients:{iron_mg:4}}]);");assert.equal(saves,1);
-call("healthImport21(healthTicket21.id,'nutrition',[{id:'meal-1',date:today,value:450,protein:20}]);");assert.equal(saves,2);assert.equal(context.s.logs.length,1);assert.equal(context.s.logs[0].carbs,null);
+call("requestHealth21(false,true);healthImport21(healthTicket21.id,'permissions',['nutrition']);healthImport21(healthTicket21.id,'nutrition',[{id:'meal-1',date:today,value:450,protein:20}]);");assert.equal(saves,2);assert.equal(context.s.logs.length,1);assert.equal(context.s.logs[0].carbs,null);
 call("sessionStorage.veraUser='account-b';healthImport21(healthTicket21.id,'nutrition',[]);");assert.equal(saves,2);assert.equal(context.s.logs.length,1);
 call("sessionStorage.veraUser='account-a';requestHealth21(false,true);");const count=requests.length;call('requestHealth21();');assert.equal(requests.length,count);
 const start=Date.now()-3600000;context.start=start;

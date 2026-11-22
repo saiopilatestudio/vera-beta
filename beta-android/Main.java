@@ -35,16 +35,18 @@ public class Main extends Activity {
  }
  private String backupPayload;
  private boolean requestingBio; private String healthTicket21; private long externalFlow23;
- protected void onStop(){super.onStop();if(web!=null&&picker==null&&backupPayload==null){web.setVisibility(View.INVISIBLE);if(externalFlow23==0||SystemClock.elapsedRealtime()-externalFlow23>=600000)web.evaluateJavascript("window.lockDiary?.()",null);}}
- protected void onResume(){super.onResume();if(web!=null){web.setVisibility(View.VISIBLE);if(externalFlow23!=0){boolean expired=SystemClock.elapsedRealtime()-externalFlow23>=600000;externalFlow23=0;web.evaluateJavascript(expired?"window.lockDiary?.()":"window.refreshGoogle23?.();window.requestHealth21?.(false,true)",null);}}}
+ protected void onStop(){super.onStop();if(web!=null){web.setVisibility(View.INVISIBLE);web.evaluateJavascript("window.suspendSession24?.()",null);}}
+ protected void onResume(){super.onResume();if(web!=null){web.setVisibility(View.VISIBLE);externalFlow23=0;web.evaluateJavascript("window.resumeSession24?.()",null);}}
  public class Bridge{
  @JavascriptInterface public String healthPermissions23(){return HealthWriter23.status(Main.this);}
  @JavascriptInterface public void deleteHealth23(String ticket,String json){runOnUiThread(()->{if(Build.VERSION.SDK_INT>=34)HealthWriter23.delete(Main.this,ticket,json);});}
  @JavascriptInterface public void writeHealth23(String ticket,String json){runOnUiThread(()->{if(Build.VERSION.SDK_INT>=34)HealthWriter23.write(Main.this,ticket,json);});}
  @JavascriptInterface public void openGoogle23(String url){runOnUiThread(()->{try{Uri u=Uri.parse(url);if(!"https".equals(u.getScheme())||!"accounts.google.com".equals(u.getAuthority())||!"/o/oauth2/v2/auth".equals(u.getPath()))return;externalFlow23=SystemClock.elapsedRealtime();startActivity(new Intent(Intent.ACTION_VIEW,u));}catch(Exception e){externalFlow23=0;status("No se pudo abrir Google en el navegador.");}});}
+ @JavascriptInterface public void persistSession24(String owner,String token){try{SessionStore24.save(getPreferences(0),owner,token);}catch(Exception e){runOnUiThread(()->status("No se pudo conservar la sesión en este dispositivo."));}}
+ @JavascriptInterface public String restoreSession24(){try{return SessionStore24.read(getPreferences(0));}catch(Exception e){SessionStore24.clear(getPreferences(0));return "";}}
  @JavascriptInterface public String savedEmail(){return getPreferences(0).getString("loginMail","");}
  @JavascriptInterface public boolean hasSavedSession(){return getPreferences(0).contains("sessionCipher");}
- @JavascriptInterface public void forgetLogin(){getPreferences(0).edit().remove("loginMail").remove("loginSecret").remove("loginIV").remove("sessionCipher").apply();}
+ @JavascriptInterface public void forgetLogin(){SessionStore24.clear(getPreferences(0));getPreferences(0).edit().remove("loginMail").remove("loginSecret").remove("loginIV").remove("sessionCipher").apply();}
  @JavascriptInterface public void rememberLogin(String email,String token){try{LoginVault.save(getPreferences(0),email,token);}catch(Exception e){forgetLogin();runOnUiThread(()->status("No se pudo recordar la cuenta."));}}
  @JavascriptInterface public void loginBiometric(boolean saved,boolean reveal){promptLogin(saved,reveal,false);}
  @JavascriptInterface public void unlock(){promptLogin(false,false,true);}
@@ -65,7 +67,7 @@ public class Main extends Activity {
  @JavascriptInterface public void exportBackup(String json){runOnUiThread(()->{if(backupPayload!=null)return;Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,"vera-diario.json");backupPayload=json;try{startActivityForResult(intent,7);}catch(ActivityNotFoundException e){backupPayload=null;status("El dispositivo no ofrece selector de archivos.");}});}
 
 
- @JavascriptInterface public void refreshHealth21(String ticket){runOnUiThread(()->{if(Build.VERSION.SDK_INT>=34&&HealthReader.anyAllowed(Main.this))HealthReader.read(Main.this,ticket);});}
+ @JavascriptInterface public void refreshHealth21(String ticket){runOnUiThread(()->{if(Build.VERSION.SDK_INT>=34)HealthReader.read(Main.this,ticket);});}
  @JavascriptInterface public void health21(String ticket){runOnUiThread(()->{if(Build.VERSION.SDK_INT<34){status("Health Connect requiere Android 14 o posterior en esta APK.");return;}healthTicket21=ticket;externalFlow23=SystemClock.elapsedRealtime();requestPermissions(HealthWriter23.permissions(),4);});}
  }
  void status(String s){if(web==null||isFinishing()||isDestroyed())return;web.evaluateJavascript("msg("+org.json.JSONObject.quote(s)+")",null);}

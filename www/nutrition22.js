@@ -48,7 +48,7 @@ supplementForm=function(x,i=-1,replaceFacts=false){
   for(const [key]of nutritionLabels22)$('supFact22_'+key).value=facts[key]===undefined?'':Number(facts[key].toFixed(4));lastAmount=nextAmount;lastUnit=nextUnit;
  };
  $('supAmount').onchange=recalc;$('supUnit').onchange=recalc;
- $('saveSupp8').onclick=()=>saveSupplement(x,i);if(typeof bindProductReview24==='function')bindProductReview24(x);node.scrollIntoView?.({block:'start'});
+ $('saveSupp8').onclick=()=>saveSupplement(x,i);if(typeof bindProductReview24==='function')bindProductReview24(x);if(typeof bindMixingLiquid24==='function')bindMixingLiquid24();node.scrollIntoView?.({block:'start'});
 };
 saveSupplement=function(x,i=-1){
  if(x.kind==='food'&&typeof saveFoodProduct24==='function')return saveFoodProduct24(x);
@@ -72,7 +72,7 @@ editSupplement=function(i){const l=s.logs[i];if(l?.kind==='Suplemento')supplemen
 // The liquid belongs to the same record: editing/deleting the dose also edits/deletes it.
 function mixingLiquidForm23(liquid){
  const x=liquid||{},values=x.per100ml||{};
- return '<details open class="mixing-liquid23"><summary>¿Con qué lo tomas?</summary>'+selectField('mixType23','Líquido',['Sin líquido','Agua','Leche','Bebida vegetal'],({water:'Agua',milk:'Leche',plant:'Bebida vegetal'})[x.type]||'Sin líquido')+field('mixMl23','Cantidad de líquido (ml)',x.ml??'','number','min="1" max="5000" step="any"')+field('mixName23','Marca y tipo de leche o bebida (si corresponde)',x.name||'','text','maxlength="160"')+'<p class="sub">Agua: añade volumen sin calorías. Para leche o bebida vegetal, copia los valores de tu envase por 100 ml. No se asignan valores genéricos. No registres otra vez este mismo vaso como agua o comida.</p><details><summary>Etiqueta de la leche o bebida · por 100 ml</summary><div class="nutrition-inputs22">'+nutritionLabels22.map(([key,label,unit])=>field('mixFact23_'+key,label+' ('+unit+'/100 ml)',values[key]??'','number','min="0" step="any"')).join('')+'</div></details></details>';
+ return '<details open class="mixing-liquid23"><summary>¿Con qué lo tomas?</summary>'+selectField('mixType23','Líquido',['Sin líquido','Agua','Leche','Bebida vegetal'],({water:'Agua',milk:'Leche',plant:'Bebida vegetal'})[x.type]||'Sin líquido')+field('mixMl23','Cantidad de líquido (ml)',x.ml??'','number','min="1" max="5000" step="any"')+field('mixName23','Marca y tipo de leche o bebida (si corresponde)',x.name||'','text','maxlength="160"')+(typeof milkLookupPanel24==='function'?milkLookupPanel24(x):'')+'<p class="sub">Agua: añade volumen sin calorías. Para leche o bebida vegetal, copia los valores de tu envase por 100 ml. No se asignan valores genéricos. No registres otra vez este mismo vaso como agua o comida.</p><details><summary>Etiqueta de la leche o bebida · por 100 ml</summary><div class="nutrition-inputs22">'+nutritionLabels22.map(([key,label,unit])=>field('mixFact23_'+key,label+' ('+unit+'/100 ml)',values[key]??'','number','min="0" step="any"')).join('')+'</div></details></details>';
 }
 function readMixingLiquid23(){
  const type=({'Agua':'water','Leche':'milk','Bebida vegetal':'plant'})[$('mixType23')?.value];
@@ -80,5 +80,5 @@ function readMixingLiquid23(){
  const ml=Number($('mixMl23').value);if(!Number.isFinite(ml)||ml<1||ml>5000)throw Error('Indica una cantidad de líquido entre 1 y 5000 ml.');
  const per100ml={};
  if(type!=='water')for(const [key]of nutritionLabels22){const raw=$('mixFact23_'+key).value;if(!raw.trim())continue;const value=numberMetric21(raw);if(value===null)throw Error('Revisa la etiqueta del líquido: valores positivos o cero.');per100ml[key]=value;}
- return {type,ml,name:type==='water'?'Agua':$('mixName23').value.trim().slice(0,160),source:type==='water'?'Volumen registrado':'Etiqueta introducida por el usuario',per100ml};
+ return {type,ml,name:type==='water'?'Agua':$('mixName23').value.trim().slice(0,160),source:type==='water'?'Volumen registrado':($('mixSource24')?.value||'Etiqueta introducida por el usuario').slice(0,300),per100ml};
 }

@@ -55,3 +55,26 @@ function supplementRepairPanel24(logs,since,today){
  if(!rows.length)return '';
  return '<details><summary>Revisar '+rows.length+' suplementos sin micronutrientes declarados</summary><p class="sub">Algunas etiquetas no los incluyen. Si tu envase sí tiene una tabla, abre la toma y pulsa Completar etiqueta para elegir su referencia exacta. Se mantiene la fecha y la cantidad tomadas.</p>'+rows.slice(-20).reverse().map(row=>'<div><b>'+safe(row.productName||row.note||'Suplemento')+'</b><small> · '+safe(row.date)+'</small>'+btn('Revisar etiqueta',"openSupplementFromMetrics24('"+row.id+"')")+'</div>').join('')+'</details>';
 }
+
+function milkLookupPanel24(liquid={}){
+ return '<div class="milk-lookup24"><p class="sub">Para rellenar la leche, escribe arriba su marca y variante exactas y busca una ficha. Elige la que coincide con tu envase. Si aún no existe, añade su etiqueta en Alimentación o completa los datos inferiores; vacío no significa cero.</p><button type="button" id="mixSearch24">Buscar ficha de esta leche o bebida</button><div id="mixMatches24" aria-live="polite"></div><input type="hidden" id="mixSource24" value="'+safe(liquid.source||'Etiqueta introducida por el usuario')+'"></div>';
+}
+function applyMilkProduct24(product){
+ if(product.unit!=='ml'||!Number.isFinite(product.portion)||product.portion<=0)throw Error('La etiqueta debe indicar sus valores por ml. No se convierten gramos a volumen sin conocer la densidad.');
+ if(!['Leche','Bebida vegetal'].includes($('mixType23').value))throw Error('Elige Leche o Bebida vegetal antes de aplicar su etiqueta.');
+ const facts=productFacts24(product.facts);if(!Object.keys(facts).length)throw Error('Esta ficha no tiene cantidades nutricionales. Completa la etiqueta de tu envase.');
+ for(const [key]of nutritionLabels22)$('mixFact23_'+key).value=facts[key]===undefined?'':String(Number((facts[key]*100/product.portion).toFixed(6)));
+ $('mixName23').value=product.name;
+ if($('mixSource24'))$('mixSource24').value=[product.source||product.sourceNote||'Ficha confirmada',product.url||product.sourceUrl||''].filter(Boolean).join(' · ').slice(0,300);
+}
+function bindMixingLiquid24(){
+ const button=$('mixSearch24');if(!button)return;
+ const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s;
+ button.onclick=async()=>{const target=$('mixMatches24'),query=$('mixName23').value.trim();if(!query){target.textContent='Escribe la marca y la variante en el campo de leche o bebida.';return;}
+ const active=()=>sameVeraSession(owner,token,state)&&target.isConnected;button.disabled=true;target.textContent='Buscando fichas guardadas…';
+ try{const response=await api('products/search',{query,kind:'food',limit:25});if(!active())return;const products=(response.products||[]).filter(p=>p.unit==='ml'&&p.portion>0&&Object.keys(productFacts24(p.facts)).length);
+  target.innerHTML=products.length?'<p>Selecciona tu referencia exacta:</p>'+products.map((p,i)=>'<button type="button" id="mixPick24_'+i+'">'+safe(p.name)+' · '+safe(p.variant||'Comprueba la variante')+'</button>').join(''):'<p>No hay una ficha con tabla por ml para esa referencia. Introduce la etiqueta inferior o crea su ficha privada en Alimentación. No se han inventado valores.</p>';
+  products.forEach((p,i)=>{$('mixPick24_'+i).onclick=()=>{if(!active())return;try{applyMilkProduct24(p);target.textContent='Tabla aplicada por 100 ml. Revisa tu envase y escribe cuánto líquido has tomado. Fuente: '+($('mixSource24')?.value||'Ficha confirmada');}catch(e){target.textContent=e.message;}};});
+ }catch(e){if(active())target.textContent='No se pudo consultar la ficha. '+e.message;}finally{button.disabled=false;}};
+ for(const [key]of nutritionLabels22){const input=$('mixFact23_'+key);if(input)input.onchange=()=>{if($('mixSource24'))$('mixSource24').value='Etiqueta modificada por el usuario';};}
+}

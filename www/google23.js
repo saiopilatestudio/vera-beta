@@ -1,5 +1,6 @@
 /* Account identity is verified by the server; OS permissions are queried afresh. */
 let googleState23=null,googleOwner23='',googleToken23='',googleChecking23=false,googleError23='',googlePoll23=null;
+let googleRenderStamp24='';
 function googleActive23(owner,token){return validSession&&sessionStorage.veraUser===owner&&sessionStorage.veraToken===token;}
 function googleLinked23(){return validSession&&googleOwner23===sessionStorage.veraUser&&googleToken23===sessionStorage.veraToken&&googleState23?.configured===true&&googleState23?.linked===true;}
 function healthAccess23(){try{return JSON.parse(window.VeraNative.healthPermissions23());}catch{return {supported:false,complete:false};}}
@@ -10,7 +11,7 @@ async function refreshGoogle23(){
  if(!validSession||googleChecking23)return;const owner=sessionStorage.veraUser,token=sessionStorage.veraToken;googleChecking23=true;
  try{const result=await googleRequest23('/google/status');if(!googleActive23(owner,token))return;googleState23=result;googleOwner23=owner;googleToken23=token;googleError23='';}
  catch(error){if(googleActive23(owner,token)){googleState23=null;googleOwner23=owner;googleToken23=token;googleError23=error.message;}}
- finally{googleChecking23=false;if(validSession){render();if(googleActive23(owner,token)&&googleState23?.linked)exportHealth23();}}
+ finally{googleChecking23=false;if(validSession){const current=googleActive23(owner,token),stamp=JSON.stringify([googleOwner23,googleToken23,googleState23,googleError23,healthAccess23()]);if(!current||stamp!==googleRenderStamp24){googleRenderStamp24=stamp;render();}if(current&&googleState23?.linked){exportHealth23();if(typeof requestHealth21==='function')requestHealth21(false,true);}}}
 }
 async function connectGoogle23(){
  const owner=sessionStorage.veraUser,token=sessionStorage.veraToken;

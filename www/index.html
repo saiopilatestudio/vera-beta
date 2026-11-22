@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 2.4 beta
+    Vera 2.4.1 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="2.4 beta" />
+  <meta name="vera-build" content="2.4.1 beta" />
   <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="exercises-es22.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
   
   <header>
-    <div class="brand14" role="img" aria-label="VERA Performance 2.4 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.4 BETA</small></span></div>
+    <div class="brand14" role="img" aria-label="VERA Performance 2.4.1 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.4.1 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -758,7 +758,7 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      return '<details><summary>Diagnóstico técnico · Vera 2.4 beta</summary><p>Build: 240</p><p>Origen: '+safe(origin)+
+      return '<details><summary>Diagnóstico técnico · Vera 2.4.1 beta</summary><p>Build: 241</p><p>Origen: '+safe(origin)+
         '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube, con funciones separadas. Cada consulta verifica la configuración del servidor; no hay modelos en el dispositivo.</p><p>Sesión autenticada: '+
         (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario, perfil y salud autorizada se guardan automáticamente en tu cuenta cuando hay conexión. Fotos y conversaciones permanecen en este dispositivo.</p></details>';
     }
@@ -1086,6 +1086,7 @@
       if(!sameVeraSession(owner,token,state))throw Error("La sesión ha cambiado. Repite la operación en tu cuenta actual.");
       if (r.status === 401) {
         sessionStorage.removeItem("veraToken");
+        window.VeraNative?.forgetLogin?.();
         // Keep the diary bound to its owner after the bearer expires.
         validSession = false;
         render();
@@ -1709,7 +1710,7 @@
           !["127.0.0.1", "localhost"].includes(u.hostname)
         )
           throw Error("Se necesita HTTPS.");
-        const email=$("email").value.trim(),password=$("pass").value,remember=!!$("remember12")?.checked;
+        const email=$("email").value.trim(),password=$("pass").value,remember=action==="register"||!!$("remember12")?.checked;
         let res = await fetch(u.origin + "/" + action, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1731,6 +1732,7 @@
         localStorage.veraHost = u.origin;
         sessionStorage.veraToken = data.token;
         sessionStorage.veraUser = u.origin + "/" + data.id; localStorage.veraRememberedUser=sessionStorage.veraUser;
+        if(typeof rememberSession24==="function")rememberSession24(sessionStorage.veraUser,data.token,remember);
         clearSessionMedia14();
         s = loadVeraState(storageKey());
         if(data.nick)s.profile.nick=data.nick;
@@ -2392,7 +2394,7 @@
             (registering ? "new-password" : "current-password") +
             '"',
         ) +
-        '<button id="eye12" type="button" onclick="togglePass12(this)">'+(savedSession?"Usar contraseña":"Ver contraseña")+'</button>'+(!registering?'<label class="check"><input type="checkbox" id="remember12" '+(remembered?'checked':'')+'> Recordarme en este dispositivo</label>':'')+
+        '<button id="eye12" type="button" onclick="togglePass12(this)">'+(savedSession?"Usar contraseña":"Ver contraseña")+'</button>'+(!registering?'<label class="check"><input type="checkbox" id="remember12" '+'checked'+'> Mantener mi sesión en este dispositivo</label>':'')+
         (registering
           ? '<label class="check"><input id="adult" type="checkbox" required> Tengo 18 años o más y he leído el aviso sobre mis datos.</label>'
           : "") +
@@ -3038,5 +3040,5 @@
     render();
     if(!window.VeraNative)verifySession();
   </script>
-<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="nutrition24.js"></script><script src="online22.js"></script><script src="google23.js"></script><script src="training23.js"></script><script src="sleep23.js"></script><script src="workouts24.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script><link rel="stylesheet" href="design23.css"><link rel="stylesheet" href="training23.css"><link rel="stylesheet" href="workouts24.css">
+<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="nutrition24.js"></script><script src="food-photo24.js"></script><script src="online22.js"></script><script src="google23.js"></script><script src="session24.js"></script><script src="training23.js"></script><script src="sleep23.js"></script><script src="workouts24.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script><link rel="stylesheet" href="design23.css"><link rel="stylesheet" href="training23.css"><link rel="stylesheet" href="workouts24.css">
 </html>

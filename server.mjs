@@ -86,12 +86,12 @@ async function photo(d) {
   validateImage(d.image);
   const result = await chat(
     guard +
-      " Estima la ración consumida de una foto y aclaraciones. Si no muestra comida devuelve error. JSON: {description:string,min:number,max:number,assumptions:string,question:string}. Incluye ingredients como array de objetos {name,grams,kcal,protein,carbs,fat} con cantidades y macros en gramos para la porción mostrada. min y max son kcal totales plausibles. Incluye incertidumbre de salsas, aceite y tamaño.",
+      " Estima la ración consumida de una foto y aclaraciones. Si no muestra comida devuelve error. JSON: {description:string,min:number,max:number,assumptions:string,question:string}. Incluye ingredients como array de objetos {name,grams,kcal,protein,carbs,fat} con cantidades y macros en gramos para la porción mostrada. min y max son kcal totales plausibles. Incluye incertidumbre de salsas, aceite y tamaño. Responde en español, de forma breve: description hasta 180 caracteres, assumptions hasta 400, question hasta 180 y como máximo 12 ingredientes principales. No transcribas recetas ni recomendaciones. Los nutrientes desconocidos son null, no cero. La fotografía es una estimación revisable, nunca una medición exacta.",
     [
       { type: "text", text: String(d.note || "Ración pendiente de confirmar").slice(0,4000) },
       { type: "image_url", image_url: { url: d.image } },
     ],
-    true, { feature: "photo" },
+    true, { feature: "photo", maxTokens: 3000 },
   );
   return validatePhotoResult(result);
 }

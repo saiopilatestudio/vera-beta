@@ -1,16 +1,35 @@
 /* Health Connect transport is OS-permission based; never an AI or Google OAuth substitute. */
-let healthTicket21=null,healthDebounce21=null,healthApplying21=false,healthLastRequest21=0,healthLastOwner21='';
+let healthTicket21=null,healthDebounce21=null,healthApplying21=false,healthLastRequest21=0,healthLastOwner21='',healthTimeout21=null,healthQueued21=null,healthFollowup21=null,healthReadStatus21=null;
 const healthKinds21={steps:'Pasos',sleep:'Sueño',workouts:'Entrenamiento',weight:'Otro pesaje',nutrition:'Comida',hydration:'Agua'};
-function healthReady21(){return typeof googleLinked23==='function'&&googleLinked23()&&validSession&&!!sessionStorage.veraUser&&!!sessionStorage.veraToken&&!document.hidden&&!!window.VeraNative?.refreshHealth21;}
+function healthReady21(){return typeof googleLinked23==='function'&&googleLinked23()&&validSession&&(typeof accountReady22==='undefined'||accountReady22)&&!!sessionStorage.veraUser&&!!sessionStorage.veraToken&&!document.hidden&&!!window.VeraNative?.refreshHealth21;}
+function healthStatus21(){return healthReadStatus21&&sameVeraSession(healthReadStatus21.owner,healthReadStatus21.token,healthReadStatus21.state)?{phase:healthReadStatus21.phase,started:healthReadStatus21.started,completed:healthReadStatus21.completed||null,counts:{...healthReadStatus21.counts},errors:{...healthReadStatus21.errors}}:{phase:'waiting',counts:{},errors:{}};}
+function paintHealthStatus21(){const target=document.getElementById?.('healthSync24');if(target)target.outerHTML=healthSyncPanel24();}
+function cancelHealthRead21(){clearTimeout(healthTimeout21);clearTimeout(healthDebounce21);clearTimeout(healthFollowup21);healthTimeout21=null;healthFollowup21=null;healthQueued21=null;if(healthTicket21&&!healthTicket21.done){healthTicket21.done=true;if(healthReadStatus21?.phase==='reading')healthReadStatus21.phase='paused';}}
+function finishHealth21(request){
+ if(healthTicket21!==request||!sameVeraSession(request.owner,request.token,request.state))return;
+ request.done=true;clearTimeout(healthTimeout21);healthTimeout21=null;
+ const status=healthReadStatus21;if(status&&status.started===request.started){status.completed=Date.now();status.phase=Object.keys(status.errors).length?'partial':'read';}
+ paintHealthStatus21();
+ const queued=healthQueued21;healthQueued21=null;
+ if(queued&&sameVeraSession(queued.owner,queued.token,queued.state)){clearTimeout(healthFollowup21);healthFollowup21=setTimeout(()=>{healthFollowup21=null;if(sameVeraSession(queued.owner,queued.token,queued.state))requestHealth21(queued.permissions,true);},15000);}
+}
+function healthTypeFinished21(request,type,error,count){
+ request.received.add(type);if(healthReadStatus21?.started===request.started){if(error)healthReadStatus21.errors[type]=error;else healthReadStatus21.counts[type]=count;}
+ if(request.expected?.every(t=>request.received.has(t)))finishHealth21(request);
+}
 function requestHealth21(permissions=false,force=false){
  if(!healthReady21())return;
  const owner=sessionStorage.veraUser,now=Date.now();
- if(!force&&healthTicket21&&!healthTicket21.done&&sameVeraSession(healthTicket21.owner,healthTicket21.token,healthTicket21.state)&&now-healthTicket21.started<90000)return;
+ if(healthTicket21&&!healthTicket21.done&&sameVeraSession(healthTicket21.owner,healthTicket21.token,healthTicket21.state)&&now-healthTicket21.started<120000){if(force)healthQueued21={owner,token:sessionStorage.veraToken,state:s,permissions:permissions||healthQueued21?.permissions===true};return;}
  if(!force&&owner===healthLastOwner21&&now-healthLastRequest21<15000)return;
+ clearTimeout(healthTimeout21);clearTimeout(healthFollowup21);healthFollowup21=null;healthQueued21=null;
  healthLastRequest21=now;healthLastOwner21=owner;
  const id='h'+now+'_'+Math.random().toString(36).slice(2);
  healthTicket21={id,owner,token:sessionStorage.veraToken,state:s,started:now,done:false,received:new Set()};
- if(permissions)window.VeraNative.health21(id);else window.VeraNative.refreshHealth21(id);
+ const request=healthTicket21;healthReadStatus21={owner,token:request.token,state:s,phase:'reading',started:now,counts:{},errors:{}};
+ paintHealthStatus21();
+ healthTimeout21=setTimeout(()=>{if(healthTicket21===request&&!request.done&&sameVeraSession(request.owner,request.token,request.state)){healthReadStatus21.errors.timeout='Health Connect no terminó la lectura. Se conservan los datos anteriores.';finishHealth21(request);msg(healthReadStatus21.errors.timeout);}},120000);
+ try{if(permissions)window.VeraNative.health21(id);else window.VeraNative.refreshHealth21(id);}catch{healthReadStatus21.errors.bridge='No se pudo iniciar la lectura de Health Connect.';finishHealth21(request);msg(healthReadStatus21.errors.bridge);}
 }
 function refreshHealthAfterAction21(){
  if(healthApplying21||!healthReady21())return;clearTimeout(healthDebounce21);
@@ -20,7 +39,9 @@ function refreshHealthAfterAction21(){
 refreshUnlockedHealth=function(){
  if(!healthReady21())return;const key='vera.health21.asked.'+sessionStorage.veraUser;
  if(!localStorage.getItem(key)){localStorage.setItem(key,'yes');s.autoHealth=true;requestHealth21(true,true);return;}
- if(s.autoHealth!==false)requestHealth21();
+ // Old installations could retain autoHealth=false. Automatic synchronization
+ // is now part of the mandatory integration, not an optional legacy switch.
+ s.autoHealth=true;requestHealth21();
 };
 syncHealth=function(){if(!healthReady21())return msg('Health Connect requiere la APK en Android 14 o posterior y una sesión iniciada.');s.autoHealth=true;localStorage.setItem('vera.health21.asked.'+sessionStorage.veraUser,'yes');save();requestHealth21(true,true);};
 function normalizeHealth21(type,rows){
@@ -48,11 +69,15 @@ function normalizeHealth21(type,rows){
  }return [...result.values()];
 }
 function healthImport21(ticket,type,rows){
- const request=healthTicket21;if(!request||request.id!==ticket||Date.now()-request.started>120000||!validSession||!sameVeraSession(request.owner,request.token,request.state))return;
- if(type==='permissions'){request.expected=Array.isArray(rows)?rows.filter(x=>healthKinds21[x]):[];request.done=request.expected.length===0;return;}
- request.received.add(type);if(request.expected?.every(t=>request.received.has(t)))request.done=true;
+ const request=healthTicket21;if(!request||request.id!==ticket||request.done||Date.now()-request.started>120000||!validSession||!sameVeraSession(request.owner,request.token,request.state))return;
+ if(type==='permissions'){if(request.expected)return;request.expected=Array.isArray(rows)?[...new Set(rows.filter(x=>healthKinds21[x]))]:[];if(!request.expected.length)healthReadStatus21.errors.permissions='Autoriza la lectura de datos en Health Connect.';if(request.expected.every(t=>request.received.has(t)))finishHealth21(request);return;}
+ if(type==='error'){
+  for(const error of Array.isArray(rows)?rows:[]){const failed=error?.type,message=typeof error?.message==='string'?error.message.slice(0,300):'No se pudo completar la lectura.';if(failed==='all'){healthReadStatus21.errors.all=message;finishHealth21(request);msg('No se ha actualizado salud. '+message);return;}if(healthKinds21[failed]&&!request.received.has(failed)){healthTypeFinished21(request,failed,message);msg('Se conservan los registros anteriores de '+healthKinds21[failed].toLowerCase()+'. '+message);}}
+  return;
+ }
+ if(!healthKinds21[type]||request.received.has(type)||request.expected&&!request.expected.includes(type))return;
  try{
-  const imported=normalizeHealth21(type,rows),start=new Date();start.setDate(start.getDate()-27);const first=type==='steps'?day():day(start);
+  const imported=normalizeHealth21(type,rows),start=new Date();start.setDate(start.getDate()-27);const first=day(start);
   // Device-only provenance: an empty local Health Connect snapshot must never
   // delete records synchronized from a different phone.
   const idsKey='vera.health21.ids.'+request.owner;let known={};try{known=JSON.parse(localStorage.getItem(idsKey)||'{}');}catch{}if(!known||typeof known!=='object'||Array.isArray(known))known={};
@@ -62,15 +87,18 @@ function healthImport21(ticket,type,rows){
   const remember=()=>{known[type]=imported.map(l=>l.id);localStorage.setItem(idsKey,JSON.stringify(known));};
   // Identical snapshots do not schedule another save/sync/AI revision.
   const stable=xs=>JSON.stringify([...xs].sort((a,b)=>String(a.id).localeCompare(String(b.id))));
-  if(stable(next)===stable(s.logs)){remember();return;}
+  if(stable(next)===stable(s.logs)){remember();healthTypeFinished21(request,type,null,imported.length);return;}
   const previous=s.logs;healthApplying21=true;s.logs=next;
   try{save();}catch(e){s.logs=previous;throw e;}finally{healthApplying21=false;}
   remember();
-  msg('Health Connect actualizado: '+imported.length+' registros de '+healthKinds21[type].toLowerCase()+'.');
- }catch(e){msg('No se ha actualizado salud. '+e.message);}
+  healthTypeFinished21(request,type,null,imported.length);
+  msg('Leídos '+imported.length+' registros de '+healthKinds21[type].toLowerCase()+' de Health Connect. Comprueba la confirmación de guardado de tu cuenta.');
+ }catch(e){healthTypeFinished21(request,type,e.message);msg('No se ha actualizado salud. '+e.message);}
 }
+function healthSyncPanel24(){const status=healthStatus21(),count=Object.values(status.counts).reduce((n,v)=>n+Number(v||0),0),errors=Object.values(status.errors);return '<section id="healthSync24" class="health-sync24"><h3>Google Fit y Health Connect</h3><p>'+(status.phase==='reading'?'Leyendo datos autorizados…':status.phase==='read'?'Última lectura completada: '+count+' registros.':status.phase==='partial'?'Lectura incompleta. Se conservan los datos de las categorías que fallaron.':'La lectura automática comienza al recuperar tu cuenta y los permisos.')+'</p>'+(errors.length?'<p>'+errors.map(safe).join(' · ')+'</p>':'')+(status.phase==='read'&&count===0?'<p>Health Connect no ha aportado registros. En Google Fit abre <strong>Perfil → Ajustes → Sincronizar Fit con Health Connect</strong> y activa esa conexión. Comprueba también los permisos de Fit para compartir los datos. Después vuelve a Vera: la lectura se reanudará automáticamente.</p>':'')+'<small>Vincular la cuenta Google no activa el puente de Google Fit. La sincronización automática se realiza mientras Vera está activa y al volver a ella; no se garantiza con la app cerrada.</small>'+btn('Comprobar ahora','requestHealth21(false,true)')+'</section>';}
+const healthPrefsBefore24=typeof prefs==='function'?prefs:null;if(healthPrefsBefore24)prefs=function(){return healthPrefsBefore24()+healthSyncPanel24();};
 window.addEventListener?.('focus',()=>refreshUnlockedHealth());
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshUnlockedHealth();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelHealthRead21();else refreshUnlockedHealth();});
 // Detects the first successful login without a repeated OS permission prompt.
-setInterval(()=>{if(healthReady21()&&(sessionStorage.veraUser!==healthLastOwner21||Date.now()-healthLastRequest21>=300000))refreshUnlockedHealth();},30000);
+setInterval(()=>{if(!validSession){cancelHealthRead21();return;}if(healthReady21()&&(sessionStorage.veraUser!==healthLastOwner21||Date.now()-healthLastRequest21>=60000))refreshUnlockedHealth();},5000);
 setTimeout(()=>refreshUnlockedHealth(),1500);
