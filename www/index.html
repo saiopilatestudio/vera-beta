@@ -1708,7 +1708,7 @@
             adult: !!$("adult")?.checked,
             invite: "",
           }),
-          signal:AbortSignal.timeout(20000),
+          signal:AbortSignal.timeout(75000),
         });
         let data = await res.json();
         if (!res.ok) throw Error(data.error);
