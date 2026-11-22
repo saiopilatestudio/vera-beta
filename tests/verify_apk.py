@@ -1,40 +1,90 @@
-"""Validate signed Android release assets before UI testing."""
+"""Verify VERA 2.0 APK identity, signature, alignment and packaged source assets."""
 import argparse
 import hashlib
+import os
 from pathlib import Path
-from subprocess import check_call, check_output, run
+import re
+import subprocess
 from zipfile import ZipFile
 
-parser = argparse.ArgumentParser()
-parser.add_argument("apk", type=Path)
-parser.add_argument("www", type=Path)
-parser.add_argument("tools", type=Path)
-parser.add_argument("--mode", choices=["signed","unsigned"], default="signed")
-args = parser.parse_args()
-check_call([args.tools / "zipalign", "-c", "4", args.apk])
-manifest = check_output([args.tools / "aapt2", "dump", "badging", args.apk], text=True)
-print(manifest.splitlines()[0])
-assert "versionName='1.0.3" in manifest
-assert "name='app.vera.coach.visionbeta'" in manifest and "versionCode='13'" in manifest
-if args.mode == "signed":
-    cert = check_output([args.tools / "apksigner", "verify", "--print-certs", args.apk], text=True)
-    assert "e816105533d0800d388a44f802a6b90a74573242eec531ee69eaa73a4a826d71" in cert
-else:
-    verification = run([args.tools / "apksigner", "verify", args.apk], capture_output=True)
-    assert verification.returncode != 0 and b"DOES NOT VERIFY" in verification.stderr, verification.stderr
-with ZipFile(args.apk) as package:
-    assert package.testzip() is None
-    assert package.read("classes.dex").startswith(b"dex\n")
-    assert package.getinfo("assets/vision.onnx").file_size == 89117001
-    for path in sorted(args.www.rglob("*")):
-        if path.is_file() and not path.name.startswith("."):
-            member = "assets/" + path.relative_to(args.www).as_posix()
-            with path.open("rb") as local, package.open(member) as actual:
-                digest = hashlib.file_digest(local, "sha256").hexdigest()
-                assert digest == hashlib.file_digest(actual, "sha256").hexdigest(), member
-            if path.suffix in {".gguf", ".onnx"}:
-                print(member, path.stat().st_size, digest)
-    assert package.getinfo("assets/coach.gguf").file_size == 491400032
-    assert package.getinfo("assets/food.onnx").file_size == 93297500
-with args.apk.open("rb") as apk:
-    print("SHA-256", hashlib.file_digest(apk, "sha256").hexdigest())
+PACKAGE = "app.vera.coach.visionbeta"
+VERSION_NAME = "2.0 beta"
+VERSION_CODE = 200
+FORBIDDEN_ASSET_SUFFIXES = (".gguf", ".onnx", ".tflite", ".safetensors", ".wasm", ".traineddata", ".traineddata.gz", ".pt", ".pth", ".p12", ".jks", ".keystore")
+FORBIDDEN_ASSET_NAMES = {"local.js", "local-ai.js", "ort.js", "ocr.js", "ocr-worker.js", "ocr-core.js", "vision-labels.json", "eng.traineddata.gz"}
+
+
+def require(condition, message):
+    if not condition:
+        raise RuntimeError(message)
+
+
+def digest(path):
+    with path.open("rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def native(tools, name):
+    return tools / (name + (".exe" if os.name == "nt" else ""))
+
+
+def require_cloud_assets(names):
+    for name in names:
+        normalized = str(name).replace("\\", "/").lower()
+        basename = normalized.rsplit("/", 1)[-1]
+        require(not normalized.endswith(FORBIDDEN_ASSET_SUFFIXES) and basename not in FORBIDDEN_ASSET_NAMES,
+                "VERA V2 is cloud-only: forbidden local AI asset or private signing material: " + str(name))
+
+
+def verify(apk, www, tools, java="java", mode="signed", expected_cert=None):
+    subprocess.run([str(native(tools, "zipalign")), "-c", "-P", "16", "4", str(apk)], check=True)
+    manifest = subprocess.check_output([str(native(tools, "aapt2")), "dump", "badging", str(apk)], text=True, encoding="utf-8")
+    identity = manifest.splitlines()[0]
+    print(identity, flush=True)
+    require(f"versionName='{VERSION_NAME}'" in identity, "Unexpected APK versionName")
+    require(f"name='{PACKAGE}'" in identity and f"versionCode='{VERSION_CODE}'" in identity, "Unexpected APK package/versionCode")
+    signer = [str(java), "-jar", str(tools / "lib/apksigner.jar"), "verify", "--verbose", "--print-certs", str(apk)]
+    result = subprocess.run(signer, text=True, capture_output=True, encoding="utf-8")
+    cert = None
+    if mode == "signed":
+        require(result.returncode == 0, "APK signature did not verify: " + result.stderr)
+        require(re.fullmatch(r"[a-fA-F0-9]{64}", expected_cert or "") is not None, "A certificate SHA-256 must be supplied")
+        matches = re.findall(r"Signer #\d+ certificate SHA-256 digest: ([a-fA-F0-9]{64})", result.stdout)
+        require(len(matches) == 1 and matches[0].lower() == expected_cert.lower(), "APK certificate differs from the explicitly selected release certificate")
+        cert = matches[0].lower()
+        print(result.stdout, flush=True)
+    else:
+        require(result.returncode != 0 and "DOES NOT VERIFY" in result.stderr, "Expected an unsigned APK, got an unexpected verification result")
+    with ZipFile(apk) as package:
+        require_cloud_assets(package.namelist())
+        require(package.testzip() is None, "ZIP CRC validation failed")
+        dex = package.read("classes.dex")
+        require(dex.startswith(b"dex\n"), "Missing/invalid executable DEX")
+        require(b"android/speech/" not in dex and b"android.speech." not in dex,
+                "Native speech inference must not be packaged in the cloud-only APK")
+        source_files = [p for p in sorted(www.rglob("*")) if p.is_file() and not any(part.startswith(".") for part in p.relative_to(www).parts)]
+        expected_assets = set()
+        for path in source_files:
+            member = "assets/" + path.relative_to(www).as_posix()
+            expected_assets.add(member)
+            with package.open(member) as actual:
+                require(digest(path) == hashlib.file_digest(actual, "sha256").hexdigest(), "Packaged resource differs from source: " + member)
+        actual_assets = {p.filename for p in package.infolist() if p.filename.startswith("assets/") and not p.is_dir()}
+        require(actual_assets == expected_assets, "APK contains stale or missing web assets")
+    report = {"package": PACKAGE, "versionName": VERSION_NAME, "versionCode": VERSION_CODE,
+              "signature": mode, "certificateSHA256": cert, "apkBytes": apk.stat().st_size,
+              "apkSHA256": digest(apk), "verifiedAssets": len(source_files), "cloudOnlyAssetsVerified": True}
+    print("SHA-256", report["apkSHA256"], flush=True)
+    return report
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("apk", type=Path)
+    parser.add_argument("www", type=Path)
+    parser.add_argument("tools", type=Path)
+    parser.add_argument("--mode", choices=["signed", "unsigned"], default="signed")
+    parser.add_argument("--java", default=os.environ.get("JAVA", "java"))
+    parser.add_argument("--expected-cert-sha256", default=os.environ.get("VERA_EXPECTED_CERT_SHA256"))
+    args = parser.parse_args()
+    verify(args.apk.resolve(), args.www.resolve(), args.tools.resolve(), args.java, args.mode, args.expected_cert_sha256)

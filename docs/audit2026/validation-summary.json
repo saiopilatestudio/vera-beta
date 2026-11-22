@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-22",
+  "newTestGroupsPassed": 67,
+  "androidOriginCasesPassed": 17,
+  "legacySuitesPassed": 4,
+  "baselineDefectsReproduced": 5,
+  "upstreamAI": "simulated",
+  "database": "real temporary SQLite",
+  "browserQA": "not executed: EPERM / browser origin permission declined",
+  "androidCompilation": "Java API35 and manifest/resources passed",
+  "newInstallableAPK": false,
+  "deployment": false,
+  "sourceCommit": "e5e3cc4fd45df2d70b361254852259d235ae9a24"
+}

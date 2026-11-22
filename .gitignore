@@ -5,3 +5,12 @@ node_modules/
 *.apk
 *.aab
 *.sqlite*
+owner.json
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.pem
+*.key
+artifacts/

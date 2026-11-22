@@ -3,7 +3,7 @@
   <meta charset="utf-8" /><meta
     name="viewport"
     content="width=device-width,initial-scale=1"
-  /><title>Vera Performance 1.0.3 · Administración</title
+  /><title>Vera Performance 2.0 beta · Administración</title
   ><style>
     * {
       box-sizing: border-box;
@@ -50,7 +50,7 @@
       display: block;
     }
   body{background:#0c1915;color:#eff5ee;font-family:system-ui}h1,h2{font-family:inherit;letter-spacing:-.04em}h1{font-size:clamp(30px,5vw,50px)}section{background:#162820;border:1px solid #344a3e}button{background:#c9f56a;color:#14201a;font-weight:650}input,select{background:#11221b;color:white}#week{display:grid;gap:5px}#week meter{accent-color:#c9f56a;width:50%}</style>
-  <h1>Vera Performance 1.0.3 · Administración</h1>
+  <h1>Vera Performance 2.0 beta · Administración</h1>
   <section id="access">
     <label
       >Correo <input type="email" id="email" autocomplete="username" /></label
@@ -132,7 +132,7 @@
     }
     async function refresh() {
       const d = await call("summary");
-      const op=d.operations;if(op)el("operations").textContent="Backend "+op.build+" · Base de datos consultada · Clave IA "+(op.openAIConfigured?"configurada":"pendiente")+" · Places "+(op.placesConfigured?"configurado":"pendiente");
+      const op=d.operations;if(op)el("operations").textContent="Backend "+op.build+" · Base de datos consultada · Groq "+(op.aiRoutes?.coach?.configured?"configurado":"pendiente")+" · Gemini "+(op.aiRoutes?.photo?.configured?"configurado":"pendiente")+" (configuración, sin prueba de conexión) · Places "+(op.placesConfigured?"configurado":"pendiente");
       el("stats").textContent =
         d.accounts +
         " cuentas · " +

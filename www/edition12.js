@@ -11,42 +11,48 @@ function submitLogin12(action){
 }
 async function authenticated12(token){
  if(!token||!$('email')||$('email').value.trim()!==window.VeraNative.savedEmail())return;
+ const emailField=$('email'),email=emailField.value.trim();
  try{
    const r=await fetch(ACCOUNT_HOST+'/session',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:'{}'});
+   if(!emailField.isConnected||emailField.value.trim()!==email)return;
    if(r.status===401){VeraNative.forgetLogin();render();return msg('Tu sesión ha caducado. Escribe la contraseña.');}
    if(!r.ok)throw Error('No se pudo validar la sesión.');
-   const data=await r.json();if(!data.id)throw Error('Actualiza también el servidor para usar el acceso recordado.');
+   const data=await r.json();if(!emailField.isConnected||emailField.value.trim()!==email)return;if(!data.id)throw Error('Actualiza también el servidor para usar el acceso recordado.');
    sessionStorage.veraToken=token;sessionStorage.veraUser=ACCOUNT_HOST+'/'+data.id;localStorage.veraRememberedUser=sessionStorage.veraUser;
-   s=JSON.parse(localStorage.getItem(storageKey())||'null')||initial();validSession=true;go('Hoy');
+   clearSessionMedia14();s=loadVeraState(storageKey());if(data.nick)s.profile.nick=data.nick;validSession=true;go('Hoy');
  }catch(e){msg(e.message);}
 }
 async function plate12(el){
  const file=el.files?.[0];if(!file)return;
+ const mediaOwner=sessionStorage.veraUser,mediaToken=sessionStorage.veraToken,mediaState=s;
  const owner=$('machineResult'),gym=$('gymNow').value,im=new Image();im.src=await readData(file);await im.decode();
+ if(!sameVeraSession(mediaOwner,mediaToken,mediaState)||!el.isConnected)return;
  const c=document.createElement('canvas'),ratio=Math.min(1,1600/Math.max(im.width,im.height));c.width=Math.round(im.width*ratio);c.height=Math.round(im.height*ratio);
  const ctx=c.getContext('2d');ctx.drawImage(im,0,0,c.width,c.height);const pixels=ctx.getImageData(0,0,c.width,c.height);
  const qr=jsQR(pixels.data,c.width,c.height)?.data?.trim().slice(0,512)||'';
  const src=c.toDataURL('image/jpeg',.92),rev=++machineRevision;machinePlate=src;
- const label=await readLabel(src).catch(()=>'');
  if(!owner.isConnected||$('gymNow').value!==gym||rev!==machineRevision)return;
- const d={...machineDraft};for(const k of ['type','brand','model','fit','muscles','operation'])if($('m_'+k))d[k]=$('m_'+k).value;
- const joined=label.replace(/\s+/g,' ');
- if(/life\s*fitness/i.test(joined))d.brand='Life Fitness';else if(/hammer\s*strength/i.test(joined))d.brand='Hammer Strength';
- const model=label.match(/(?:model(?:o)?|product code)\s*[:#-]?\s*([A-Z0-9][A-Z0-9-]{2,25})\b/i);if(model)d.model=model[1];
  const prior=qr&&(s.machines||[]).find(m=>m.gym===gym&&m.qr===qr);
- if(prior){Object.assign(d,prior);}
- if(qr)d.qr=qr;
- d.evidence=[label.trim().slice(0,250),qr?'QR leído · '+qr:''].filter(Boolean).join(' · ')||'Placa ilegible. Prueba de frente, con luz y sin reflejos.';
- machineDraft=d;showMachine();if(!prior&&machinePhoto&&sessionStorage.veraToken&&s.preferLocal!==true&&VeraPrivacy6.allowed('cloud'))return identify();msg(prior?'Encontrada en tu inventario.':'Revisa la identificación antes de guardarla.');
+ machineDraft={...(prior||machineDraft||{}),...(qr?{qr}:{}),evidence:qr?'QR leído · '+qr:'Placa adjunta, pendiente de análisis con Gemini.'};
+ showMachine();
+ if(prior)return msg('Encontrada en tu inventario mediante QR. Revisa la ficha.');
+ if(machinePhoto)return identify();
+ msg('Placa adjunta. Añade una foto de la máquina completa para analizar ambas con Gemini.');
 }
 function addIngredient12(){
  const row=document.createElement('fieldset');
- row.innerHTML='<label>Ingrediente<input class="componentName"></label><label>Gramos consumidos<input class="componentGrams" type="number" min="1"></label><label>kcal por 100 g, si se conocen<input class="componentEnergy" type="number" min="0"></label><button type="button">Quitar ingrediente</button>';
+ row.innerHTML='<label>Ingrediente<input class="componentName"></label><label>Gramos consumidos<input class="componentGrams" type="number" min="1"></label><label>kcal por 100 g, si se conocen<input class="componentEnergy" type="number" min="0"></label><details><summary>Macros por 100 g (opcional)</summary><label>Proteína<input class="componentProtein" type="number" min="0" step="any"></label><label>Hidratos<input class="componentCarbs" type="number" min="0" step="any"></label><label>Grasa<input class="componentFat" type="number" min="0" step="any"></label></details><button type="button">Quitar ingrediente</button>';
  row.querySelector('button').onclick=()=>row.remove();$('components12').append(row);
 }
+function mealTotals14(rows){
+ const metrics=['energy','protein','carbs','fat'];
+ if(rows.some(x=>!x.name.trim()||!Number.isFinite(x.grams)||x.grams<=0||metrics.some(k=>x[k]!==''&&x[k]!=null&&(!Number.isFinite(Number(x[k]))||Number(x[k])<0))))throw Error('Revisa los nombres, las cantidades y los nutrientes.');
+ const ingredients=rows.map(x=>({name:x.name.trim(),confirmedGrams:x.grams,...Object.fromEntries(metrics.map(k=>[k==='energy'?'kcal':k,x[k]===''||x[k]==null?null:x.grams*Number(x[k])/100]))}));
+ const totals=Object.fromEntries(['kcal','protein','carbs','fat'].map(k=>[k,ingredients.every(x=>x[k]!==null)?ingredients.reduce((sum,x)=>sum+x[k],0):null]));
+ return {ingredients,value:totals.kcal===null?null:Math.round(totals.kcal),protein:totals.protein,carbs:totals.carbs,fat:totals.fat};
+}
 function saveMeal12(){
- const rows=[{name:$('foodItem').value,grams:+$('foodGrams').value,energy:$('foodKcal').value},...Array.from($('components12').children,row=>({name:row.querySelector('.componentName').value,grams:+row.querySelector('.componentGrams').value,energy:row.querySelector('.componentEnergy').value}))];
- if(rows.some(x=>!x.name.trim()||!Number.isFinite(x.grams)||x.grams<=0||(x.energy!==''&&(!Number.isFinite(+x.energy)||+x.energy<0))))return msg('Revisa los nombres, las cantidades y la energía.');
- const allKnown=rows.every(x=>x.energy!=='');
- s.logs.push({date:day(),kind:'Comida',note:rows.map(x=>x.name.trim()+' · '+x.grams+' g').join(', '),ingredients:rows.map(x=>({name:x.name.trim(),confirmedGrams:x.grams,kcal:x.energy===''?null:x.grams*Number(x.energy)/100})),value:allKnown?Math.round(rows.reduce((sum,x)=>sum+x.grams*Number(x.energy)/100,0)):null,source:'foto confirmada'});save();go('Alimentación');
+ const rows=[{name:$('foodItem').value,grams:+$('foodGrams').value,energy:$('foodKcal').value,protein:$('foodProtein')?.value??'',carbs:$('foodCarbs')?.value??'',fat:$('foodFat')?.value??''},...Array.from($('components12').children,row=>({name:row.querySelector('.componentName').value,grams:+row.querySelector('.componentGrams').value,energy:row.querySelector('.componentEnergy').value,protein:row.querySelector('.componentProtein')?.value??'',carbs:row.querySelector('.componentCarbs')?.value??'',fat:row.querySelector('.componentFat')?.value??''}))];
+ let totals;try{totals=mealTotals14(rows);}catch(error){return msg(error.message);}
+ s.logs.push({date:day(),kind:'Comida',note:rows.map(x=>x.name.trim()+' · '+x.grams+' g').join(', '),...totals,source:'foto confirmada'});save();go('Alimentación');msg('Comida guardada en este dispositivo. Los nutrientes sin referencia quedan sin dato.');
 }

@@ -1,0 +1,141 @@
+{
+  "title": "VERA — investigación de producto y evolución propuesta",
+  "reviewDate": "2026-11-22",
+  "scope": "Revisión estática de código actual y fuentes públicas primarias. No es un estudio con usuarios, prueba de eficacia clínica ni verificación de las funciones remotas de la app. No se modificó código en esta revisión.",
+  "observed": [
+    {"id":"P-O1","area":"Catálogo","evidence":"www/exercises.json contiene 876 registros y 876 IDs únicos. www/list7.js conserva los nombres en inglés; www/catalog6.js pinta x.name.","finding":"Los alias españoles sirven para buscar, pero no traducen los resultados ni las instrucciones. La queja de ejercicios en inglés sigue vigente."},
+    {"id":"P-O2","area":"Continuidad del historial","evidence":"www/session13.js:previousSet13 compara exercise normalizado, sin catalogId.","finding":"Renombrar ejercicios al español directamente puede separar el historial de cargas. La migración debe basarse en identidad estable, conservando el nombre original."},
+    {"id":"P-O3","area":"Social","evidence":"partners.mjs define partner_rooms con host y guest; www/partners.js sólo dibuja host/guest y el formulario pide un compañero.","finding":"Existe entrenamiento en pareja y reto por series. No existe el modelo de miembros necesario para grupos, lista de amigos, invitaciones múltiples o puntuación personal longitudinal."},
+    {"id":"P-O4","area":"Suplementación","evidence":"www/catalog6.js mapea cada resultado DSLD con n:{}; www/perf6.js sólo calcula macros desde label y gramos.","finding":"El buscador reconoce marca/presentación pero no descarga la composición de la etiqueta. Elegir un resultado DSLD deja nutrientes desconocidos. No es un fallo del reconocimiento visual en sí."},
+    {"id":"P-O5","area":"Cobertura nutricional","evidence":"www/index.html:coverage cuenta días que tengan al menos una Comida con value>0; considera limitada la cobertura si hay menos de 4 días de comida o peso en cada semana.","finding":"Una sola comida registrada hace que ese día cuente, sin distinguir día completo/parcial. El código avisa de revisar completitud, pero no dispone de una señal estructurada para que el análisis la use."},
+    {"id":"P-O6","area":"Modelo de entrenamiento","evidence":"www/session13.js guarda registros individuales con ejercicio, kg, reps, RIR y fecha; www/catalog6.js agrupa repeticiones de varias series bajo una sola carga. No se localizaron campos routineId, sessionId ni setType en los scripts propios revisados.","finding":"La captura rápida por serie existe. Faltan identidad de sesión/rutina y tipo de serie para distinguir calentamiento, trabajo y técnicas especiales al medir volumen y progresión."},
+    {"id":"P-O7","area":"Catálogo muscular","evidence":"exercises.json utiliza 17 claves musculares: abdominals, abductors, adductors, biceps, calves, chest, forearms, glutes, hamstrings, lats, lower back, middle back, neck, quadriceps, shoulders, traps, triceps. Sueño guarda un group de texto libre.","finding":"Las relaciones entre esfuerzo muscular, molestias, sueño y nutrición no están normalizadas mediante IDs compartidos; pueden aparecer grupos equivalentes escritos de formas distintas."}
+  ],
+  "proposals": [
+    {
+      "id":"P01","priority":"P1","title":"Catálogo bilingüe con identidad estable",
+      "proposal":"Añadir traducciones revisadas name.es/name.en, sinónimos e instrucciones por idioma, manteniendo el ID fuente. Mostrar español por defecto y nombre inglés secundario. Guardar exerciseId y displayName por separado; enlazar legacy catalogId cuando exista.",
+      "reasoning":"Corrección directa del catálogo observado. El dataset ofrece identificadores estables aprovechables; no hace falta reescribir cientos de registros históricos.",
+      "evidenceType":"Código observado + diseño propuesto","sourceIds":["S01"],"effort":"Medio: estructura pequeña, revisión lingüística de 876 nombres y técnica más costosa.",
+      "acceptance":["Búsquedas press banca/bench press devuelven el mismo ID.","Cambiar idioma conserva historial y récords.","Los 876 IDs permanecen únicos y los registros sin traducción muestran inglés marcado como pendiente.","No fusionar automáticamente variantes, agarres o máquinas distintas por similitud de nombre."],
+      "privacy":"Procesar traducciones sobre catálogo público; no enviar diarios personales para traducirlo."
+    },
+    {
+      "id":"P02","priority":"P1","title":"Sesión estructurada y registro de una mano",
+      "proposal":"Introducir sesión, rutina y serie con IDs. La fila muestra último peso/repeticiones/RIR del mismo ejercicio y contexto; completar una serie inicia el descanso elegido. Conservar borrador al bloquear pantalla. Separar calentamiento y trabajo.",
+      "reasoning":"VERA ya tiene carga individual, último registro y temporizador. El siguiente salto útil es conectarlos con una sesión y evitar teclear repetidamente. Hevy distingue valores previos de los valores de rutina; Strong distingue plantilla de entrenamiento ejecutado.",
+      "evidenceType":"Funciones oficiales de referencia + propuesta VERA","sourceIds":["S02","S03"],"effort":"Medio-alto",
+      "acceptance":["Completar 3 series con cargas distintas conserva las tres cargas.","Alternar rutinas de fuerza e hipertrofia permite elegir historial del mismo programa o global.","Una plantilla planificada no aumenta estadísticas hasta completar series.","Probar guardado, bloqueo, reapertura y corte de red en un Android real."],
+      "privacy":"Historial privado; compartir una rutina no comparte cargas o notas personales por defecto."
+    },
+    {
+      "id":"P03","priority":"P1","title":"Separar sustitución de sesión y edición permanente de rutina",
+      "proposal":"Si una máquina está ocupada, ofrecer una sustitución para hoy con material y músculos compatibles. Al terminar, preguntar si se conserva la plantilla o se actualiza, mostrando cambios concretos.",
+      "reasoning":"Hevy documenta esa separación explícita. En VERA evita que una recomendación puntual de IA altere silenciosamente las próximas sesiones.",
+      "evidenceType":"Referencia de producto; beneficio inferido","sourceIds":["S04"],"effort":"Medio; depende de P02",
+      "acceptance":["Sustituir remo por polea hoy no cambia la plantilla sin aceptar.","Aceptar una propuesta crea nueva versión de rutina y conserva la anterior.","La app explica que cargas de máquinas diferentes no son directamente comparables."],
+      "privacy":"No requiere servicios externos para sustituciones del catálogo confirmado."
+    },
+    {
+      "id":"P04","priority":"P1","title":"Suplementos con etiqueta y porción realmente utilizables",
+      "proposal":"Tras seleccionar DSLD, obtener el detalle por ID, país, fecha y versión de etiqueta. Mapear cantidad/unidad por porción y permitir cápsulas o scoops sólo con equivalencia declarada. Foto frontal identifica producto; foto de tabla aporta composición. Confirmar antes de guardar.",
+      "reasoning":"La API DSLD v9 sí ofrece /label/{id}; VERA sólo usa la búsqueda y descarta composición. NIH describe una colección de etiquetas de productos vendidos en Estados Unidos, incluso fórmulas retiradas: no garantiza equivalencia con un bote europeo actual.",
+      "evidenceType":"Defecto estático y fuente oficial","sourceIds":["S05","S06"],"effort":"Medio",
+      "acceptance":["Dos fórmulas de misma marca no se fusionan.","Registrar 2 cápsulas escala desde la porción de etiqueta sin convertir cápsulas a gramos arbitrariamente.","5 g de creatina no se convierten en 5 g de proteína.","Si la etiqueta no declara un nutriente, el valor sigue desconocido, no cero.","Conservar URL/ID, fecha y base de cálculo en el registro."],
+      "privacy":"Búsqueda por producto sin datos del usuario. Recortar fotos para no incluir rostro, receta o documentación ajena."
+    },
+    {
+      "id":"P05","priority":"P1","title":"Foto de comida con corrección visible y procedencia",
+      "proposal":"Mostrar ingredientes, gramos, fuente nutricional, rango estimado y supuestos; permitir foto+texto, corregir cocido/crudo y aceite/salsas antes de confirmar. Sustituir un ingrediente por uno de catálogo sin rehacer toda la comida.",
+      "reasoning":"MacroFactor documenta foto, foto+texto y resultados editables. Eso respalda un patrón de interacción, no prueba precisión para VERA. La corrección de macros de esta entrega es una base; falta vincular cada ingrediente con una fuente verificable.",
+      "evidenceType":"Referencia oficial + propuesta","sourceIds":["S07"],"effort":"Medio",
+      "acceptance":["Editar de 100 a 200 g duplica únicamente nutrientes conocidos.","El estado crudo/cocido se conserva.","La estimación nunca se etiqueta medición exacta.","Un plato sin ración fiable pide corrección en vez de inventar micronutrientes."],
+      "privacy":"Consentimiento de foto específico y descarte de imagen cuando deja de ser necesaria."
+    },
+    {
+      "id":"P06","priority":"P1","title":"Días completos, parciales y sin datos",
+      "proposal":"Añadir estado diario de cobertura nutricional, con confirmación sencilla. Mostrar cobertura junto a tendencias e impedir ajustes automáticos basados en días parciales no identificados. No borrar los registros parciales: excluirlos del cálculo que exija completitud.",
+      "reasoning":"MacroFactor explica que ingestas parciales pueden distorsionar sus cálculos de gasto. En VERA, contar cualquier comida como día cubierto es insuficiente. El algoritmo concreto debe diseñarse y validarse propio; no copiar umbrales como prescripción universal.",
+      "evidenceType":"Código observado y razonamiento apoyado en producto","sourceIds":["S08"],"effort":"Medio",
+      "acceptance":["Un café registrado no equivale a día completo.","Un día sin datos no se interpreta como ingesta cero.","Las gráficas indican cuántos días válidos sostienen la comparación.","Cambiar la cobertura recalcula resultados derivados y deja trazabilidad."],
+      "privacy":"La cobertura se mantiene privada; un reto no necesita ingestas o peso corporal."
+    },
+    {
+      "id":"P07","priority":"P1","title":"Retos de grupo con miembros, reglas y salida",
+      "proposal":"Migrar host/guest a tabla de miembros con invitación/aceptación/salida y roles. Ofrecer objetivo cooperativo y reto por adherencia, con fechas, reglas versionadas e historial. Mantener las salas antiguas como grupos de dos.",
+      "reasoning":"Strava documenta retos privados de participantes, reglas, ventana temporal y objetivo cooperativo sin clasificación. Es una referencia útil, no una razón para copiar su límite o condiciones comerciales.",
+      "evidenceType":"Brecha funcional observada + fuente oficial","sourceIds":["S09"],"effort":"Alto: migración backend, autorización y UI",
+      "acceptance":["Cinco cuentas aceptadas ven la misma sala; una sexta no puede leerla.","Salir revoca acceso futuro; invitado sin aceptar no aparece en clasificación.","Reenviar el mismo evento no suma puntos dos veces.","Mismo resultado produce empate reproducible.","Migración de sala legacy conserva participantes, series y estado."],
+      "privacy":"Compartir únicamente contribución al reto; nunca chats, lesiones, sueño, fotos corporales o dieta. Añadir bloqueo y límites de invitación antes de descubrimiento abierto."
+    },
+    {
+      "id":"P08","priority":"P2","title":"Puntuación explicable que no premie sobreentrenar",
+      "proposal":"Puntuar adherencia a objetivos pactados y progresión relativa dentro de ejercicios comparables, con límites. Mostrar componentes, cobertura y versión de reglas. La IA explica la puntuación; las reglas producen el número de forma reproducible.",
+      "reasoning":"Propuesta de VERA. La bibliografía diferencia objetivos y variables de entrenamiento; no valida un score comercial universal. Más kilos o más series no deben significar automáticamente mejor salud o mejor recuperación.",
+      "evidenceType":"Inferencia de diseño, no score validado","sourceIds":["S10"],"effort":"Alto; depende de P02, P06 y P07",
+      "acceptance":["Dos ejecuciones con mismos datos/reglas producen el mismo resultado.","Duplicados y datos futuros no suman.","Descanso programado no penaliza la adherencia.","Pocos datos producen score no disponible o baja cobertura, no una certeza inventada.","No comparar kg de máquinas distintas ni exigir publicar peso corporal."],
+      "privacy":"Puntuación compartida sólo por adhesión; componentes sensibles permanecen privados."
+    },
+    {
+      "id":"P09","priority":"P1","title":"Mapa muscular y contexto común con fechas",
+      "proposal":"Normalizar los 17 grupos del catálogo en una taxonomía española, conectar series y molestias mediante IDs y mantener fecha/procedencia. Mostrar carga de trabajo y sensaciones declaradas, sin porcentaje de músculo recuperado inventado.",
+      "reasoning":"La app ya contiene taxonomía muscular y contexto de sueño, pero los conecta mediante textos y resúmenes. La mejora exige datos estructurados antes de añadir más agentes.",
+      "evidenceType":"Código observado + propuesta","sourceIds":["S01","S10"],"effort":"Medio-alto",
+      "acceptance":["Dorsal y lats se agrupan bajo el mismo ID sin perder texto original.","Un registro de piernas y una molestia de cuádriceps aparecen relacionados por fecha.","La recomendación señala registros concretos y datos que faltan.","La vista no diagnostica lesión ni calcula recuperación clínica."],
+      "privacy":"Acceso por cuenta autenticada; datos de dolor y salud excluidos de vistas sociales."
+    },
+    {
+      "id":"P10","priority":"P2","title":"Favoritos, recetas y unidades habituales",
+      "proposal":"Guardar comidas y suplementos frecuentes con porción propia; duplicar comida a otra fecha con nueva identidad de evento. Diferenciar definición de receta y consumo histórico para que editar receta no cambie silenciosamente el pasado.",
+      "reasoning":"MacroFactor documenta alimentos personalizados y porciones con nombre. En VERA evita repetir búsquedas y fotografías cuando ya se conoce la etiqueta; ahorro de pasos y de peticiones IA es una hipótesis a medir.",
+      "evidenceType":"Patrón oficial y propuesta","sourceIds":["S11"],"effort":"Medio",
+      "acceptance":["Una botella de 330 ml conserva equivalencia explícita.","Duplicar una comida crea un registro distinto; reintentar un envío conserva la misma identidad.","Editar definición pregunta si afecta consumos existentes, con vista previa.","Sin conexión, la UI distingue borrador local de persistencia confirmada."],
+      "privacy":"Biblioteca privada por defecto; compartir receta no incluye horario ni diario."
+    },
+    {
+      "id":"P11","priority":"P2","title":"Informe semanal corto y accionable",
+      "proposal":"Una tarjeta con 3 hechos verificables, 1 propuesta de ajuste y cobertura de datos. Enlazar las series/comidas/sueño que la sustentan. Rechazar o aceptar cambios explícitamente y recordar esa elección como preferencia, no como hecho médico.",
+      "reasoning":"Propuesta propia para reducir dispersión de la pestaña Equipo. La diferenciación de VERA sería conectar datos confirmados y explicar una decisión concreta, en vez de multiplicar paneles o respuestas de especialistas.",
+      "evidenceType":"Hipótesis de producto","sourceIds":[],"effort":"Medio; depende de memoria persistente y datos estructurados",
+      "acceptance":["Sin suficientes registros muestra qué falta.","Cada cifra coincide con una consulta determinista del periodo.","Aceptar/rechazar no altera registros de actividad.","Medir comprensión y utilidad con usuarios antes de afirmar mejora de adherencia."],
+      "privacy":"No incluir métricas íntimas en notificaciones de pantalla bloqueada."
+    },
+    {
+      "id":"P12","priority":"P1","title":"Validación de campo centrada en tareas",
+      "proposal":"Probar con personas reales registro de serie, repetición de comida, corrección de ración, recuperación de sesión y aceptación de reto. Medir éxito sin ayuda, errores, tiempo y abandono; accesibilidad con teclado/lector y mano única.",
+      "reasoning":"Propuesta de evaluación. Los tests lógicos existentes no demuestran que la interacción sea rápida o comprensible, y la revisión visual de esta sesión está bloqueada.",
+      "evidenceType":"Plan de medición, no resultados","sourceIds":[],"effort":"Medio",
+      "acceptance":["Publicar tareas, muestra y resultados reales, sin cifras inventadas.","Separar problemas de entendimiento, latencia y fallo de red.","Repetir en Android de memoria limitada y con letra ampliada.","Definir metas tras medir la línea base, no declarar arbitrariamente que la nueva UI es más rápida."],
+      "privacy":"Datos sintéticos en sesiones grabadas; consentimiento para investigación y borrado de grabaciones."
+    }
+  ],
+  "localizationPlan": {
+    "identity":"Mantener id original de Free Exercise DB como externalId; exerciseId interno estable. No usar traducción como clave primaria.",
+    "fields":["exerciseId","source","externalId","names.es","names.en","aliases.es","aliases.en","instructions.es","instructions.en","primaryMuscleIds","secondaryMuscleIds","equipmentIds","translationStatus","catalogVersion"],
+    "migration":"Primero enlazar registros que ya tengan catalogId exacto. Para entradas libres, sugerir correspondencia y pedir confirmación si hay ambigüedad; conservar legacyName siempre. Histórico sin enlace sigue visible.",
+    "examples":[
+      {"id":"Barbell_Bench_Press_-_Medium_Grip","en":"Barbell Bench Press - Medium Grip","es":"Press de banca con barra, agarre medio"},
+      {"id":"Barbell_Squat","en":"Barbell Squat","es":"Sentadilla con barra"},
+      {"id":"Bent_Over_Barbell_Row","en":"Bent Over Barbell Row","es":"Remo inclinado con barra"},
+      {"id":"Dumbbell_Bench_Press","en":"Dumbbell Bench Press","es":"Press de banca con mancuernas"},
+      {"id":"Leg_Press","en":"Leg Press","es":"Prensa de piernas"},
+      {"id":"Romanian_Deadlift","en":"Romanian Deadlift","es":"Peso muerto rumano"},
+      {"id":"Seated_Cable_Rows","en":"Seated Cable Rows","es":"Remo sentado en polea"},
+      {"id":"Wide-Grip_Lat_Pulldown","en":"Wide-Grip Lat Pulldown","es":"Jalón al pecho con agarre ancho"}
+    ],
+    "review":"Ejemplos lingüísticos propuestos, no nueva biblioteca implementada. Revisar técnica e imágenes por variante y conservar fuente/licencia; la licencia del dataset no certifica la seguridad técnica de cada instrucción."
+  },
+  "sources":[
+    {"id":"S01","title":"Free Exercise DB — repositorio fuente","url":"https://github.com/yuhonas/free-exercise-db","checked":"2026-11-22","supports":"Dataset público con campos e IDs, referencia de procedencia del catálogo."},
+    {"id":"S02","title":"Hevy — valores del entrenamiento anterior","url":"https://help.hevyapp.com/hc/en-us/articles/36011896355479-How-to-Use-Previous-Workout-Values-to-Improve-Performance-in-Hevy","checked":"2026-11-22","supports":"Referencia previa global o de la misma rutina; información previa distinta de los valores objetivo."},
+    {"id":"S03","title":"Strong — plantilla frente a entrenamiento","url":"https://help.strongapp.io/article/105-about-templates","checked":"2026-11-22","supports":"Plantilla sin series completadas ni fecha de ejecución; reutilizar una sesión como plantilla."},
+    {"id":"S04","title":"Hevy — actualizar o conservar rutina","url":"https://help.hevyapp.com/hc/en-us/articles/38387296276375-Update-Routine-vs-Keep-Original-Routine","checked":"2026-11-22","supports":"Cambios estructurales de una sesión pueden aplicarse a plantilla o conservarla."},
+    {"id":"S05","title":"NIH ODS — Dietary Supplement Label Database","url":"https://ods.od.nih.gov/research/dietary_supplement_label_database.aspx","checked":"2026-11-22","supports":"Etiquetas estadounidenses, productos actuales y retirados, cambios de formulación."},
+    {"id":"S06","title":"NIH DSLD Label API v9","url":"https://api.ods.od.nih.gov/dsld/v9/","checked":"2026-11-22","supports":"API v9.4.0 documentada; búsqueda y detalle /v9/label/{id}; declaración CC0."},
+    {"id":"S07","title":"MacroFactor — AI Food Logging","url":"https://help.macrofactorapp.com/en/articles/258-ai-food-logging","checked":"2026-11-22","supports":"Foto+texto, porciones estimadas y revisión editable antes de registrar."},
+    {"id":"S08","title":"MacroFactor — registro parcial","url":"https://help.macrofactorapp.com/en/articles/241-what-is-partial-logging","checked":"2026-11-22","supports":"Distinguir una ingesta parcial de un día completo para interpretar tendencias."},
+    {"id":"S09","title":"Strava — retos de grupo","url":"https://support.strava.com/en-us/articles/15401736-how-do-group-challenges-work-on-strava","checked":"2026-11-22","supports":"Participación privada, invitaciones, reglas y fechas, salida y objetivo cooperativo."},
+    {"id":"S10","title":"ACSM Position Stand 2026 — Resistance Training Prescription","url":"https://pubmed.ncbi.nlm.nih.gov/41843416/","checked":"2026-11-22","supports":"Síntesis de revisiones sobre entrenamiento progresivo en adultos sanos; objetivos distintos requieren interpretar variables, sin score universal de recuperación."},
+    {"id":"S11","title":"MacroFactor — alimento personalizado y porciones","url":"https://help.macrofactorapp.com/en/articles/5-create-and-add-a-custom-food","checked":"2026-11-22","supports":"Etiqueta/identidad de producto y porciones con unidad y cantidad propias."}
+  ]
+}

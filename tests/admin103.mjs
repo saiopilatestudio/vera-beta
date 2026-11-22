@@ -1,3 +1,4 @@
+import './test-env.mjs';
 import assert from "node:assert/strict";
 import {randomBytes} from "node:crypto";
 import {ownerLogin,ownerSession,ownerLogout,allowed,ownerCookie} from "../owner.mjs";

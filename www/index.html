@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 1.0.3 beta
+    Vera 2.0 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="1.0.3 beta" />
-  <script src="ort.js"></script><script src="ai5.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="diario5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script><script src="local.js"></script>
-  <script src="ocr.js"></script>
+  <meta name="vera-build" content="2.0 beta" />
+  <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
+  
   <header>
-    <img src="brand.png" class="brand7" alt="VERA Performance">
+    <div class="brand14" role="img" aria-label="VERA Performance 2.0 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.0 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -605,12 +605,7 @@
       memory: [],
       endpoint: "",
     });
-    let s =
-      JSON.parse(
-        localStorage.getItem(storageKey()) ||
-          (!sessionStorage.veraUser && localStorage.getItem("vera.v1")) ||
-          "null",
-      ) || initial();
+    let s = loadVeraState(storageKey(), !sessionStorage.veraUser ? "vera.v1" : "");
     let tab = s.profile.name ? "Hoy" : "Perfil",
       period = 7,
       kind = "Entrenamiento",
@@ -647,10 +642,10 @@
     function save() {
       delete s.profile.template;
       markLogs();
-      localStorage.setItem(storageKey(), JSON.stringify(s));
+      persistVeraState();
     }
     function msg(t) {
-      $("notice").textContent = t;
+      $("notice").textContent = stateReadError || stateWriteError || t;
     }
     function go(t) {
       if (!validSession) {
@@ -677,7 +672,7 @@
     }
     function btn(t, fn, primary = false) {
       return (
-        '<button class="' +
+        '<button type="button" class="' +
         (primary ? "primary" : "") +
         '" onclick="' +
         fn +
@@ -714,7 +709,9 @@
         .join("");
     }
     function render() {
+      VeraSpeech14.stop();
       VeraPartners.stop();
+      if(stateReadError||stateWriteError)msg(stateReadError||stateWriteError);
       $("topTools").style.display = validSession ? "flex" : "none";
       $("nav").style.display = validSession ? "flex" : "none";
       if (!validSession) {
@@ -745,7 +742,8 @@
       };
       $("view").innerHTML =
         (tab === "Chat" ? "" : "<h1>" + safe(tab) + "</h1>") +
-        (pages[tab] || convo)();
+        VeraPrivacy6.prompt() + (pages[tab] || convo)();
+      for(const button of $("nav").querySelectorAll("button")) if(button.classList.contains("primary")) button.setAttribute("aria-current","page");
       if (tab === "Chat")
         for (const section of $("view").querySelectorAll("section"))
           if (section.firstElementChild?.textContent === "TÚ")
@@ -754,13 +752,12 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      const engine = typeof window.veraGenerate === "function" ? "motor JS cargado (modelo no verificado)" : "motor local NO cargado";
-      const ocr = typeof window.Tesseract !== "undefined" ? "OCR JS disponible" : "OCR JS no disponible";
-      return '<details><summary>Diagnóstico técnico · Vera 1.0.3 beta</summary><p>Build: 13</p><p>Origen: '+safe(origin)+
-        '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>'+safe(engine)+'</p><p>'+safe(ocr)+'</p><p>Sesión autenticada: '+
-        (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>Los datos de entrenamiento siguen guardándose localmente en cada navegador/dispositivo, no se sincronizan aún.</p></details>';
+      return '<details><summary>Diagnóstico técnico · Vera 2.0 beta</summary><p>Build: 200</p><p>Origen: '+safe(origin)+
+        '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube, con funciones separadas. Cada consulta verifica la configuración del servidor; no hay modelos en el dispositivo.</p><p>Sesión autenticada: '+
+        (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario se guarda en este dispositivo. La sincronización manual de registros está disponible en Perfil; fotos y conversaciones quedan fuera.</p></details>';
     }
     function exportVera() {
+      if(blockedStateKey===storageKey())return exportOriginalState();
       const payload={format:'vera-local-backup',version:1,created:new Date().toISOString(),state:s};
       if(window.VeraNative?.exportBackup){VeraNative.exportBackup(JSON.stringify(payload));return;}
       const file = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
@@ -777,7 +774,11 @@
         if(d.format!=='vera-local-backup'||d.version!==1||!d.state||!Array.isArray(d.state.logs)||!Array.isArray(d.state.turns)||typeof d.state.profile!=='object')
           throw Error('Formato de respaldo no válido.');
         if(!confirm('¿Reemplazar los datos LOCALES de este dispositivo por el respaldo? Esto no fusiona registros.'))return;
-        s=d.state;save();render();msg('Datos locales restaurados.');
+        const restored=validateVeraState(d.state);
+        // Sync revisions belong to this account/server, never to a portable backup.
+        restored.diaryRevisions={};
+        localStorage.setItem(storageKey(),JSON.stringify(restored));
+        s=restored;stateReadError='';stateWriteError='';blockedStateKey='';render();msg('Datos locales restaurados. Revisa el diario antes de sincronizar.');
       }catch(e){msg('No se pudo restaurar: '+e.message);}
       finally{input.value='';}
     }
@@ -785,7 +786,7 @@
       let p = s.profile;
       return (
         nickPanel()+VeraJournal.panel()+VeraPrivacy6.panel()+prefs() +
-        versionInfo() + btn("Probar IA local","veraTestAI(msg).then(r=>msg(r.answer)).catch(e=>msg(e.message))") + (window.VeraNative?.chooseVoice?btn("Elegir voz","VeraNative.chooseVoice()"):"")+
+        versionInfo() +
         '<details><summary>Respaldo de mis datos</summary><p>Exporta tus datos antes de reinstalar la aplicación. No hay sincronización automática entre la APK y la web.</p>'+
         btn("Exportar respaldo JSON", "exportVera()")+
         '<label>Restaurar respaldo<input type="file" accept="application/json,.json" onchange="importVera(this)"></label></details>' +
@@ -843,7 +844,6 @@
           !["localhost", "127.0.0.1"].includes(u.hostname)
         )
           throw Error();
-        if(data.nick)s.profile.nick=data.nick;
         s.endpoint = u.origin;
         sessionStorage.veraToken = $("token").value.trim();
         save();
@@ -1008,8 +1008,8 @@
               "Repeticiones en reserva en la última serie",
               "",
               "number",
-              'min="0" max="20"',
-            )
+              'min="0" max="10"',
+            ) + '<p><small>'+rirHelp14+'</small></p>'
           : "") +
         '<label>Detalle o sensaciones<textarea id="detail" ' +
         (["Sensaciones", "Comida"].includes(kind) ? "required" : "") +
@@ -1043,40 +1043,25 @@
           pump: $("pump").value,
           soreness: $("soreness").value,
         });
-        let reps = $("reps").value.trim().split(/[, ]+/).map(Number);
-        if (reps.some((x) => !Number.isInteger(x) || x <= 0)) {
-          msg("Comprueba las repeticiones de cada serie.");
-          return;
-        }
-        Object.assign(l, {
-          exercise: $("exercise").value.trim(),
-          kg: Number($("load").value),
-          reps,
-          rir: $("rir").value,
-        });
-        l.note = [
-          l.exercise,
-          l.kg + " kg",
-          reps.join(" / ") + " rep.",
-          l.rir ? "RIR " + l.rir : "",
-          l.note,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+        try{Object.assign(l,validateTraining14({exercise:$('exercise').value,date:l.date,enteredKg:$('load').value,mode:l.mode,reps:$('reps').value,rir:$('rir').value,note:l.note}));}catch(e){return msg(e.message);}
       }
       s.logs.push(l);
       save();
       go("Hoy");
     }
-    async function api(path, data, blob = false) {
-      if(["coach","intro","photo","machine","label","listen","speak"].includes(path)){
+    async function api(path, data, blob = false, options = {}) {
+      const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s,privacyRevision=VeraPrivacy6.revision;
+      const remoteAI=["coach","intro","photo","machine","label","listen","speak"].includes(path);
+      if(remoteAI){
         if(!VeraPrivacy6.allowed("cloud"))throw Error("Activa el análisis remoto desde Privacidad.");
-        await VeraPrivacy6.ensureRemote();
+        await VeraPrivacy6.ensureRemote(path,data,options.signal);
       }
       if (!sessionStorage.veraToken)
         throw Error(
           "Entra en Mi perfil → Mi cuenta para usar el equipo de IA.",
         );
+      if(remoteAI&&(!VeraPrivacy6.allowed("cloud")||privacyRevision!==VeraPrivacy6.revision))throw Error("Análisis remoto desactivado.");
+      if(!sameVeraSession(owner,token,state))throw Error("La sesión ha cambiado. Repite la operación en tu cuenta actual.");
       const r = await fetch(ACCOUNT_HOST + "/" + path, {
         method: "POST",
         headers: {
@@ -1084,8 +1069,9 @@
           Authorization: "Bearer " + sessionStorage.veraToken,
         },
         body: JSON.stringify(data),
-        signal: AbortSignal.timeout(path==="places"?5500:90000),
+        signal: options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(90000)]):AbortSignal.timeout(path==="places"?5500:90000),
       });
+      if(!sameVeraSession(owner,token,state))throw Error("La sesión ha cambiado. Repite la operación en tu cuenta actual.");
       if (r.status === 401) {
         sessionStorage.removeItem("veraToken");
         // Keep the diary bound to its owner after the bearer expires.
@@ -1097,7 +1083,10 @@
           (await r.json().catch(() => ({}))).error ||
             "El servidor no responde.",
         );
-      return blob ? r.blob() : r.json();
+      const result=await (blob ? r.blob() : r.json());
+      if(!sameVeraSession(owner,token,state))throw Error("La sesión ha cambiado. Repite la operación en tu cuenta actual.");
+      if(remoteAI&&(!VeraPrivacy6.allowed("cloud")||privacyRevision!==VeraPrivacy6.revision))throw Error("Has revocado el análisis remoto. No se incorpora la respuesta recibida.");
+      return result;
     }
     function chatPage() {
       return (
@@ -1116,9 +1105,10 @@
               safe(t.question) +
               '</p><h3>Vera</h3><div class="answer">' +
               VeraActions.markdown(t.answer) +
-              "</div>" +
-              VeraActions.review(t) + proposals(t) +
-              btn("Escuchar voz IA", "speak(" + s.turns.indexOf(t) + ")") +
+              "</div>" + btn("Escuchar en español · Gemini", "VeraSpeech14.speak("+s.turns.indexOf(t)+")") +
+              contextCoverage14(t) + VeraActions.review(t) + proposals(t) +
+              (typeof t.plan==="string"&&t.plan ? "<details><summary>Propuesta de plan</summary><p class=pre>"+safe(t.plan)+"</p>"+btn("Usar este plan","adoptPlan("+s.turns.indexOf(t)+")")+"</details>" : "") +
+
               (t.memory && !s.memory.includes(t.memory)
                 ? btn(
                     "Recordar esta preferencia",
@@ -1183,19 +1173,20 @@
         )
         .join("");
     }
+    function adoptPlan(i){
+      const plan=s.turns[i]?.plan;if(typeof plan!=="string"||!plan.trim())return;
+      s.plan=plan;save();msg("Plan aceptado y guardado en este dispositivo.");
+    }
     function adopt(i) {
       let t = s.turns[i];
       if (t.memory && !s.memory.includes(t.memory)) s.memory.push(t.memory);
       save();
       render();
     }
+    let actionPending=false;
     async function ask(question, specialty) {
-      if (busy || !question.trim()) return;
-      if (!specialty && await VeraActions.handle(question)) return;
-      if(attached && /comida|plato|alimento|caloría/i.test(question))return sessionStorage.veraToken&&VeraPrivacy6.allowed("cloud")&&s.preferLocal!==true?analyzeChatImage(question,specialty):chatPlate();
+      if (busy || actionPending || !question.trim()) return;
       if (attached) return analyzeChatImage(question, specialty);
-      if(!specialty){const answer=VeraDiary.recall(question,s.logs),entries=answer?[]:VeraDiary.parse(question);if(answer||entries.length){s.turns.push({date:day(),question,answer:answer||"Revisa las fechas y confirma los registros.",entries,reports:[],engine:"local"});save();go("Chat");return;}}
-      if (s.preferLocal===true || !VeraPrivacy6.allowed("cloud") || !sessionStorage.veraToken) return localAnswer(question, specialty);
       if (!s.profile.name && !s.profile.introduced) {
         go("Chat");
         return intro(question);
@@ -1206,39 +1197,24 @@
       msg("El equipo está revisando tus registros…");
       try {
         markLogs();
-        const supplied = s.logs.filter(
-          (x) => x.date >= day(new Date(Date.now() - 56 * 86400000)),
-        );
-        let d = await api("coach", {
-          question: specialty ? specialty+" · "+question : question,
-          profile: { ...s.profile, template: undefined },
-          memory: activeMem(),
-          gym: s.gym,
-          equipment: (s.gyms || {})[s.gym],
-          machines: (s.machines || []).filter((m) => m.gym === s.gym),
-          recovery: readiness(),
-          logs: s.logs.filter(
-            (x) => x.date >= day(new Date(Date.now() - 56 * 86400000)),
-          ),
-          nutritionCoverage: coverage(),
-          currentPlan: s.plan,
-          history: s.turns
-            .slice(-6)
-            .map(({ question, answer }) => ({ question, answer })),
-          today: day(),
-        });
+        const payload=buildCoachPayload14(question,specialty);
+        payload.mode=s.coachMode==='deep'?'deep':'standard';
+        const supplied=payload.logs;
+        if(payload.contextCoverage.truncated)msg('El equipo revisará '+payload.contextCoverage.included+' de '+payload.contextCoverage.total+' registros recientes. El contexto de esta consulta es parcial.');
+        let d = await api("coach", payload);
         s.turns.push({
           ...d,
           date: day(),
           question,
           inputIds: supplied.map((l) => l.id),
+          contextCoverage:payload.contextCoverage,
         });
-        if (d.plan) s.plan = d.plan;
+        // A generated plan remains a proposal until the user adopts it.
         save();
         go("Chat");
         msg("Decisión guardada. Puedes consultar las aportaciones en Equipo.");
       } catch (e) {
-        msg(e.message + " · Elige el motor local si lo tienes disponible.");
+        msg(e.message);
       } finally {
         busy = false;
       }
@@ -1280,22 +1256,6 @@
         : "<p>Tras la primera consulta verás la decisión de Vera y la aportación de cada especialidad.</p>" +
             roles.map((r) => "<section>" + r + "</section>").join("");
     }
-    async function speak(i) {
-      if (s.turns[i]?.engine === "local" && window.VeraNative) {
-        window.VeraNative.say(s.turns[i].answer);
-        return;
-      }
-      try {
-        let url = URL.createObjectURL(
-          await api("speak", { text: s.turns[i].answer }, true),
-        );
-        let a = new Audio(url);
-        a.onended = () => URL.revokeObjectURL(url);
-        await a.play();
-      } catch (e) {
-        msg(e.message);
-      }
-    }
     const readData = (file) =>
       new Promise((ok, no) => {
         let r = new FileReader();
@@ -1304,7 +1264,7 @@
         r.readAsDataURL(file);
       });
     async function dictate() {
-      if(window.VeraNative?.dictate){VeraNative.dictate();return;}
+
       if (recording) {
         recording.stop();
         return;
@@ -1313,10 +1273,15 @@
         msg("Conecta el servidor en Mi perfil para transcribir tu voz.");
         return;
       }
+      const audioOwner=sessionStorage.veraUser,audioToken=sessionStorage.veraToken,audioState=s,audioPrivacyRevision=VeraPrivacy6.revision;
+      const audioActive=()=>validSession&&sameVeraSession(audioOwner,audioToken,audioState)&&audioPrivacyRevision===VeraPrivacy6.revision&&VeraPrivacy6.allowed('cloud');
       try {
+        await VeraPrivacy6.ensureRemote('listen');
+        if(!audioActive())throw Error("La sesión ha cambiado. Repite la grabación en tu cuenta actual.");
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
+        if(!audioActive()){stream.getTracks().forEach(track=>track.stop());throw Error("La sesión ha cambiado. Se ha descartado la grabación.");}
         let rec = new MediaRecorder(stream),
           chunks = [];
         recording = rec;
@@ -1329,6 +1294,7 @@
             const audio = await readData(
               new Blob(chunks, { type: rec.mimeType }),
             );
+            if(!audioActive())throw Error("La sesión ha cambiado. Se ha descartado la grabación sin enviarla.");
             let r = await api("listen", {
               data: audio.split(",")[1],
               mime: rec.mimeType,
@@ -1354,12 +1320,14 @@
         "<section>" +
         camControls("preparePhoto") +
         '<div id="platePreview"></div><div id="foodReview"></div><label>Ración, aceite, salsas o sobras<textarea id="portion" placeholder="¿Cuánto comiste?"></textarea></label>' +
-        btn("Analizar ingredientes con OpenAI", "estimate()", true) +
+        btn("Analizar ingredientes con Gemini", "estimate()", true) + btn("Registrar comida manualmente", "foodReview()") +
         '<div id="estimate"></div></section>'
       );
     }
     let draft = null;
     async function preparePhoto(el) {
+      const mediaOwner=sessionStorage.veraUser,mediaToken=sessionStorage.veraToken,mediaState=s;
+      const mediaActive=()=>validSession&&sameVeraSession(mediaOwner,mediaToken,mediaState)&&el.isConnected;
       photoData = "";
       draft = null;
       $("estimate").innerHTML = "";
@@ -1368,6 +1336,7 @@
         let img = new Image();
         img.src = await readData(el.files[0]);
         await img.decode();
+        if(!mediaActive())return;
         let scale = Math.min(1, 1280 / Math.max(img.width, img.height));
         let c = document.createElement("canvas");
         c.width = img.width * scale;
@@ -1378,7 +1347,7 @@
           '<img alt="Plato elegido" style="max-width:100%;max-height:180px" src="' +
           photoData +
           '">';
-        if(sessionStorage.veraToken && VeraPrivacy6.allowed("cloud") && s.preferLocal!==true) await estimate(); else await foodReview(photoData);
+        await estimate();
       } catch {
         msg("El formato no se pudo abrir. Prueba con una foto JPEG.");
       }
@@ -1421,12 +1390,12 @@
         if (draft.ingredients?.length) ingredientTotal();
         msg("Estimación pendiente de tu confirmación.");
       } catch (e) {
-        msg(e.message+" · Se muestran sugerencias locales."); await foodReview(photoData);
+        msg(e.message+" · No se ha analizado ni guardado la comida. Puedes reintentar o registrarla manualmente.");
       }
     }
     function confirmMeal() {
       const v = $("kcal").value;
-      if (!v || +v < 0) return;
+      if (!v || !Number.isFinite(+v) || +v < 0) return msg("Revisa la energía de la comida.");
       s.logs.push({
         kind: "Comida",
         date: day(),
@@ -1468,11 +1437,11 @@
       return '<div class="bar-chart" role="img" aria-label="Gráfico de barras de '+safe(unit)+'">'+rows.map(([d,v])=>'<div class="bar-column" title="'+safe(d)+': '+v.toFixed(1)+' '+safe(unit)+'"><div class="bar-stick" style="height:'+Math.max(2,Math.round(100*v/peak))+'%"></div><span>'+safe(d.slice(5))+'</span></div>').join('')+'</div>';
     }
     function strengthSummary() {
-      const trained=s.logs.filter(l=>l.kind==='Entrenamiento' && l.exercise && l.date>=day(new Date(Date.now()-28*86400000)));
+      const trained=trainingRows14(28);
       const sets=trained.reduce((n,l)=>n+(Array.isArray(l.reps)?l.reps.length:0),0);
-      const volume=trained.reduce((n,l)=>n+((Number(l.kg)||0)*(Array.isArray(l.reps)?l.reps.reduce((a,v)=>a+(Number(v)||0),0):0)),0);
+      const volume=trainingVolume14(trained);
       const exercises=new Set(trained.map(l=>l.exercise));
-      return '<section class="stats"><h3>Fuerza · últimos 28 días</h3><div class="stat-grid"><div><b>'+sets+'</b><small>Series anotadas</small></div><div><b>'+Math.round(volume).toLocaleString('es-ES')+'</b><small>Volumen registrado · kg</small></div><div><b>'+exercises.size+'</b><small>Ejercicios distintos</small></div></div><p class="sub">Volumen = suma de carga × repeticiones. No sustituye a la intensidad o la recuperación.</p></section>';
+      return '<section class="stats"><h3>Fuerza · últimos 28 días</h3><div class="stat-grid"><div><b>'+sets+'</b><small>Series anotadas</small></div><div><b>'+Math.round(volume).toLocaleString('es-ES')+'</b><small>Volumen registrado · kg</small></div><div><b>'+exercises.size+'</b><small>Ejercicios distintos</small></div></div><p class="sub">Volumen externo = suma de carga total × repeticiones; no incluye el peso corporal. La asistencia cuenta como series, pero no se suma al volumen externo. No sustituye a la intensidad o la recuperación.</p></section>';
     }
     function progress() {
       return tile("Mediciones", "Peso, cintura y sensaciones") + progressBody();
@@ -1585,7 +1554,7 @@
           .join("") +
         "</table></section><section><h3>Marcas por sesión</h3>" +
         s.logs
-          .filter((x) => x.exercise && x.date >= day(from))
+          .filter((x) => x.exercise && trainingDate14(x.date) && x.date >= day(from) && x.date <= day(end))
           .map(
             (l) =>
               logLine(l) +
@@ -1685,11 +1654,11 @@
     function accountPanel() {
       if (sessionStorage.veraToken)
         return (
-          "<p>Sesión iniciada. Tu diario se guarda en este móvil.</p>" +
+          "<p>Sesión iniciada. Tu diario se guarda en este dispositivo; sincronízalo desde Perfil para conservar los registros en tu cuenta.</p>" +
           btn("Cerrar sesión", "signOut()")
         );
       return (
-        "<p>El diario funciona sin cuenta. Inicia sesión para consultar al equipo, dictar mensajes y analizar fotos. El servicio recibirá los registros que necesite para responder.</p>" +
+        "<p>Inicia sesión para abrir tu espacio personal. El análisis remoto opcional recibe el contexto necesario para responder.</p>" +
         field("email", "Correo", "", "email") +
         field("pass", "Contraseña", "", "password") +
         btn("Crear cuenta", "signIn('register')") +
@@ -1706,7 +1675,12 @@
             "</details>")
       );
     }
+    let loginPending=false;
     async function signIn(action) {
+      if(loginPending)return;
+      loginPending=true;
+      const loginForm=$("email")?.form;
+      for(const button of loginForm?.querySelectorAll("button")||[])button.disabled=true;
       try {
         let host =
           ACCOUNT_HOST ||
@@ -1734,6 +1708,7 @@
             adult: !!$("adult")?.checked,
             invite: "",
           }),
+          signal:AbortSignal.timeout(20000),
         });
         let data = await res.json();
         if (!res.ok) throw Error(data.error);
@@ -1744,16 +1719,19 @@
         localStorage.veraHost = u.origin;
         sessionStorage.veraToken = data.token;
         sessionStorage.veraUser = u.origin + "/" + data.id; localStorage.veraRememberedUser=sessionStorage.veraUser;
-        s =
-          JSON.parse(localStorage.getItem(storageKey()) || "null") || initial();
+        clearSessionMedia14();
+        s = loadVeraState(storageKey());
         if(data.nick)s.profile.nick=data.nick;
         s.endpoint = u.origin;
-        save();
+        if(!stateReadError)save();
         validSession = true;
         go("Hoy");
         msg("Has entrado en tu espacio personal.");
       } catch (e) {
         msg(e.message);
+      } finally {
+        loginPending=false;
+        for(const button of loginForm?.querySelectorAll("button")||[])button.disabled=false;
       }
     }
     async function signOut() {
@@ -1764,6 +1742,8 @@
       try {
         await api("logout", {});
       } catch {}
+      window.VeraNative?.forgetLogin?.();
+      localStorage.removeItem("veraLoginEmail");
       sessionStorage.removeItem("veraToken");
       sessionStorage.removeItem("veraUser"); localStorage.removeItem("veraRememberedUser");
       location.reload();
@@ -1910,20 +1890,20 @@
           'min="4" max="14" step=".25" required',
         ) +
         '<label>Tipo<select id="restType"><option>Noche</option><option>Siesta</option></select></label>' +
-        field("muscle", "Grupo muscular que evalúas", "", "text", "required") +
+        field("muscle", "Grupo muscular (opcional)", "", "text", "maxlength=100") +
         field(
           "sore",
           "Agujetas en ese grupo (0–10)",
           "",
           "number",
-          'min="0" max="10" required',
+          'min="0" max="10"',
         ) +
         field(
           "tired",
           "Fatiga al despertar (0–10)",
           "",
           "number",
-          'min="0" max="10" required',
+          'min="0" max="10"',
         ) +
         '<button class="primary">Guardar descanso</button></section></form><section><h3>Estimación de hoy</h3><p>' +
         safe(readiness().text) +
@@ -1934,16 +1914,10 @@
       e.preventDefault();
       let start = +new Date($("start").value),
         end = +new Date($("end").value);
-      let minutes = (end - start) / 60000 - Number($("awake").value);
-      if (
-        !Number.isFinite(minutes) ||
-        minutes <= 0 ||
-        end > Date.now() + 60000 ||
-        end - start > 86400000
-      ) {
-        msg("Comprueba las horas y el tiempo despierto.");
-        return;
-      }
+      const optional=id=>$(id).value.trim()===''?null:Number($(id).value);
+      let minutes;
+      try { minutes=validateSleepInput({start,end,awake:Number($("awake").value),need:Number($("need").value),sore:optional('sore'),tired:optional('tired')}); }
+      catch(error){msg(error.message);return;}
       if (
         s.logs.some((l) => l.start < end && l.end > start && l.kind === "Sueño")
       ) {
@@ -1959,13 +1933,17 @@
         start,
         end,
         value: minutes / 60,
+        minutes,
+        awakeMinutes:Number($("awake").value),
+        restType:$("restType").value,
         group: $("muscle").value.trim(),
-        sore: +$("sore").value,
-        tired: +$("tired").value,
+        sore: optional("sore"),
+        tired: optional("tired"),
         note: $("restType").value + " · " + minutes + " min",
       });
       save();
       go("Hoy");
+      msg("Descanso guardado en este dispositivo. Pendiente de sincronizar.");
     }
     function readiness() {
       let rows = s.logs.filter((l) => l.kind === "Sueño" && l.date === day());
@@ -2096,14 +2074,7 @@
         "</section>"
       );
     }
-    function sayCue(t) {
-      if (window.VeraNative) window.VeraNative.say(t);
-      else if (window.speechSynthesis) {
-        let u = new SpeechSynthesisUtterance(t);
-        u.lang = "es-ES";
-        speechSynthesis.speak(u);
-      }
-    }
+    function sayCue(t) { if($("cue"))$("cue").textContent=t; }
     function poseStop() {
       clearInterval(poseTimer);
       poseTimer = null;
@@ -2176,7 +2147,7 @@
     }
     function comparable(l) {
       return JSON.stringify(
-        [l.exercise, l.gym, l.machine, l.rom, l.mode].map((x) =>
+        [l.exercise, l.gym, l.machine, l.rom, trainingLoad14(l).mode].map((x) =>
           String(x || "")
             .trim()
             .toLowerCase(),
@@ -2184,18 +2155,17 @@
       );
     }
     function recordFor(l) {
-      if (!l.exercise || !l.reps?.length) return "";
+      if (!l.exercise || !l.reps?.length || !trainingDate14(l.date)) return "";
       const prior = s.logs.filter(
         (p) =>
           p !== l &&
-          p.date <= l.date &&
-          s.logs.indexOf(p) < s.logs.indexOf(l) &&
+          trainingDate14(p.date) && p.date < l.date &&
           comparable(p) === comparable(l) &&
           p.reps?.length,
       );
-      if (!prior.length) return "Primera referencia";
+      if (!prior.length) return "Sin referencia de días anteriores";
       const reps = Math.max(...l.reps),
-        same = prior.filter((p) => p.kg === l.kg);
+        same = prior.filter((p) => trainingLoad14(p).kg === trainingLoad14(l).kg);
       if (
         same.length &&
         reps > Math.max(...same.map((p) => Math.max(...p.reps)))
@@ -2204,11 +2174,11 @@
       let matched = prior.filter((p) => Math.max(...p.reps) === reps);
       if (
         matched.length &&
-        (l.mode === "Asistencia"
-          ? l.kg < Math.min(...matched.map((p) => p.kg))
-          : l.kg > Math.max(...matched.map((p) => p.kg)))
+        (trainingLoad14(l).mode === "assistance"
+          ? trainingLoad14(l).kg < Math.min(...matched.map((p) => trainingLoad14(p).kg))
+          : trainingLoad14(l).kg > Math.max(...matched.map((p) => trainingLoad14(p).kg)))
       )
-        return l.mode === "Asistencia"
+        return trainingLoad14(l).mode === "assistance"
           ? "Menor asistencia a repeticiones comparables"
           : "Récord de carga a repeticiones comparables";
       return "";
@@ -2306,20 +2276,23 @@
       for (const [i, x] of (draft?.ingredients || []).entries()) {
         const f =
           Math.max(0, +($("ing" + i)?.value || 0)) / Math.max(0.01, +x.grams);
-        for (const k in sums) sums[k] += Math.max(0, Number(x[k]) || 0) * f;
+        for (const k in sums) {
+          if(x[k]==null||x[k]===""||!Number.isFinite(Number(x[k])))sums[k]=null;
+          else if(sums[k]!==null)sums[k]+=Math.max(0,Number(x[k]))*f;
+        }
       }
       return sums;
     }
     function ingredientTotal() {
       const n = ingredientValues();
-      $("kcal").value = Math.round(n.kcal);
+      if(n.kcal!==null)$("kcal").value = Math.round(n.kcal);
       $("ingtotal").textContent =
         "Proteína " +
-        n.protein.toFixed(1) +
+        (n.protein===null?"sin dato":n.protein.toFixed(1)) +
         " g · hidratos " +
-        n.carbs.toFixed(1) +
+        (n.carbs===null?"sin dato":n.carbs.toFixed(1)) +
         " g · grasa " +
-        n.fat.toFixed(1) +
+        (n.fat===null?"sin dato":n.fat.toFixed(1)) +
         " g";
     }
     function effects(l) {
@@ -2327,6 +2300,7 @@
     }
     function editRecord(i) {
       const l = s.logs[i];
+      if(l.kind==='Entrenamiento')return editTraining14(i);
       $("view").innerHTML =
         "<h1>Corregir registro</h1><section>" +
         field("correctNote", "Detalle", l.note) +
@@ -2360,6 +2334,7 @@
     }
     function applyEdit(i) {
       let l = s.logs[i];
+      if(l.kind==='Entrenamiento')return applyTraining14(i);
       if ($("correctValue") && Number($("correctValue").value) < 0) return;
       l.note = $("correctNote").value;
       if ($("correctValue")) l.value = $("correctValue").value || null;
@@ -2460,7 +2435,7 @@
         field("gymNow", "Gimnasio", s.gym || "") +
         camControls("machineFile") +
         '<div id="machinePreview"></div><h3>Placa o QR de la máquina</h3><p>Añade un primer plano con la marca y el modelo legibles.</p>' + camControls('plate12') +
-        btn("Identificar máquina", "identify()", true) +
+        '<p>La foto ayuda a identificar el aparato. No verifica su estado mecánico ni tu técnica al usarlo. Revisa los ajustes y las indicaciones del fabricante o del personal del gimnasio.</p>' + btn("Identificar máquina", "identify()", true) +
         btn("Registrar a mano", "manualMachine()") +
         '<div id="machineResult"></div></section><section><h3>Inventario por gimnasio</h3>' +
         all
@@ -2515,6 +2490,7 @@
       );
     }
     async function machineFile(el) {
+      const mediaOwner=sessionStorage.veraUser,mediaToken=sessionStorage.veraToken,mediaState=s;
       if (!el.files[0]) return;
       machinePhoto = "";machinePlate="";++machineRevision;
       machineDraft = null;
@@ -2523,6 +2499,7 @@
         let img = new Image();
         img.src = await readData(el.files[0]);
         await img.decode();
+        if(!validSession||!sameVeraSession(mediaOwner,mediaToken,mediaState)||!el.isConnected)return;
         let c = document.createElement("canvas"),
           f = Math.min(1, 1600 / Math.max(img.width, img.height));
         c.width = img.width * f;
@@ -2542,38 +2519,12 @@
       if (!machinePhoto) return msg("Toma una foto o elige una de la galería.");
       const source=machinePhoto,plate=machinePlate,rev=++machineRevision,target=$("machineResult");
       try {
-        msg("Leyendo la máquina y la placa…");
-        if(s.preferLocal===true || !VeraPrivacy6.allowed("cloud"))throw Error("Análisis local.");
-        const response=await api("machine", { image: source,plate });
-        if(!target.isConnected||machinePhoto!==source||rev!==machineRevision)return;machineDraft={...response,qr:machineDraft?.qr||"",brand:machineDraft?.brand||response.brand,model:machineDraft?.model||response.model};
-        showMachine();
+        msg("Gemini está analizando la máquina y la placa…");
+        const response=await api("machine", {image:source,plate});
+        if(!target.isConnected||machinePhoto!==source||rev!==machineRevision)return;
+        machineDraft={...response,qr:machineDraft?.qr||""};showMachine();
         msg("Comprueba la marca y el modelo antes de guardarlos.");
-      } catch (e) {
-        try {
-          const [label,candidates]=await Promise.all([readLabel(plate||source).catch(()=>""),visualCandidates(machinePhoto,"machine").catch(()=>[])]);
-          if(!target.isConnected||source!==machinePhoto||rev!==machineRevision)return;
-          const lines = label
-            .split(/\n/)
-            .map((t) => t.trim())
-            .filter(Boolean);
-          machineDraft = {
-            ...(machineDraft||{}),
-            type: candidates.length>1&&candidates[0].score>.22&&candidates[0].score-candidates[1].score>.018?candidates[0].name:"",
-            brand: machineDraft?.brand ||
-              lines.find((t) =>
-                /life fitness|technogym|matrix|precor|hammer strength/i.test(t),
-              ) || "",
-            model: machineDraft?.model || lines.find((t) => /model|modelo/i.test(t)) || "",
-            evidence: label.slice(0, 300),
-            uncertainty:
-              "Lectura de la placa. Confirma el tipo y los datos antes de guardar.",
-          };
-          showMachine();
-          msg("Revisa la ficha. Si el tipo queda vacío, prueba una foto lateral que muestre asiento, plataforma y recorrido, o introdúcelo manualmente.");
-        } catch {
-          msg(e.message);
-        }
-      }
+      } catch(error) { if(target.isConnected&&rev===machineRevision)msg(error.message+" · No se ha identificado la máquina. Puedes reintentar o introducir la ficha manualmente."); }
     }
     function manualMachine() {
       machineDraft = {};
@@ -2646,16 +2597,7 @@
       const body = chatPage();
       return (
         (!s.turns.length ? greeting() : "") +
-        "<details><summary>Motor de conversación</summary>" +
-        btn(
-          "IA local gratuita",
-          "s.preferLocal=true;save();msg(\'IA local seleccionada. Envía tu pregunta.\')",
-        ) +
-        btn(
-          "Equipo del servidor",
-          "s.preferLocal=false;save();msg(\'Equipo del servidor seleccionado.\')",
-        ) +
-        "</details>" +
+        '<section><h3>Vera · Groq y Gemini</h3><p>Conversación y dictado: Groq. Fotos, revisión avanzada y voz en español: Gemini. Cada función necesita su proveedor configurado, conexión, sesión y permiso. Sin conexión puedes registrar tu diario manualmente.</p><label>Tipo de consulta<select onchange="s.coachMode=this.value;save()"><option value="standard" ' + (s.coachMode!=='deep'?'selected':'') + '>Conversación · Groq</option><option value="deep" ' + (s.coachMode==='deep'?'selected':'') + '>Revisión avanzada · Gemini</option></select></label><small>La revisión avanzada se usa sólo al seleccionarla; no implica mayor certeza.</small><div id="speechPlayer14" aria-live="polite"></div></section>' +
         body
           .replace(
             "<section><label>Habla con Vera",
@@ -2940,36 +2882,22 @@
       );
     }
     function roster() {
-      return roles.map((role,i)=>{
+      return '<p>Resumen de tus registros; la conversación usa Groq; puedes elegir una revisión avanzada con Gemini.</p>'+roles.map((role,i)=>{
         const [state,opinion]=teamOpinion(role);
         return '<details class="roster"><summary>'+safe(role)+'<small class="status7">'+safe(state)+'</small><p>'+safe(opinion)+'</p></summary><form onsubmit="event.preventDefault(); ask(this.elements.question.value,roles['+i+'])"><label>Preguntar a este especialista<input name="question" required></label><button>Enviar pregunta</button></form></details>';
       }).join('');
     }
-    let attached = null,
-      ocrEngine = null,
-      activeLocalRole = "",
-      places = [];
-    async function readLabel(file) {
-      if (!ocrEngine)
-        ocrEngine = Tesseract.createWorker("eng", 1, {
-          workerPath: new URL("ocr-worker.js", location.href).href,
-          corePath: new URL("ocr-core.js", location.href).href,
-          langPath: location.origin + "/",
-          workerBlobURL: true,
-        }).catch((e) => {
-          ocrEngine = null;
-          throw e;
-        });
-      const w = await ocrEngine;
-      return (await w.recognize(file)).data.text.trim();
-    }
+    let attached = null, places = [];
     async function attachChat(el) {
+      const mediaOwner=sessionStorage.veraUser,mediaToken=sessionStorage.veraToken,mediaState=s;
+      const mediaActive=()=>validSession&&sameVeraSession(mediaOwner,mediaToken,mediaState)&&el.isConnected;
       if (!el.files[0]) return;
-      msg("Leyendo texto visible en la foto…");
+      msg("Preparando foto para adjuntar…");
       try {
         const img = new Image();
         img.src = await readData(el.files[0]);
         await img.decode();
+        if(!mediaActive())return;
         const c = document.createElement("canvas"),
           f = Math.min(1, 1400 / Math.max(img.width, img.height));
         c.width = img.width * f;
@@ -2982,14 +2910,9 @@
           '">' +
           btn("Quitar", "attached=null;render()");
         $("attachment").innerHTML+=btn("Identificar comida","chatPlate()");
-        attached.text = await readLabel(attached.src);
-        msg(
-          attached.text
-            ? "Foto adjunta. Se ha leído el texto visible."
-            : "Foto adjunta. El modo local puede leer etiquetas; esta foto no tiene texto reconocible.",
-        );
+        msg("Foto adjunta. Se enviará a Gemini cuando solicites analizarla; todavía no se ha interpretado.");
       } catch (e) {
-        msg("No se pudo completar la lectura de la foto.");
+        msg("No se pudo adjuntar la foto.");
       }
     }
 
@@ -2998,7 +2921,7 @@
       const food = /comida|alimento|plato|calor[ií]a|macros|prote[ií]na|almuerzo|cena|desayuno/i.test(question);
       const machine = /m[aá]quina|aparato|gimnasio|biomec[aá]nica|ejercicio|equipamiento/i.test(question);
       if (!food && !machine) {
-        msg("Para reconocer visualmente la foto, pregunta por la comida o por la máquina que aparece. El OCR local solo detecta texto, no identifica objetos.");
+        msg("Para analizar esta foto con Gemini, pregunta por la comida o por la máquina que aparece.");
         return;
       }
       if (!sessionStorage.veraToken) {
@@ -3024,47 +2947,6 @@
         msg("Análisis visual realizado en el servidor. No se ha guardado una comida sin confirmarla.");
       } catch(e) { msg("No se pudo analizar la foto: " + e.message); }
       finally {busy=false;}
-    }
-    async function localAnswer(question, specialty) {
-      if (typeof window.veraGenerate !== "function") {
-        msg("Motor local no cargado. Comprueba que local.js y local.wasm existen y que Android sirve los assets correctamente. Puedes seleccionar Equipo del servidor; no se enviarán datos sin elegirlo.");
-        return;
-      }
-      busy = true;
-      go("Chat");
-      msg("Abriendo el modelo local…");
-      try {
-        const role = specialty || "Hipertrofia";
-        const ctx = JSON.stringify({
-          especialidad: role,
-          perfil: s.profile,
-          ultimo: s.logs.slice(-4),
-          maquinas: s.machines?.slice(-2),
-          textoFoto: attached?.text?.slice(0, 420),
-          historial: s.turns.at(-1)?.answer?.slice(0, 240),
-        });
-        let answer = await window.veraGenerate(question, ctx, msg);
-        if (typeof answer !== "string" || !answer.trim()) throw Error("Respuesta vacía del modelo");
-        s.localModelOK = true;
-        s.turns.push({
-          date: day(),
-          question: question + (attached ? " · Foto adjunta" : ""),
-          answer,
-          reports: [{ role, text: answer }],
-          inputIds: s.logs.slice(-4).map((l) => l.id),
-          engine: "local",
-        });
-        attached = null;
-        save();
-        go("Chat");
-        msg("Respuesta generada en este dispositivo · Qwen.");
-      } catch (e) {
-        s.localModelOK = false;
-        save();
-        msg("Fallo real de inferencia local: " + e.message + ". La IA del servidor es una alternativa distinta (requiere conexión y envía el contexto al servicio).");
-      } finally {
-        busy = false;
-      }
     }
     function gymLookup() {
       return (

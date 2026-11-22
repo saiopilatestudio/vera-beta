@@ -44,7 +44,7 @@ const VeraActions = (() => {
   function interpret(raw,ref=new Date()){
     const t=norm(raw).trim(),date=when(t,ref);
     if(!date)return {answer:'Revisa la fecha del registro.'};
-    if(/\b(manana|deberia|podria|quiero hacer|voy a|no (?:he |habia )?(?:dormido|bebi|tomado|hecho))\b/.test(t))return null;
+    if(/\b(manana|deberia|podria|quiero hacer|voy a|no (?:he |habia )?(?:dormi|dormido|bebi|bebido|tome|tomado|hice|hecho|entrene|entrenado|realice))\b/.test(t))return null;
     if(/cuant[ao]s?.*(?:dormi|dormido|sueno)/.test(t))return {tool:'query_history',kind:'Sueño',date};
     if(/[¿?]/.test(t))return null;
     if(/(?:\bdormi\b|he dormido|he dormio|dormi una siesta|(?:registra|anota).{0,25}(?:sueno|siesta))/.test(t)){
@@ -78,11 +78,7 @@ const VeraActions = (() => {
   function eventKey(row){return JSON.stringify([row.date,row.kind,row.value,row.startTime,row.endTime,row.exercise&&norm(row.exercise),row.kg,row.reps]);}
   function commit(row){
     const key=eventKey(row);
-    if(s.logs.some(l=>l.actionKey===key))return 'Ya registrado';
-    s.logs.push({...row,id:uid(),actionKey:key,source:'diario local'});return 'Guardado';
-  }
-  function turn(question,answer,extra={}){
-    s.turns.push({id:uid(),question,answer,date:day(),reports:[],engine:'diario',...extra});save();go('Chat');
+    s.logs.push({...row,id:uid(),actionKey:key,source:'diario local'});return 'Guardado en este dispositivo';
   }
   function review(t){
     if(!t.ocrDraft||t.confirmed)return '';
@@ -96,29 +92,5 @@ const VeraActions = (() => {
     if(!rows.length||rows.some(a=>a?.tool!=='log_workout'))return msg('Escribe una línea por ejercicio, por ejemplo «Press banca 3×10 con 60 kg».');
     rows.forEach(a=>commit({...a.row,date:t.workoutDate}));t.confirmed=true;t.answer='Entrenamiento confirmado · '+rows.map(a=>a.row.note).join('\n');delete t.ocrDraft;save();go('Chat');
   }
-  async function handle(question){
-    if(attached){
-      if(/entrenamiento|rutina|ejercicios|series/i.test(question)){
-        const photo=attached;try{const ocr=photo.text||await readLabel(photo.src);if(photo!==attached)return true;
-        attached=null;turn(question,'Revisa las series que aparecen en la captura antes de guardarlas.',{ocrDraft:ocr.trim()||' ',workoutDate:when(norm(question))||day()});}
-        catch{msg('No se pudo leer la captura. Puedes volver a fotografiarla o escribir las series.');}
-        return true;
-      }return false;
-    }
-    const correction=norm(question).match(/^(?:no,?\s*)?(?:eran|fueron)\s+(\d+(?:[.,]\d+)?)\s*kg\b/);
-    if(correction){const row=[...s.logs].reverse().find(l=>l.kind==='Entrenamiento'&&Number.isFinite(l.kg));if(!row||num(correction[1])>2000){turn(question,'No encuentro una carga válida que corregir.');return true;}
-      if(row.kg===num(correction[1])){turn(question,'La carga ya está actualizada.');return true;}
-      const prior={kg:row.kg,note:row.note,actionKey:row.actionKey};row.kg=num(correction[1]);row.note=row.exercise+' · '+row.reps.join('/')+' rep. · '+row.kg+' kg';row.actionKey=eventKey(row);
-      turn(question,'Carga corregida a '+row.kg+' kg. Puedes decir «deshacer».',{undo:{id:row.id,prior,after:row.actionKey}});return true;
-    }
-    if(/^deshacer[.!]?$/i.test(question.trim())){const t=[...s.turns].reverse().find(t=>t.undo&&!t.reverted);const row=t&&s.logs.find(r=>r.id===t.undo.id&&r.actionKey===t.undo.after);
-      if(row){Object.assign(row,t.undo.prior);t.reverted=true;}turn(question,row?'Se ha restaurado la carga anterior.':'No hay una corrección reciente que se pueda deshacer.');return true;}
-    // Let the existing multi-date extractor split compound diary requests.
-    if(/;|\n|\by\s+(?:ayer|anteayer|hoy|el lunes|el martes)/i.test(question))return false;
-    const a=interpret(question);if(!a)return false;
-    if(a.tool==='query_history'){const rows=s.logs.filter(l=>l.kind===a.kind&&l.date===a.date);const manual=rows.filter(l=>l.source!=='health');const selected=manual.length?manual:rows;const minutes=selected.reduce((n,l)=>n+(Number(l.minutes)||Math.round((+l.value||0)*60)),0);turn(question,rows.length?'Tienes '+Math.floor(minutes/60)+' h '+minutes%60+' min de sueño registrados el '+a.date+'.':'Sin registros de sueño el '+a.date+'.');}
-    else if(a.row)turn(question,commit(a.row)+' · '+a.row.date+' · '+a.row.note,{tool:a.tool});
-    else turn(question,a.answer);return true;
-  }
-  return {handle,interpret,markdown,review,update,confirm,eventKey};
+  return {interpret,markdown,review,update,confirm,eventKey};
 })();

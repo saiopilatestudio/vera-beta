@@ -18,6 +18,16 @@ class HealthReader{
  if(allowed(a,"SLEEP")){TimeInstantRangeFilter window=new TimeInstantRangeFilter.Builder().setStartTime(start.minus(Duration.ofDays(2))).setEndTime(end).build();records(a,m,SleepSessionRecord.class,window,rs->{JSONArray arr=new JSONArray();for(SleepSessionRecord r:rs){if(r.getEndTime().isBefore(start))continue;JSONArray awake=new JSONArray();for(SleepSessionRecord.Stage stage:r.getStages()){int type=stage.getType();if(type==1||type==3||type==7)awake.put(new JSONArray().put(stage.getStartTime().toEpochMilli()).put(stage.getEndTime().toEpochMilli()));}arr.put(new JSONArray().put(r.getStartTime().toEpochMilli()).put(r.getEndTime().toEpochMilli()).put(awake));}emit(a,"sleep",arr.toString());});}
  if(!allowed(a,"STEPS")&&!allowed(a,"EXERCISE")&&!allowed(a,"SLEEP"))a.status("Sin permisos de lectura.");
  }
- static <T extends android.health.connect.datatypes.Record> void records(Main a,HealthConnectManager m,Class<T> cls,TimeInstantRangeFilter range,Consumer<List<T>> done){m.readRecords(new ReadRecordsRequestUsingFilters.Builder<T>(cls).setTimeRangeFilter(range).setPageSize(500).build(),a.getMainExecutor(),new OutcomeReceiver<ReadRecordsResponse<T>,HealthConnectException>(){public void onResult(ReadRecordsResponse<T> r){done.accept(r.getRecords());}public void onError(HealthConnectException e){a.status("No se pudo leer "+cls.getSimpleName());}});}
- static void emit(Main a,String type,String data){a.web.evaluateJavascript("healthImport('"+type+"',"+data+")",null);}
+ static <T extends android.health.connect.datatypes.Record> void records(Main a,HealthConnectManager m,Class<T> cls,TimeInstantRangeFilter range,Consumer<List<T>> done){readPage(a,m,cls,range,done,new ArrayList<T>(),-1L,0);}
+ static <T extends android.health.connect.datatypes.Record> void readPage(Main a,HealthConnectManager m,Class<T> cls,TimeInstantRangeFilter range,Consumer<List<T>> done,List<T> all,long token,int pages){
+ if(a.isFinishing()||a.isDestroyed())return;
+ if(pages>=20){a.status("Hay demasiados registros de salud para esta importación. No se ha importado un resultado parcial.");return;}
+ ReadRecordsRequestUsingFilters.Builder<T> builder=new ReadRecordsRequestUsingFilters.Builder<T>(cls).setTimeRangeFilter(range).setPageSize(500);
+ if(token!=-1L)builder.setPageToken(token);
+ try{m.readRecords(builder.build(),a.getMainExecutor(),new OutcomeReceiver<ReadRecordsResponse<T>,HealthConnectException>(){
+ public void onResult(ReadRecordsResponse<T> r){if(a.isFinishing()||a.isDestroyed())return;all.addAll(r.getRecords());long next=r.getNextPageToken();if(next==-1L)done.accept(all);else if(next==token)a.status("No se pudo completar la lectura de salud.");else readPage(a,m,cls,range,done,all,next,pages+1);}
+ public void onError(HealthConnectException e){a.status("No se pudo leer "+cls.getSimpleName()+". No se han importado datos parciales.");}});
+ }catch(SecurityException e){a.status("El permiso de salud ha cambiado. Revisa los permisos antes de reintentar.");}
+ }
+ static void emit(Main a,String type,String data){if(a.web==null||a.isFinishing()||a.isDestroyed())return;a.web.evaluateJavascript("healthImport('"+type+"',"+data+")",null);}
 }

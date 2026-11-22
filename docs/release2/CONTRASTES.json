@@ -1,0 +1,56 @@
+[
+  {
+    "component": "Acceso/bienvenida anterior",
+    "text": "#516052",
+    "background": "#172c24",
+    "contrast": 2.21
+  },
+  {
+    "component": "Acceso/bienvenida V2",
+    "text": "#c1cfc4",
+    "background": "#172c24",
+    "contrast": 9.13
+  },
+  {
+    "component": "Adjuntar foto anterior",
+    "text": "#eef3e9",
+    "background": "#eef4e9",
+    "contrast": 1.01
+  },
+  {
+    "component": "Adjuntar foto V2",
+    "text": "#eef3e9",
+    "background": "#172c24",
+    "contrast": 13.1
+  },
+  {
+    "component": "Fechas barras anterior",
+    "text": "#47604b",
+    "background": "#172c24",
+    "contrast": 2.14
+  },
+  {
+    "component": "Fechas barras V2",
+    "text": "#c1cfc4",
+    "background": "#172c24",
+    "contrast": 9.13
+  },
+  {
+    "component": "Boton sesion anterior",
+    "text": "#edf2e7",
+    "background": "#cafa65",
+    "contrast": 1.06
+  },
+  {
+    "component": "Boton sesion V2",
+    "text": "#102211",
+    "background": "#cafa65",
+    "contrast": 13.8
+  },
+  {
+    "component": "Placeholder V2",
+    "text": "#b8c9bf",
+    "background": "#10221b",
+    "contrast": 9.59
+  }
+]

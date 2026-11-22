@@ -1,6 +1,11 @@
 const VeraJournal=(()=>{
  let busy=false;
- function panel(){return '<details><summary>Sincronizar mi diario</summary><p>Envía tus registros manuales a tu cuenta y recupera los del otro dispositivo. Fotos, conversaciones y lecturas de Health Connect quedan fuera.</p>'+btn('Sincronizar ahora','VeraJournal.sync()',true)+'</details>';}
+ function status(){
+  const base=s.diaryRevisions||{},local=new Map(s.logs.filter(r=>r.source!=='health').map(r=>[r.id,r]));
+  const pending=[...new Set([...local.keys(),...Object.keys(base)])].filter(id=>JSON.stringify(local.get(id)||null)!==(base[id]?.raw??'null')).length;
+  return '<section class=sync14 role=status><h3>Tu diario</h3>'+(stateWriteError?'<p role=alert>'+safe(stateWriteError)+'</p>':'')+'<p>'+(pending?pending+' cambios guardados solo en este dispositivo.':s.diaryLastSync?'Sin cambios locales pendientes. Última sincronización: '+safe(new Date(s.diaryLastSync).toLocaleString('es-ES')):'Todavía no has sincronizado tu cuenta en este dispositivo.')+'</p>'+btn('Sincronizar registros','VeraJournal.sync()')+'<small>Fotos, conversaciones y Health Connect no se sincronizan.</small></section>';
+ }
+ function panel(){return status()+ '<details><summary>Sincronizar mi diario</summary><p>Envía tus registros manuales a tu cuenta y recupera los del otro dispositivo. Fotos, conversaciones y lecturas de Health Connect quedan fuera.</p>'+btn('Sincronizar ahora','VeraJournal.sync()',true)+'</details>';}
  async function sync(){
   if(busy)return;busy=true;
   const state=s,account=sessionStorage.veraUser,active=()=>s===state&&validSession&&sessionStorage.veraUser===account;
@@ -27,8 +32,8 @@ const VeraJournal=(()=>{
     if(index>=0)s.logs.splice(index,1,...(r.record?[r.record]:[]));else if(r.record)s.logs.push(r.record);
     base[id]={rev:r.rev,raw};
    }
-   save();render();msg('Diario sincronizado.');
+   s.diaryLastSync=new Date().toISOString();save();render();msg('Sincronización terminada. Revisa si quedan cambios pendientes.');
   }catch(e){if(active())msg('El diario sigue en tu dispositivo. '+e.message);}finally{busy=false;}
  }
- return {panel,sync};
+ return {panel,sync,status};
 })();

@@ -1,0 +1,56 @@
+[
+  {
+    "element": "Texto principal",
+    "foreground": "#f1f5ed",
+    "background": "#13271f",
+    "ratio": 14.22
+  },
+  {
+    "element": "Texto secundario",
+    "foreground": "#b8cbbf",
+    "background": "#13271f",
+    "ratio": 9.22
+  },
+  {
+    "element": "CTA principal",
+    "foreground": "#14220e",
+    "background": "#c8f56b",
+    "ratio": 13.23
+  },
+  {
+    "element": "Metrica",
+    "foreground": "#c8f56b",
+    "background": "#10281c",
+    "ratio": 12.46
+  },
+  {
+    "element": "Placeholder",
+    "foreground": "#b8cbbf",
+    "background": "#0c1d16",
+    "ratio": 10.25
+  },
+  {
+    "element": "Texto hero",
+    "foreground": "#f1f5ed",
+    "background": "#193d2c",
+    "ratio": 10.9
+  },
+  {
+    "element": "Borde campo",
+    "foreground": "#688271",
+    "background": "#0c1d16",
+    "ratio": 4.17
+  },
+  {
+    "element": "Foco",
+    "foreground": "#ddffa0",
+    "background": "#1c342a",
+    "ratio": 12.0
+  },
+  {
+    "element": "Fecha grafico",
+    "foreground": "#b8cbbf",
+    "background": "#0c1d16",
+    "ratio": 10.25
+  }
+]

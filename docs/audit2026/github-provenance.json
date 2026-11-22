@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-11-21T23:08:56.634Z",
+  "repository": "https://github.com/saiopilatestudio/vera-beta",
+  "branch": "main",
+  "commit": "e5e3cc4fd45df2d70b361254852259d235ae9a24",
+  "commitDate": "2026-11-15T23:01:58Z",
+  "message": "actualizacion 2",
+  "treeTruncated": false,
+  "filesCompared": 166,
+  "matches": 163,
+  "differences": [
+    {
+      "path": ".gitattributes",
+      "same": false,
+      "missingInZip": true,
+      "size": 66
+    },
+    {
+      "path": "android/gradlew.bat",
+      "same": false
+    },
+    {
+      "path": "owner.json",
+      "same": false,
+      "missingInZip": true,
+      "size": 234
+    }
+  ],
+  "runs": []
+}

@@ -11,7 +11,7 @@ await db.batch([
 function fail(status,message){throw Object.assign(new Error(message),{status});}
 export const partnerPaths=new Set(["/partners/list","/partners/invite","/partners/room","/partners/respond","/partners/set","/partners/finish"]);
 async function me(uid){
-  await rows("INSERT OR IGNORE INTO nicknames(uid,nick) VALUES(?,?)",uid,"vera_"+uid);
+  await rows("INSERT OR IGNORE INTO nicknames(uid,nick) VALUES(?,?)",uid,"vera_"+uid.slice(0,19));
   return (await rows("SELECT nick FROM nicknames WHERE uid=?",uid))[0].nick;
 }
 const roomSql="SELECT r.*,h.nick AS host_nick,g.nick AS guest_nick FROM partner_rooms r JOIN nicknames h ON r.host=h.uid JOIN nicknames g ON r.guest=g.uid";
@@ -19,6 +19,9 @@ function view(r,uid){
   return {id:r.id,title:r.title,mode:r.mode,plan:JSON.parse(r.plan),target:r.target,state:r.state,host:r.host_nick,guest:r.guest_nick,side:r.host===uid?"host":"guest",hostDone:!!r.host_done,guestDone:!!r.guest_done,created:r.created};
 }
 export async function partnerAction(path,uid,d){
+  if(!partnerPaths.has(path))fail(404,"Acción no disponible.");
+  if(typeof uid!=="string"||!uid)fail(401,"Inicia sesión.");
+  if(!d||typeof d!=="object"||Array.isArray(d))fail(422,"Solicitud no válida.");
   const nick=await me(uid);
   if(path==="/partners/list"){
     const list=await rows(roomSql+" WHERE host=? OR guest=? ORDER BY created DESC LIMIT 50",uid,uid);

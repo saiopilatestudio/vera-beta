@@ -1,44 +1,97 @@
-name: Vera Android
+name: VERA 2.0 beta Android
+permissions:
+  contents: read
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Compilar para revisión o firmar con la clave de distribución 1.0.3
+        description: Compilar V2 sin firma o firmar con la clave de distribución V2
         type: choice
         options: [unsigned, signed]
         default: unsigned
         required: true
 jobs:
-  android:
+  verify-source:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+  android:
+    needs: verify-source
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verificar ausencia de IA local y puentes de voz
+        run: python tests/audit-android-cloud.py
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
-      - name: Recuperar modelos y comprobar integridad
-        run: sh scripts/restore-models.sh
       - name: Compilar y verificar
         env:
           MODE: ${{ inputs.mode }}
           KEY: ${{ secrets.VERA_KEYSTORE_BASE64 }}
           BETA_PASS: ${{ secrets.VERA_KEYSTORE_PASSWORD }}
+          VERA_EXPECTED_CERT_SHA256: ${{ vars.VERA_EXPECTED_CERT_SHA256 }}
         run: |
           umask 077
           export ECJ="$RUNNER_TEMP/ecj.jar" BETA_KEYSTORE="$RUNNER_TEMP/vera.p12"
-          export BUILDTOOLS="$ANDROID_HOME/build-tools/35.0.0" ANDROID_JAR="$ANDROID_HOME/platforms/android-35/android.jar"
-          export APK_OUTPUT="$GITHUB_WORKSPACE/Vera-1.0.3-$MODE.apk"
+          export APK_OUTPUT="$GITHUB_WORKSPACE/VERA-2.0-beta-$MODE.apk"
           curl -fsSL https://repo.maven.apache.org/maven2/org/eclipse/jdt/ecj/3.38.0/ecj-3.38.0.jar -o "$ECJ"
           echo "97c566b120009c203a2fc8b291f4a9adbc171cf1ccb70f06f6b4e1828c00ce8e  $ECJ" | sha256sum -c -
-          if [ "$MODE" = signed ]; then echo "$KEY" | base64 -d > "$BETA_KEYSTORE"; fi
-          sh beta-android/build.sh "$MODE"
-          sha256sum Vera-1.0.3-$MODE.apk > SHA256.txt
+          build_args=(--ecj "$ECJ" --android-jar "$ANDROID_HOME/platforms/android-35/android.jar" --build-tools "$ANDROID_HOME/build-tools/35.0.0" --work-dir "$RUNNER_TEMP/vera-build" --output "$APK_OUTPUT" --mode "$MODE")
+          if [ "$MODE" = signed ]; then
+            : "${KEY:?Falta VERA_KEYSTORE_BASE64}" "${BETA_PASS:?Falta VERA_KEYSTORE_PASSWORD}" "${VERA_EXPECTED_CERT_SHA256:?Falta la variable VERA_EXPECTED_CERT_SHA256}"
+            printf '%s' "$KEY" | base64 --decode > "$BETA_KEYSTORE"
+            build_args+=(--keystore "$BETA_KEYSTORE" --key-alias vera-beta --expected-cert-sha256 "$VERA_EXPECTED_CERT_SHA256")
+          fi
+          python beta-android/build.py "${build_args[@]}"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          metadata = {
+              "release": "VERA 2.0 beta",
+              "package": "app.vera.coach.visionbeta",
+              "versionName": "2.0 beta",
+              "versionCode": 200,
+              "mode": os.environ["MODE"],
+              "aiProviders": ["groq", "gemini"],
+              "routingVersion": 2,
+              "localInference": False,
+              "commit": os.environ["GITHUB_SHA"],
+              "ref": os.environ["GITHUB_REF_NAME"],
+              "runId": os.environ["GITHUB_RUN_ID"],
+              "backendDeployedByWorkflow": False,
+              "deviceRuntimeTestedByWorkflow": False,
+          }
+          Path("RELEASE-METADATA.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+          PY
+          sha256sum "VERA-2.0-beta-$MODE.apk" "VERA-2.0-beta-$MODE.apk.build.json" RELEASE-METADATA.json > SHA256.txt
+      - name: Eliminar copia temporal de la clave
+        if: always()
+        run: rm -f "$RUNNER_TEMP/vera.p12"
       - uses: actions/upload-artifact@v4
         with:
-          name: Vera-1.0.3
+          name: VERA-2.0-beta-${{ inputs.mode }}
           path: |
-            Vera-1.0.3-*.apk
+            VERA-2.0-beta-*.apk
+            VERA-2.0-beta-*.apk.build.json
+            RELEASE-METADATA.json
             SHA256.txt
+          if-no-files-found: error

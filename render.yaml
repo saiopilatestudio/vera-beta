@@ -3,7 +3,7 @@ services:
     name: vera-beta
     runtime: node
     plan: free
-    buildCommand: npm ci --omit=dev && sh scripts/restore-models.sh
+    buildCommand: npm ci --omit=dev
     startCommand: node server.mjs
     healthCheckPath: /health
     envVars:
@@ -11,6 +11,24 @@ services:
         value: 24
       - key: HOST
         value: 0.0.0.0
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_CHAT_MODEL
+        value: openai/gpt-oss-120b
+      - key: GROQ_SPEECH_MODEL
+        value: whisper-large-v3-turbo
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_VISION_MODEL
+        value: gemini-4-hydrogen
+      - key: GEMINI_DEEP_MODEL
+        value: gemini-4-argon
+      - key: GEMINI_TTS_MODEL
+        value: gemini-3.8-flash-lite-tts
+      - key: GEMINI_TTS_VOICE
+        value: Kore
+      - key: VERA_ALLOW_LEGACY_OWNER_FILE
+        value: 'false'
       - key: TURSO_DATABASE_URL
         sync: false
       - key: TURSO_AUTH_TOKEN

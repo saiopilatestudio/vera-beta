@@ -1,5 +1,6 @@
 import { rows } from "./storage.mjs";
 import { randomUUID, createHash, timingSafeEqual } from "node:crypto";
+import { allowed } from "./owner.mjs";
 const hash = (x) => createHash("sha256").update(x).digest();
 export function adminAllowed(header) {
   return (
@@ -10,11 +11,15 @@ export function adminAllowed(header) {
     )
   );
 }
-export async function business(path, d, role="propietario") {
+export async function business(path, d, role=null) {
+  if (!allowed(role, path)) throw Object.assign(Error("Acceso restringido."), {status:403});
+  if (!d || typeof d !== "object" || Array.isArray(d)) throw Object.assign(Error("Solicitud no válida."), {status:422});
   const catalog = "Fichas técnicas de maquinaria con licencia independiente";
-  if (path === "/admin/summary")
+  if (path === "/admin/summary") {
+    const { aiConfiguration } = await import('./ai-provider.mjs');
+    const ai = aiConfiguration();
     return {
-      operations:{build:"1.0.3-beta",database:"consulta completada",openAIConfigured:Boolean(process.env.OPENAI_API_KEY),placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY)},
+      operations:{build:"2.0.0-beta.1",database:"consulta completada",aiProviders:ai.providers,aiRoutes:ai.routes,aiExecution:ai.execution,localInference:false,placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY)},
       nickCount:(await rows("SELECT count(*) AS n FROM nicknames WHERE nick != 'vera_' || substr(uid,1,19)"))[0].n,
       rooms:await rows("SELECT state,count(*) AS n FROM partner_rooms GROUP BY state"),
       week:await rows("SELECT day,sum(n) AS n FROM quota WHERE day>=date('now','-6 days') GROUP BY day ORDER BY day"),
@@ -27,21 +32,25 @@ export async function business(path, d, role="propietario") {
       ),
       deals: role==="propietario"?await rows("SELECT * FROM deals ORDER BY created DESC LIMIT 100"):[],
     };
+  }
   if (path === "/admin/catalog") {
-    const source = new URL(d.source);
+    let source;
+    try { source = new URL(d.source); }
+    catch { throw Object.assign(Error("Introduce una URL válida para la fuente."), {status:422}); }
     if (
       !["https:", "http:"].includes(source.protocol) ||
-      !d.brand?.trim() ||
-      !d.model?.trim() ||
+      source.username || source.password || source.href.length > 600 ||
+      typeof d.brand !== "string" || !d.brand.trim() || d.brand.length > 120 ||
+      typeof d.model !== "string" || !d.model.trim() || d.model.length > 150 ||
       !["Material propio", "Licencia comercial documentada"].includes(d.rights)
     )
-      throw Error("Completa la ficha y sus derechos de uso.");
+      throw Object.assign(Error("Completa la ficha y sus derechos de uso."), {status:422});
     await rows(
       "INSERT INTO catalog_items VALUES(?,?,?,?,?,?)",
       randomUUID(),
-      d.brand.slice(0, 120),
-      d.model.slice(0, 150),
-      source.href.slice(0, 600),
+      d.brand.trim(),
+      d.model.trim(),
+      source.href,
       d.rights,
       new Date().toISOString(),
     );
@@ -53,11 +62,11 @@ export async function business(path, d, role="propietario") {
       !["Prospecto", "En evaluación", "Acordado externamente"].includes(
         d.stage,
       ) ||
-      !String(d.company || "").trim() ||
+      typeof d.company !== "string" || !d.company.trim() || d.company.length > 120 ||
       !Number.isFinite(d.price) ||
-      d.price < 0
+      d.price < 0 || d.price > 1e12
     )
-      throw Error("Revisa los datos de la operación.");
+      throw Object.assign(Error("Revisa los datos de la operación."), {status:422});
     await rows(
       "INSERT INTO deals VALUES(?,?,?,?,?,?,?)",
       randomUUID(),
@@ -71,33 +80,7 @@ export async function business(path, d, role="propietario") {
     return { ok: true };
   }
   if (path === "/admin/prospects") {
-    if (!process.env.OPENAI_API_KEY)
-      throw Error(
-        "Activa el proveedor de búsqueda para localizar organizaciones.",
-      );
-    const r = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + process.env.OPENAI_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.VERA_SEARCH_MODEL || "gpt-4.1-mini",
-        tools: [{ type: "web_search_preview" }],
-        tool_choice: "required",
-        input:
-          "Busca 4 organizaciones europeas de equipamiento de gimnasio o software de inventario que puedan licenciar o adquirir catálogos técnicos de máquinas. Da nombre, web oficial y razón de encaje. Diferencia claramente una hipótesis de un interés confirmado. Solo información corporativa pública, sin nombres de personas ni datos de usuarios. Cita la fuente de cada empresa.",
-      }),
-      signal: AbortSignal.timeout(60000),
-    });
-    if (!r.ok) throw Error("Búsqueda no disponible.");
-    const body = await r.json();
-    return {
-      text: (body.output || [])
-        .flatMap((x) => x.content || [])
-        .map((x) => x.text || "")
-        .join("\n"),
-    };
+    throw Object.assign(Error("La búsqueda de organizaciones no está habilitada en VERA 2.0. No se han consultado ni generado prospectos."), {status:501,code:"PROSPECTS_UNAVAILABLE"});
   }
   throw Error("Acción desconocida.");
 }
