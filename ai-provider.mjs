@@ -1,4 +1,4 @@
-// Server-only, fixed routing: Groq + Gemini. No automatic provider substitution.
+// Server-only routing. Food photos have one explicit Groq fallback for transient Gemini failure.
 export class ServiceError extends Error {
   constructor(message, status = 502, code = 'AI_UNAVAILABLE', retryAfter) { super(message); Object.assign(this, { status, code, retryAfter }); }
 }
@@ -6,9 +6,9 @@ export function aiConfiguration(env = process.env) {
   const route = (provider, model) => ({provider, model, configured: Boolean(env[provider === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY']?.trim())});
   const groq = route('groq', env.GROQ_CHAT_MODEL || 'openai/gpt-oss-120b');
   const vision = route('gemini', env.GEMINI_VISION_MODEL || 'gemini-3.5-flash-lite');
-  return {routingVersion:2, providers:['groq','gemini'], execution:'cloud-only', localInference:false, verification:'configuration-only', speechOutput:'remote', routes:{
+  return {routingVersion:3, providers:['groq','gemini'], execution:'cloud-only', localInference:false, verification:'configuration-only', speechOutput:'remote', routes:{
     coach:{...groq}, coach_deep:route('gemini',env.GEMINI_DEEP_MODEL || 'gemini-3.5-flash-lite'), intro:{...groq},
-    photo:{...vision}, machine:{...vision}, label:{...vision},
+    photo:{...vision,fallback:{...route('groq',env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'),on:['AI_RATE_LIMIT','AI_BUSY','AI_TIMEOUT'],maxAttempts:1}}, machine:{...vision}, label:{...vision},
     listen:route('groq',env.GROQ_SPEECH_MODEL || 'whisper-large-v3-turbo'),
     speak:route('gemini',env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts'),
   }};
@@ -73,7 +73,7 @@ export function createGeminiProvider({env=process.env,fetchImpl=fetch}={}) {
 }
 const gemini=createGeminiProvider();
 export async function chat(system,user,json=false,options={}) {
-  const feature=options.feature || 'coach', route=requireRoute(feature);
+  const feature=options.feature || 'coach', route=requireRoute(feature),deadline=options.deadline??Date.now()+75000;
   let value;
   if(route.provider==='groq') {
     if(Array.isArray(user))throw new ServiceError('Las imágenes requieren la ruta de visión Gemini.',400,'AI_PATH');
@@ -88,11 +88,25 @@ export async function chat(system,user,json=false,options={}) {
       if(!match)throw new ServiceError('Imagen no válida.',400,'INVALID_IMAGE');
       return {inlineData:{mimeType:match[1],data:match[2]}};
     });
-    const data=await gemini(feature,{systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:options.maxTokens||8192,thinkingConfig:{thinkingLevel:'LOW'},...(json?{responseMimeType:'application/json'}:{})}},options);
+    let data;
+    try{data=await gemini(feature,{systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:options.maxTokens||8192,thinkingConfig:{thinkingLevel:'LOW'},...(json?{responseMimeType:'application/json'}:{})}},{...options,deadline});}
+    catch(error){
+      const fallback=route.fallback;
+      if(feature!=='photo'||!fallback?.configured||!fallback.on.includes(error.code)||deadline-Date.now()<1000||options.photoFallback===false)throw error;
+      if(!/^[a-zA-Z0-9._/-]{1,160}$/.test(fallback.model))throw new ServiceError('El modelo de visión alternativo no es válido.',503,'AI_CONFIG');
+      if(parts.filter(p=>p.inlineData).length>3)throw error;
+      // One alternate inference only. Preserve the same instructions, image and
+      // bounded deadline; do not retry this call even when Groq returns 503.
+      const response=await provider('chat/completions',{model:fallback.model,messages:[{role:'system',content:system},{role:'user',content:user}],max_completion_tokens:Math.min(options.maxTokens||3000,4096),...(json?{response_format:{type:'json_object'}}:{})},false,{...options,deadline,attempt:1});
+      if(response?.choices?.[0]?.finish_reason!=='stop')throw new ServiceError('La respuesta de visión alternativa está incompleta. Reintenta.',502,'AI_INCOMPLETE');
+      value=response.choices[0].message?.content;
+    }
+    if(data!==undefined){
     const candidate=data?.candidates?.[0];
     if(candidate?.finishReason!=='STOP')throw new ServiceError('La respuesta de IA está incompleta o no disponible. Reintenta.',502,'AI_INCOMPLETE');
     if(!Array.isArray(candidate.content?.parts))throw new ServiceError('La respuesta de IA no tiene el formato esperado.',502,'AI_FORMAT');
     value=candidate.content.parts.filter(part=>part && !part.thought && typeof part.text==='string').map(part=>part.text).join('');
+    }
   }
   if(typeof value!=='string'||!value.trim()||value.length>100000)throw new ServiceError('La respuesta de IA está vacía o incompleta. Reintenta.',502,'AI_INCOMPLETE');
   if(!json)return value;

@@ -24,3 +24,8 @@ export async function cachedLabel24(uid,image,compute,options={}){
  })();flights.set(flightKey,pending);
  try{return clone(await pending);}finally{if(flights.get(flightKey)===pending)flights.delete(flightKey);}
 }
+
+// Same account/image/context/model returns the reviewed estimate without a new provider reservation.
+export function cachedPhoto24(uid,image,compute,options={}){
+ return cachedLabel24(uid,image,compute,{...options,version:'photo:'+String(options.version||'photo24-v1')});
+}

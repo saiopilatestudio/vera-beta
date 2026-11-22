@@ -14,7 +14,7 @@ test('Groq selection sends credentials only to fixed Groq endpoint', async () =>
 });
 test('capabilities are explicit per route, keys private and providers fixed', () => {
   const cfg=aiConfiguration({GROQ_API_KEY:'private',OPENAI_API_KEY:'ignored'});
-  assert.deepEqual(cfg.providers,['groq','gemini']);assert.equal(cfg.routingVersion,2);
+  assert.deepEqual(cfg.providers,['groq','gemini']);assert.equal(cfg.routingVersion,3);
   assert.equal(cfg.routes.coach.model,'openai/gpt-oss-120b');assert.equal(cfg.routes.coach.configured,true);
   assert.equal(cfg.routes.photo.provider,'gemini');assert.equal(cfg.routes.photo.configured,false);
   assert.equal(cfg.routes.coach_deep.model,'gemini-3.5-flash-lite');assert.equal(cfg.routes.speak.model,'gemini-3.8-flash-lite-tts');

@@ -108,7 +108,7 @@ run('VeraPrivacy6.set(true)');let routesPosted=[];
 const withoutGemini=structuredClone(groqCapabilities);for(const route of Object.values(withoutGemini.ai.routes))if(route.provider==='gemini')route.configured=false;
 ctx.fetch=async(url,options)=>String(url).endsWith('/capabilities')?{ok:true,json:async()=>withoutGemini}:{ok:true,status:200,json:async()=>{routesPosted.push(String(url).split('/').at(-1));return {answer:'fixture'};}};
 await run("api('coach',{mode:'standard'})");await assert.rejects(run("api('coach',{mode:'deep'})"),/Gemini/);await assert.rejects(run("api('photo',{})"),/Gemini/);assert.deepEqual(routesPosted,['coach']);
-const invalidRoute=structuredClone(groqCapabilities);invalidRoute.ai.routes.photo.provider='groq';ctx.fetch=async()=>({ok:true,json:async()=>invalidRoute});await assert.rejects(run("api('photo',{})"),/no está disponible/);
+const invalidRoute=structuredClone(groqCapabilities);invalidRoute.ai.routes.photo.provider='unknown';ctx.fetch=async()=>({ok:true,json:async()=>invalidRoute});await assert.rejects(run("api('photo',{})"),/no está disponible/);
 results.push('Rutas separadas: Groq funciona sin Gemini; deep y fotos bloqueadas sin su proveedor; proveedor de ruta incorrecto rechazado');
 let postedMode;
 ctx.fetch=async(url,options)=>String(url).endsWith('/capabilities')?{ok:true,json:async()=>groqCapabilities}:{ok:true,status:200,json:async()=>{postedMode=JSON.parse(options.body).mode;return {answer:'fixture',reports:[]};}};

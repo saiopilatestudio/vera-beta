@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 2.4.1 beta
+    Vera 2.4.2 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="2.4.1 beta" />
+  <meta name="vera-build" content="2.4.2 beta" />
   <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="exercises-es22.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
   
   <header>
-    <div class="brand14" role="img" aria-label="VERA Performance 2.4.1 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.4.1 BETA</small></span></div>
+    <div class="brand14" role="img" aria-label="VERA Performance 2.4.2 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.4.2 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -758,7 +758,7 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      return '<details><summary>Diagnóstico técnico · Vera 2.4.1 beta</summary><p>Build: 241</p><p>Origen: '+safe(origin)+
+      return '<details><summary>Diagnóstico técnico · Vera 2.4.2 beta</summary><p>Build: 241</p><p>Origen: '+safe(origin)+
         '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube, con funciones separadas. Cada consulta verifica la configuración del servidor; no hay modelos en el dispositivo.</p><p>Sesión autenticada: '+
         (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario, perfil y salud autorizada se guardan automáticamente en tu cuenta cuando hay conexión. Fotos y conversaciones permanecen en este dispositivo.</p></details>';
     }
@@ -1063,7 +1063,9 @@
       const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s,privacyRevision=VeraPrivacy6.revision;
       const remoteAI=["coach","intro","photo","machine","label","listen","speak","diary-import","weekly-plan"].includes(path)||path==='workouts/weekly'&&!data?.readOnly;
       const cooldownKey=ACCOUNT_HOST+'|'+owner+'|'+path;
-      if(remoteAI&&aiCooldown24.get(cooldownKey)>Date.now())throw Error('Espera '+Math.ceil((aiCooldown24.get(cooldownKey)-Date.now())/1000)+' segundos antes de volver a pedir esta función. Tu registro se conserva.');
+      // Photo must reach its account-scoped server cache even while the provider
+      // is cooling down. Cache misses are still limited by the server/provider.
+      if(remoteAI&&path!=='photo'&&aiCooldown24.get(cooldownKey)>Date.now()){const retryAfter=Math.ceil((aiCooldown24.get(cooldownKey)-Date.now())/1000);throw Object.assign(Error('Espera '+retryAfter+' segundos antes de volver a pedir esta función. Tu registro se conserva.'),{code:'AI_COOLDOWN',status:429,retryAfter});}
       if(remoteAI){
         if(!VeraPrivacy6.allowed("cloud"))throw Error("Activa el análisis remoto desde Privacidad.");
         await VeraPrivacy6.ensureRemote(path,data,options.signal);
@@ -1093,17 +1095,20 @@
       }
       if (!r.ok) {
         const failure=await r.json().catch(() => ({}));
-        const retry=Number(r.headers.get('Retry-After'));
-        if(remoteAI&&r.status===429&&Number.isFinite(retry)&&retry>0){
-          const seconds=Math.min(Math.ceil(retry),3600);
+        const rawRetry=r.headers.get('Retry-After');
+        const retry=rawRetry&&Number.isFinite(Number(rawRetry))?Number(rawRetry):rawRetry&&Number.isFinite(Date.parse(rawRetry))?Math.ceil((Date.parse(rawRetry)-Date.now())/1000):Number(failure.retryAfter);
+        const seconds=Number.isFinite(retry)&&retry>0&&retry<=604800?Math.ceil(retry):undefined;
+        const metadata={code:typeof failure.code==='string'?failure.code:'HTTP_'+r.status,status:r.status,...(seconds?{retryAfter:seconds}:{}),...(typeof failure.resetAt==='string'&&Number.isFinite(Date.parse(failure.resetAt))?{resetAt:failure.resetAt}:{}),...(Number.isFinite(failure.limit)?{limit:failure.limit}:{})};
+        if(remoteAI&&r.status===429&&seconds){
           aiCooldown24.set(cooldownKey,Date.now()+seconds*1000);
-          throw Error((failure.error||'Límite temporal de IA.')+' Puedes reintentar en '+seconds+' segundos.');
+          throw Object.assign(Error((failure.error||'Límite temporal de IA.')+' Puedes reintentar en '+seconds+' segundos.'),metadata);
         }
-        throw Error(failure.error||'El servidor no responde.');
+        throw Object.assign(Error(failure.error||'El servidor no responde.'),metadata);
       }
       const result=await (blob ? r.blob() : r.json());
       if(!sameVeraSession(owner,token,state))throw Error("La sesión ha cambiado. Repite la operación en tu cuenta actual.");
       if(remoteAI&&(!VeraPrivacy6.allowed("cloud")||privacyRevision!==VeraPrivacy6.revision))throw Error("Has revocado el análisis remoto. No se incorpora la respuesta recibida.");
+      if(remoteAI)aiCooldown24.delete(cooldownKey);
       return result;
     }
     function chatPage() {
@@ -1338,7 +1343,7 @@
         "<section>" +
         camControls("preparePhoto") +
         '<div id="platePreview"></div><div id="foodReview"></div><label>Ración, aceite, salsas o sobras<textarea id="portion" placeholder="¿Cuánto comiste?"></textarea></label>' +
-        btn("Analizar ingredientes con Gemini", "estimate()", true) + btn("Registrar comida manualmente", "foodReview()") +
+        btn("Analizar ingredientes", "estimate()", true) + btn("Registrar comida manualmente", "foodReview()") +
         '<div id="estimate"></div></section>'
       );
     }
@@ -2611,7 +2616,7 @@
       const body = chatPage();
       return (
         (!s.turns.length ? greeting() : "") +
-        '<section><h3>Vera · Groq y Gemini</h3><p>Conversación y dictado: Groq. Fotos, revisión avanzada y voz en español: Gemini. Cada función necesita su proveedor configurado, conexión, sesión y permiso. Necesitas conexión para usar Vera.</p><label>Tipo de consulta<select onchange="s.coachMode=this.value;save()"><option value="standard" ' + (s.coachMode!=='deep'?'selected':'') + '>Conversación · Groq</option><option value="deep" ' + (s.coachMode==='deep'?'selected':'') + '>Revisión avanzada · Gemini</option></select></label><small>La revisión avanzada se usa sólo al seleccionarla; no implica mayor certeza.</small><div id="speechPlayer14" aria-live="polite"></div></section>' +
+        '<section><h3>Vera · Groq y Gemini</h3><p>Conversación y dictado: Groq. Fotos: proveedores de visión disponibles. Revisión avanzada y voz en español: Gemini. Cada función necesita su proveedor configurado, conexión, sesión y permiso. Necesitas conexión para usar Vera.</p><label>Tipo de consulta<select onchange="s.coachMode=this.value;save()"><option value="standard" ' + (s.coachMode!=='deep'?'selected':'') + '>Conversación · Groq</option><option value="deep" ' + (s.coachMode==='deep'?'selected':'') + '>Revisión avanzada · Gemini</option></select></label><small>La revisión avanzada se usa sólo al seleccionarla; no implica mayor certeza.</small><div id="speechPlayer14" aria-live="polite"></div></section>' +
         body
           .replace(
             "<section><label>Habla con Vera",
@@ -2926,7 +2931,7 @@
           '">' +
           btn("Quitar", "attached=null;render()");
         $("attachment").innerHTML+=btn("Identificar comida","chatPlate()");
-        msg("Foto adjunta. Se enviará a Gemini cuando solicites analizarla; todavía no se ha interpretado.");
+        msg("Foto adjunta. Se enviará al servicio de análisis cuando solicites analizarla; todavía no se ha interpretado.");
       } catch (e) {
         msg("No se pudo adjuntar la foto.");
       }
@@ -3041,4 +3046,5 @@
     if(!window.VeraNative)verifySession();
   </script>
 <link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="nutrition24.js"></script><script src="food-photo24.js"></script><script src="online22.js"></script><script src="google23.js"></script><script src="session24.js"></script><script src="training23.js"></script><script src="sleep23.js"></script><script src="workouts24.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script><link rel="stylesheet" href="design23.css"><link rel="stylesheet" href="training23.css"><link rel="stylesheet" href="workouts24.css">
+<script src="qr-generator24.js"></script><script src="gym-jam24.js"></script><link rel="stylesheet" href="gym-jam24.css">
 </html>

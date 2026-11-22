@@ -1,5 +1,13 @@
 /* Photo review survives harmless rerenders, remains account-bound, and always exits pending state. */
 let foodPhotoJob24=null,foodPhotoSequence24=0;
+function foodPhotoError24(error){
+ const seconds=Number(error?.retryAfter),wait=Number.isFinite(seconds)&&seconds>0?' El servidor indica una espera de '+(seconds<60?Math.ceil(seconds)+' segundos':seconds<3600?Math.ceil(seconds/60)+' minutos':Math.ceil(seconds/3600)+' horas')+'.':'';
+ if(error?.code==='QUOTA_DAILY_PHOTO')return 'Has alcanzado el cupo diario de análisis de fotos de esta cuenta de Vera. Es un límite de la aplicación, no un fallo de la foto.'+wait+' Puedes registrar la comida manualmente mientras se restablece el cupo.';
+ if(error?.code==='AI_RATE_LIMIT')return 'El proveedor de análisis de imágenes ha alcanzado un límite de uso. No se ha obtenido una nueva estimación.'+wait+' Puedes reintentar después o registrar la comida manualmente.';
+ if(error?.code==='AI_COOLDOWN')return 'El servicio está esperando antes de volver a solicitar un análisis.'+wait+' Puedes registrar la comida manualmente.';
+ if(error?.status===429)return 'El servidor ha limitado las solicitudes de análisis.'+wait+' Reintenta después o registra la comida manualmente.';
+ return error?.name==='AbortError'?'El análisis se ha interrumpido. Puedes reintentar.':error?.message||'No se pudo completar el análisis de la foto.';
+}
 function validateFoodPhoto24(value){
  if(!value||typeof value!=='object'||value.error)throw Error(typeof value?.error==='string'?value.error:'No se ha reconocido una comida. Prueba otra foto.');
  if(typeof value.description!=='string'||!value.description.trim()||typeof value.min!=='number'||typeof value.max!=='number'||!Number.isFinite(value.min)||!Number.isFinite(value.max)||value.min<0||value.max<value.min||value.max>90000)throw Error('La estimación ha llegado incompleta. Vuelve a intentar o registra la comida manualmente.');
@@ -24,14 +32,14 @@ estimate=function(){
  job.promise=(async()=>{let timeout,slow;
  try{
   const deadline=new Promise((_,reject)=>{job.reject=reject;timeout=setTimeout(()=>{job.controller.abort();reject(Error('El análisis ha tardado demasiado. Reintenta o introduce la comida manualmente.'));},90000);});
-  slow=setTimeout(()=>{if(visible())foodPhotoPanel24('Gemini sigue analizando la foto. La ración es una estimación que tendrás que revisar.',false);},15000);
+  slow=setTimeout(()=>{if(visible())foodPhotoPanel24('El servicio de análisis sigue revisando la foto. La ración es una estimación que tendrás que confirmar.',false);},15000);
   const result=await Promise.race([api('photo',{image:source,note},false,{signal:job.controller.signal}),deadline]);
   if(!active()||job.cancelled)return;
   const analysis=validateFoodPhoto24(result);if(!visible())return;
   // A server sync may replace this DOM node while awaiting. Reacquire it now.
   draft=analysis;const target=$('estimate');target.innerHTML='<h3>'+safe(draft.description)+'</h3><p>'+safe(draft.min)+'–'+safe(draft.max)+' kcal</p><p>'+safe(draft.assumptions)+'</p><p>'+safe(draft.question)+'</p><small>Revisa ingredientes y cantidades. Una foto no permite conocer con exactitud el aceite, las salsas ni el peso.</small>'+field('kcal','Estimación que guardarás (kcal)',Math.round((draft.min+draft.max)/2),'number','min="0"')+ingredientEditor()+btn('Confirmar comida','confirmMeal()',true);
   if(draft.ingredients.length&&$('ing0')&&$('ingtotal')&&$('kcal'))ingredientTotal();msg('Estimación pendiente de tu confirmación.');
- }catch(error){if(active()){const text=job.cancelled?'Análisis cancelado. No se ha guardado la comida.':(error.name==='AbortError'?'El análisis se ha interrumpido. Puedes reintentar.':error.message)+' No se ha guardado la comida.';if(visible())foodPhotoPanel24(text);msg(text);}}
+ }catch(error){if(active()){const text=job.cancelled?'Análisis cancelado. No se ha guardado la comida.':foodPhotoError24(error)+' No se ha guardado la comida.';if(visible())foodPhotoPanel24(text);msg(text);}}
  finally{clearTimeout(timeout);clearTimeout(slow);if(foodPhotoJob24===job)foodPhotoJob24=null;}
  })();return job.promise;
 };

@@ -7,9 +7,10 @@ import {journal} from "./journal.mjs";
 import {profileSync} from './profile-sync.mjs';
 import {googleStatus23,googleStart23,googleCallback23} from './google-auth23.mjs';
 import { searchProducts24, confirmProduct24, labelCatalogMatches24 } from './product-catalog24.mjs';
-import { cachedLabel24 } from './efficiency24.mjs';
+import { cachedLabel24, cachedPhoto24 } from './efficiency24.mjs';
 import { labelPrompt24, validateLabel24 } from './nutrition-label24.mjs';
 import { weeklyWorkout24 } from './workouts24.mjs';
+import { gymJamAction24 } from './gym-jam24.mjs';
 import {importDiary21,importInput21,weeklyPlan21,weekDates21} from './planning21.mjs';
 import { rows, db } from './storage.mjs';
 import { provider, chat, aiConfiguration, requireRoute, synthesize, speechText, ServiceError } from './ai-provider.mjs';
@@ -86,7 +87,7 @@ async function photo(d) {
   validateImage(d.image);
   const result = await chat(
     guard +
-      " Estima la ración consumida de una foto y aclaraciones. Si no muestra comida devuelve error. JSON: {description:string,min:number,max:number,assumptions:string,question:string}. Incluye ingredients como array de objetos {name,grams,kcal,protein,carbs,fat} con cantidades y macros en gramos para la porción mostrada. min y max son kcal totales plausibles. Incluye incertidumbre de salsas, aceite y tamaño. Responde en español, de forma breve: description hasta 180 caracteres, assumptions hasta 400, question hasta 180 y como máximo 12 ingredientes principales. No transcribas recetas ni recomendaciones. Los nutrientes desconocidos son null, no cero. La fotografía es una estimación revisable, nunca una medición exacta.",
+      " Estima la ración consumida de una foto y aclaraciones. Si no muestra comida devuelve error. JSON: {description:string,min:number,max:number,assumptions:string,question:string}. Incluye ingredients como array de objetos {name,grams,kcal,protein,carbs,fat} con cantidades y macros en gramos para la porción mostrada. min y max son kcal totales plausibles. Incluye incertidumbre de salsas, aceite y tamaño. Responde en español, de forma breve: description hasta 180 caracteres, assumptions hasta 400, question hasta 180 y como máximo 12 ingredientes principales. No transcribas recetas ni recomendaciones. Los nutrientes desconocidos son null, no cero. La fotografía es una estimación revisable, nunca una medición exacta. Cada ingrediente debe tener grams como número positivo y representar SOLO la parte comestible; excluye piel no consumida, cáscaras, huesos, envases y platos. Si no puedes estimar una cantidad sin inventarla, devuelve ingredients:[] y una pregunta concreta para aclararla; no uses grams:null ni cero.",
     [
       { type: "text", text: String(d.note || "Ración pendiente de confirmar").slice(0,4000) },
       { type: "image_url", image_url: { url: d.image } },
@@ -156,7 +157,7 @@ export const server = http.createServer(async (req, res) => {
       return res.end("ok");
     }
     if (req.method === "GET" && req.url === "/capabilities") {
-      return res.end(JSON.stringify({ apiVersion: "2.4", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true,weeklyWorkouts:true,productCatalog:true,labelNutrition:true} }));
+      return res.end(JSON.stringify({ apiVersion: "2.4", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true,weeklyWorkouts:true,productCatalog:true,labelNutrition:true,gymJam:true} }));
     }
     if (req.method === "GET" && ["/", "/index.html"].includes(req.url)) {
       res.setHeader("Content-Type", "text/html;charset=utf-8");
@@ -175,6 +176,7 @@ export const server = http.createServer(async (req, res) => {
         "/diary-import",
         "/weekly-plan",
         "/workouts/weekly",
+        ...['create','join','state','leave','propose','start','end','music'].map(action=>'/gym-jam/'+action),
         "/products/search",
         "/products/confirm",
         "/admin/end",
@@ -298,17 +300,18 @@ export const server = http.createServer(async (req, res) => {
       const out = await account(req.url, d, req.socket.remoteAddress);
       return res.end(JSON.stringify(out));
     }
+    if(req.url.startsWith('/gym-jam/'))return res.end(JSON.stringify(await gymJamAction24(req.url,uid,d)));
     // Catalog reads and repeat results do not reserve an AI request.
     if(req.url==='/products/search')return res.end(JSON.stringify(await searchProducts24(uid,d)));
     if(req.url==='/products/confirm')return res.end(JSON.stringify(await confirmProduct24(uid,d)));
-    const reserveAI24=async(feature)=>{
+    const reserveAI24=async(feature,quotaFeature=feature)=>{
       requireRoute(feature);
       if(inFlight.has(uid))throw new ServiceError('Ya hay una solicitud de IA en curso. Espera a que termine.',429,'AI_BUSY',5);
       if(inFlight.size>=20)throw new ServiceError('El servicio está ocupado. Reintenta en unos segundos.',503,'AI_BUSY',5);
       inFlight.add(uid);activeUid=uid;
-      reservation=await consume(uid);
+      reservation=await consume(uid,quotaFeature);
     };
-    if(req.url==='/workouts/weekly')return res.end(JSON.stringify(await weeklyWorkout24(uid,d,{db,ask:chat,beforeGenerate:()=>reserveAI24('coach')})));
+    if(req.url==='/workouts/weekly')return res.end(JSON.stringify(await weeklyWorkout24(uid,d,{db,ask:chat,beforeGenerate:()=>reserveAI24('coach','weeklyWorkouts')})));
     if(req.url==='/label'){
       validateImage(d.image);
       const note=typeof d.note==='string'?d.note.trim().slice(0,500):'';
@@ -318,6 +321,15 @@ export const server = http.createServer(async (req, res) => {
       },{version:'gemini:label24-v1:'+aiConfiguration().routes.label.model,note});
       const label=result.result;
       return res.end(JSON.stringify({...label,catalogMatches:await labelCatalogMatches24(uid,label),cache:result.cache}));
+    }
+    if(req.url==='/photo'){
+      validateImage(d.image);
+      const note=typeof d.note==='string'?d.note.trim().slice(0,4000):'';
+      const result=await cachedPhoto24(uid,d.image,async()=>{
+        await reserveAI24('photo');
+        return photo({...d,note});
+      },{version:'photo24-v4:'+JSON.stringify(aiConfiguration().routes.photo),note});
+      return res.end(JSON.stringify({...result.result,cache:result.cache}));
     }
     if (req.url === "/coach") coachInput(d);
     const feature = req.url === '/diary-import' ? (d.image?'photo':'coach') : req.url === '/weekly-plan' ? 'coach' : req.url === "/coach" && d.mode === "deep" ? "coach_deep" : req.url.slice(1);
@@ -332,7 +344,7 @@ export const server = http.createServer(async (req, res) => {
     if (req.url === "/speak") speechText(d.text);
     if(req.url==='/diary-import')importInput21(d);
     if(req.url==='/weekly-plan'){weekDates21(d.week);coachInput({...d,question:'Revisar semana'});}
-    reservation=await consume(uid);
+    reservation=await consume(uid,req.url==='/weekly-plan'?'weeklyWorkouts':'general');
     let result;
     if(req.url==='/diary-import')result=await importDiary21(d);
     if(req.url==='/weekly-plan')result=await weeklyPlan21(d);
@@ -360,7 +372,6 @@ export const server = http.createServer(async (req, res) => {
       );
     }
     if (req.url === "/coach") result = await coach(d, uid);
-    if (req.url === "/photo") result = await photo(d);
     if (req.url === "/listen") {
       const form = new FormData();
       const mime = d.mime.split(";")[0];
@@ -390,7 +401,7 @@ export const server = http.createServer(async (req, res) => {
     const status = internal ? 500 : Number.isInteger(e.status) && e.status >= 400 && e.status <= 599 ? e.status : 400;
     if (e.retryAfter) res.setHeader("Retry-After", String(e.retryAfter));
     if (!res.headersSent) res.writeHead(status, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: internal ? "No se pudo completar la operación de datos. Reintenta." : e.message, ...(e.code && !internal ? { code: e.code } : {}) }));
+    res.end(JSON.stringify({ error: internal ? "No se pudo completar la operación de datos. Reintenta." : e.message, ...(e.code && !internal ? { code: e.code } : {}), ...(['QUOTA_DAILY_PHOTO','QUOTA_DAILY_WORKOUT'].includes(e.code)?{resetAt:e.resetAt,limit:e.limit}:{}) }));
   } finally {
     if (activeUid) inFlight.delete(activeUid);
   }

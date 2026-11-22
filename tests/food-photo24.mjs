@@ -8,3 +8,8 @@ h=harness();pending=h.ctx.estimate();[...h.timers.values()].find(t=>t.ms===90000
 h=harness();pending=h.ctx.estimate();h.resolve({description:'Plato',min:null,max:200});await pending;assert.match(h.ctx.notice,/incompleta/);assert.equal(h.ctx.draft,null);
 h=harness();pending=h.ctx.estimate();h.reject(Error('Límite temporal del proveedor'));await pending;assert.match(h.ctx.notice,/Límite temporal/);assert.match(h.nodes.get('estimate').innerHTML,/Volver a analizar/);
 console.log('PASS food-photo24: DOM rerender during await, duplicate request, account change, cancel, timeout, malformed response, provider error and no implicit save.');
+
+h=harness();pending=h.ctx.estimate();[...h.timers.values()].find(t=>t.ms===15000).callback();assert.ok(!h.nodes.get('estimate').innerHTML.includes('Gemini'));h.reject(Object.assign(Error('Quota'),{code:'QUOTA_DAILY_PHOTO',status:429,retryAfter:7200}));await pending;assert.match(h.ctx.notice,/límite de la aplicación/);assert.match(h.ctx.notice,/2 horas/);assert.equal(h.ctx.s.logs.length,0);
+h=harness();pending=h.ctx.estimate();h.reject(Object.assign(Error('Rate'),{code:'AI_RATE_LIMIT',status:429,retryAfter:120}));await pending;assert.match(h.ctx.notice,/proveedor/);assert.match(h.ctx.notice,/2 minutos/);assert.ok(!h.ctx.notice.includes('cupo diario'));
+assert.ok(!h.ctx.foodPhotoError24({code:'AI_RATE_LIMIT'}).includes('espera de'));assert.ok(!h.ctx.foodPhotoError24({status:429}).includes('proveedor'));
+console.log('PASS photo quota UI: application/provider distinction, actual waits, generic vision labels, no implicit save');

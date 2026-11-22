@@ -1,0 +1,18 @@
+// Local real HTTP/SQLite, upstream controlled: quota/cache/refund integration, no real provider spend.
+import assert from 'node:assert/strict';import {mkdtempSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
+Object.assign(process.env,{HOST:'127.0.0.1',PORT:'0',VERA_DB:join(mkdtempSync(join(tmpdir(),'vera-photo-http24-')),'db'),TURSO_DATABASE_URL:'',TURSO_AUTH_TOKEN:'',RENDER:'',GROQ_API_KEY:'synthetic',GEMINI_API_KEY:'synthetic',VERA_DAILY_LIMIT:'1',VERA_PHOTO_DAILY_LIMIT:'2'});
+const realFetch=globalThis.fetch;let upstreamCalls=0,status=200,bad=false;globalThis.fetch=async()=>{upstreamCalls++;if(status!==200)return new Response('{}',{status,headers:{'retry-after':'7'}});return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify(bad?{min:1,max:2,ingredients:[{name:'bad',grams:-1}]}:{description:'Comida de prueba',min:100,max:200,ingredients:[{name:'Arroz',grams:100,kcal:150,protein:3,carbs:30,fat:1}]})}]}}]});};
+const {server}=await import('../server.mjs');const {db,rows}=await import('../storage.mjs');const {consume}=await import('../accounts.mjs');if(!server.listening)await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port;let token;
+const post=async(path,body)=>{const response=await realFetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});return {status:response.status,data:await response.json(),retry:response.headers.get('retry-after')};};
+try{
+ const user=(await post('/register',{email:'photo@example.invalid',password:'Only-test-password',notice:'beta-3',adult:true})).data;token=user.token;await consume(user.id);
+ const image='data:image/png;base64,iVBORw0KGgo=',body={image,note:'ración original'};
+ const batch=await Promise.all(Array.from({length:4},()=>post('/photo',body)));assert.ok(batch.every(r=>r.status===200));assert.equal(batch.filter(r=>r.data.cache==='miss').length,1);assert.equal(upstreamCalls,1,'concurrent identical photo requests share one compute');let r=batch[0];
+ r=await post('/photo',body);assert.equal(r.data.cache,'hit');assert.equal(upstreamCalls,1);
+ bad=true;r=await post('/photo',{image,note:'bad'});assert.equal(r.status,502);assert.equal(r.data.code,'AI_PHOTO');bad=false;assert.equal((await rows('SELECT n FROM photo_quota24 WHERE uid=?',user.id))[0].n,1);
+ status=429;r=await post('/photo',{image,note:'limited provider'});assert.equal(r.status,429);assert.equal(r.data.code,'AI_RATE_LIMIT');assert.equal(r.retry,'7');status=200;assert.equal((await rows('SELECT n FROM photo_quota24 WHERE uid=?',user.id))[0].n,1);
+ r=await post('/photo',{image,note:'second actual estimate'});assert.equal(r.status,200);const previous=upstreamCalls;
+ r=await post('/photo',{image,note:'third actual estimate'});assert.equal(r.status,429);assert.equal(r.data.code,'QUOTA_DAILY_PHOTO');assert.equal(r.data.limit,2);assert.ok(r.data.resetAt);assert.ok(Number(r.retry)>0);assert.equal(upstreamCalls,previous,'local budget blocks before provider');
+ r=await post('/photo',body);assert.equal(r.status,200);assert.equal(r.data.cache,'hit');assert.equal(upstreamCalls,previous,'cache works despite exhausted budget');assert.equal((await rows('SELECT n FROM quota WHERE uid=?',user.id))[0].n,1,'general budget untouched');
+ console.log('PASS photo-quota-http24: real route independent from full general budget; cached repeats zero spend, invalid/provider429 refunds, distinct local limit+reset and cache hit after limit.');
+}finally{globalThis.fetch=realFetch;await new Promise(resolve=>server.close(resolve));db.close();}

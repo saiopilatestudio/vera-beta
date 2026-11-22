@@ -1,0 +1,18 @@
+import './test-env.mjs';
+import assert from 'node:assert/strict';import {mkdtempSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
+process.env.VERA_DB=join(mkdtempSync(join(tmpdir(),'vera-photo-quota24-')),'db');process.env.VERA_DAILY_LIMIT='1';process.env.VERA_PHOTO_DAILY_LIMIT='2';
+const {consume,releaseQuota}=await import('../accounts.mjs');const {cachedPhoto24,cachedLabel24}=await import('../efficiency24.mjs');const {db,rows}=await import('../storage.mjs');
+const general=await consume('same');await assert.rejects(consume('same'),e=>e.status===429);
+const photo=await consume('same','photo');assert.equal(photo.feature,'photo');assert.equal((await rows('SELECT n FROM quota WHERE uid=?','same'))[0].n,1);
+await releaseQuota(photo);await releaseQuota(photo);assert.equal((await rows('SELECT n FROM photo_quota24 WHERE uid=?','same'))[0].n,0,'double refund must not free another request');
+const concurrent=await Promise.allSettled(Array.from({length:8},()=>consume('concurrent','photo')));assert.equal(concurrent.filter(r=>r.status==='fulfilled').length,2);const quota=concurrent.find(r=>r.status==='rejected').reason;assert.equal(quota.code,'QUOTA_DAILY_PHOTO');assert.ok(quota.retryAfter>0&&quota.retryAfter<=86400);assert.ok(quota.resetAt.endsWith('Z'));
+await releaseQuota(concurrent.find(r=>r.status==='fulfilled').value);assert.equal((await rows('SELECT n FROM photo_quota24 WHERE uid=?','concurrent'))[0].n,1);
+const image='data:image/png;base64,'+Buffer.from([137,80,78,71,13,10,26,10,0,1,2]).toString('base64');let calls=0;
+const compute=async()=>{const r=await consume('cache','photo');calls++;return {description:'Meal',min:100,max:200,ingredients:[]};};
+const first=await cachedPhoto24('cache',image,compute),second=await cachedPhoto24('cache',image,compute);assert.equal(calls,1);assert.equal(first.cache,'miss');assert.equal(second.cache,'hit');
+await cachedPhoto24('cache',image,compute,{note:'more oil'});assert.equal(calls,2);await assert.rejects(cachedPhoto24('cache',image,compute,{note:'new meal'}),e=>e.code==='QUOTA_DAILY_PHOTO');assert.equal((await cachedPhoto24('cache',image,compute)).cache,'hit','cached result bypasses exhausted quota');
+await cachedLabel24('cache',image,async()=>({brand:'Separate label'}));assert.equal((await cachedPhoto24('cache',image,compute)).result.description,'Meal','photo cache cannot return label result');
+let failed=0;const fail=async()=>{const r=await consume('failure','photo');failed++;try{throw Error('Invalid provider output');}catch(e){await releaseQuota(r);throw e;}};
+await assert.rejects(cachedPhoto24('failure',image,fail));await assert.rejects(cachedPhoto24('failure',image,fail));assert.equal(failed,2);assert.equal((await rows('SELECT n FROM photo_quota24 WHERE uid=?','failure'))[0].n,0);assert.equal((await rows('SELECT count(*) AS n FROM label_cache24 WHERE uid=?','failure'))[0].n,0);
+const stored=await rows('SELECT * FROM label_cache24');assert.ok(stored.every(row=>!JSON.stringify(row).includes(image)&&!JSON.stringify(row).includes('data:image')),'cache stores only hash+result, not raw photo');
+await releaseQuota(general);db.close();console.log('PASS photo-quota24: independent budget, concurrency, idempotent refund, reset metadata, cache before reserve, note/version isolation and uncached refunded failures.');

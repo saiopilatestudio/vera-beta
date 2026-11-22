@@ -6,7 +6,14 @@ function workoutSelectWeek24(value){workoutAccount24();if(![monday21(),workoutNe
 let workoutOwner24='',workoutToken24='',workoutState24=null,workoutPlan24=null,workoutRequest24='',workoutStale24=false,workoutError24='',workoutJob24=null,workoutLoaded24=false,workoutTimer24=null,workoutScheduled24='',workoutAccepted24='',workoutRetry24=0;
 function workoutAccount24(){const owner=sessionStorage.veraUser||'',token=sessionStorage.veraToken||'';if(owner!==workoutOwner24||token!==workoutToken24||s!==workoutState24){clearTimeout(workoutTimer24);workoutOwner24=owner;workoutToken24=token;workoutState24=s;workoutSelectedWeek24='';workoutPlan24=null;workoutRequest24='';workoutStale24=false;workoutError24='';workoutJob24=null;workoutLoaded24=false;workoutScheduled24='';workoutAccepted24='';workoutRetry24=0;}}
 function workoutReady24(){return validSession&&!!sessionStorage.veraToken&&(typeof accountReady22==='undefined'||accountReady22)&&typeof googleLinked23==='function'&&googleLinked23()&&typeof healthAccess23==='function'&&healthAccess23().complete===true&&s.profile?.introduced&&s.profile.goal&&s.profile.level&&Number(s.profile.days)>=1;}
-function workoutSignature24(){const keys=['goal','criteria','likes','age','level','days','time','eq','introduced'];const records=s.logs.filter(r=>['Entrenamiento','Sueño','Sensaciones','Cardio','Peso en ayunas','Otro pesaje'].includes(r.kind)).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.id).localeCompare(String(b.id))).slice(0,80);return JSON.stringify({week:workoutWeek24(),profile:Object.fromEntries(keys.map(k=>[k,s.profile[k]])),gym:s.gym,machines:s.machines,need:s.need,records});}
+function workoutSignature24(){
+ const week=workoutWeek24(),since=new Date(Date.parse(week+'T12:00:00Z')-42*86400000).toISOString().slice(0,10),until=new Date(Date.parse(week+'T12:00:00Z')+6*86400000).toISOString().slice(0,10);
+ const keys=['goal','criteria','likes','age','level','days','time','eq','introduced'];
+ const recordKeys=['id','kind','date','exercise','kg','enteredKg','loadMode','loadSchema','mode','reps','rir','trainingNote','note','value','minutes','sore','tired','muscle'];
+ const records=s.logs.filter(r=>['Entrenamiento','Sueño','Sensaciones','Cardio','Peso en ayunas','Otro pesaje'].includes(r.kind)&&r.date>=since&&r.date<=until).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.id).localeCompare(String(b.id))).slice(0,80).map(r=>Object.fromEntries(recordKeys.filter(k=>r[k]!==undefined).map(k=>[k,r[k]])));
+ const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
+ return JSON.stringify(stable({week,profile:Object.fromEntries(keys.map(k=>[k,s.profile[k]])),gym:s.gym,machines:s.machines,need:s.need,records}));
+}
 async function loadWorkouts24(){workoutAccount24();if(!workoutReady24()||workoutJob24)return;return runWorkout24(true);}
 async function runWorkout24(readOnly=false,request){
  workoutAccount24();if(!workoutReady24()||workoutJob24)return false;if(!readOnly&&!VeraPrivacy6.allowed('cloud')){msg('Permite el análisis remoto en Perfil para generar tu tabla.');return false;}
@@ -20,7 +27,7 @@ async function runWorkout24(readOnly=false,request){
   if(job.signature===workoutSignature24()&&!response.stale)workoutAccepted24=job.signature;else workoutStale24=true;
   if(!readOnly)msg(response.plan?.status==='needs_review'?'Antes de entrenar, revisa la aclaración que necesita Vera.':'Tabla semanal preparada. Abre una sesión y registra sólo las series que realices.');
   workoutRetry24=0;return true;
- }catch(error){if(current()){workoutError24=error.message;workoutRetry24=Date.now()+60000;workoutLoaded24=true;if(!readOnly)msg('Conservamos tu tabla anterior. '+error.message);}return false;}
+ }catch(error){if(current()){workoutError24=error.message;workoutRetry24=Date.now()+Math.max(60000,Math.min(86400000,(Number(error.retryAfter)||0)*1000),Number.isFinite(Date.parse(error.resetAt))?Math.min(86400000,Date.parse(error.resetAt)-Date.now()):0);workoutLoaded24=true;if(!readOnly)msg('Conservamos tu tabla anterior. '+error.message);}return false;}
  finally{if(current()){workoutJob24=null;render();queuePlan21();}}
 }
 function generateWorkout24(request){workoutAccount24();const text=request===undefined?($('workoutRequest24')?.value??workoutRequest24):String(request);if(text.length>1500)return msg('Describe el cambio en hasta 1500 caracteres.');if(workoutPlan24&&!confirm('¿Preparar una nueva tabla semanal con esta petición? Se conservarán todos tus entrenamientos realizados.'))return;return runWorkout24(false,text);}

@@ -22,8 +22,8 @@ const {server}=await import('../server.mjs');
 const {db,rows}=await import('../storage.mjs');
 if(!server.listening)await new Promise(resolve=>server.once('listening',resolve));
 const base='http://127.0.0.1:'+server.address().port;
-let token,passed=0;
-async function post(path,body){const r=await realFetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});return {status:r.status,data:r.headers.get('content-type')?.startsWith('audio/')?Buffer.from(await r.arrayBuffer()):await r.json(),headers:r.headers};}
+let token,passed=0,photoFixture24=0;
+async function post(path,body){if(path==='/photo'&&body.note===undefined)body={...body,note:'Independent upstream fixture '+(++photoFixture24)};const r=await realFetch(base+path,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify(body)});return {status:r.status,data:r.headers.get('content-type')?.startsWith('audio/')?Buffer.from(await r.arrayBuffer()):await r.json(),headers:r.headers};}
 async function test(name,fn){await fn();passed++;console.log('PASS · '+name);}
 try{
   const user=(await post('/register',{email:'ai@example.invalid',password:'Synthetic-only-password',adult:true,notice:'beta-3'})).data;token=user.token;

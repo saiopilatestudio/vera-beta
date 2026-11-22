@@ -1,10 +1,10 @@
-/* Label recognition is exclusively performed by Gemini through the authenticated API. */
+/* Label recognition is performed by the authenticated cloud API. */
 let labelTicket=0;
 async function labelSearch11(input){
  const file=input.files?.[0],node=$('suppResult'),ticket=++labelTicket;if(!file||!node)return;
  const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s;
  const active=()=>sameVeraSession(owner,token,state)&&node.isConnected&&ticket===labelTicket;
- node.textContent='Preparando etiqueta para Gemini…';
+ node.textContent='Preparando etiqueta para el análisis en la nube…';
  try{
   const image=new Image();image.src=await readData(file);await image.decode();
   const ratio=Math.min(1,1600/Math.max(image.width,image.height)),canvas=document.createElement('canvas');
@@ -12,7 +12,7 @@ async function labelSearch11(input){
   canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
   if(!active())return;
   const remote=await api('label',{image:canvas.toDataURL('image/jpeg',.90)});if(!active())return;
-  const product=typeof recognizedProduct24==='function'?recognizedProduct24(remote):{name:[remote.brand,remote.product].filter(x=>typeof x==='string').join(' '),form:remote.form,n:{},source:'Etiqueta revisada tras análisis Gemini'};
+  const product=typeof recognizedProduct24==='function'?recognizedProduct24(remote):{name:[remote.brand,remote.product].filter(x=>typeof x==='string').join(' '),form:remote.form,n:{},source:'Etiqueta revisada tras análisis en la nube'};
   const candidates=(Array.isArray(remote.catalogMatches)?remote.catalogMatches:[]).map(x=>productFromServer24(x));
   node.innerHTML='<h3>Revisa tu etiqueta</h3>'+field('labelQuery','Marca, producto y variante',product.name.slice(0,200))+
    '<p class="sub">'+(Object.keys(product.facts||{}).length?'Se han leído cantidades de la tabla. Comprueba la porción y cada valor antes de registrar.':'No hay una tabla nutricional legible con su porción. Fotografía también la parte posterior o introduce la etiqueta; no se inventarán sus nutrientes.')+'</p>'+
