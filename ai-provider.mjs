@@ -5,9 +5,9 @@ export class ServiceError extends Error {
 export function aiConfiguration(env = process.env) {
   const route = (provider, model) => ({provider, model, configured: Boolean(env[provider === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY']?.trim())});
   const groq = route('groq', env.GROQ_CHAT_MODEL || 'openai/gpt-oss-120b');
-  const vision = route('gemini', env.GEMINI_VISION_MODEL || 'gemini-4-hydrogen');
+  const vision = route('gemini', env.GEMINI_VISION_MODEL || 'gemini-3.5-flash-lite');
   return {routingVersion:2, providers:['groq','gemini'], execution:'cloud-only', localInference:false, verification:'configuration-only', speechOutput:'remote', routes:{
-    coach:{...groq}, coach_deep:route('gemini',env.GEMINI_DEEP_MODEL || 'gemini-4-hydrogen'), intro:{...groq},
+    coach:{...groq}, coach_deep:route('gemini',env.GEMINI_DEEP_MODEL || 'gemini-3.5-flash-lite'), intro:{...groq},
     photo:{...vision}, machine:{...vision}, label:{...vision},
     listen:route('groq',env.GROQ_SPEECH_MODEL || 'whisper-large-v3-turbo'),
     speak:route('gemini',env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts'),

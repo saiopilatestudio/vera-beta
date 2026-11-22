@@ -20,6 +20,8 @@ Android build 220. Actualiza V2.0/V2.1 con la misma firma. Toda la IA se ejecuta
 
 Fuentes y alcance: [nutrición](docs/NUTRICION-V22.md), [Juntos](docs/INVESTIGACION-JUNTOS-V22.md). Documentos release21 y anteriores son históricos.
 
+Visión y revisión Gemini usan `gemini-3.5-flash-lite`, verificado con texto e imagen sintéticos el 22/11/2026 después de observar timeouts en Hydrogen/3.8 Flash. La voz conserva `gemini-3.8-flash-lite-tts`.
+
 ## IA y servicios
 
 | Función | Servicio |

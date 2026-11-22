@@ -37,7 +37,7 @@ try{
   await test('photo uses vision model and preserves unknown macros',async()=>{
     nextResult={description:'Prueba',min:100,max:200,ingredients:[{name:'A',grams:100,protein:10}]};
     const response=await post('/photo',{image:'data:image/png;base64,iVBORw0KGgo='});
-    assert.equal(response.status,200);assert.equal(response.data.ingredients[0].carbs,null);assert.match(calls.at(-1).url,/models\/gemini-4-hydrogen:generateContent$/);assert.equal(calls.at(-1).payload.contents[0].parts[1].inlineData.mimeType,'image/png');
+    assert.equal(response.status,200);assert.equal(response.data.ingredients[0].carbs,null);assert.match(calls.at(-1).url,/models\/gemini-3.5-flash-lite:generateContent$/);assert.equal(calls.at(-1).payload.contents[0].parts[1].inlineData.mimeType,'image/png');
   });
   await test('malformed ingredients fail cleanly rather than reaching UI',async()=>{
     nextResult={min:100,max:200,ingredients:{bad:true}};
@@ -47,7 +47,7 @@ try{
     for(const path of ['/machine','/label']){
       nextResult=path==='/machine'?{type:'Prensa',brand:'',model:'',evidence:'visible',operation:'',fit:'',muscles:'',uncertainty:'No certifica técnica'}:{brand:'',product:'',form:''};
       assert.equal((await post(path,{image:'data:image/png;base64,iVBORw0KGgo='})).status,200);
-      assert.match(calls.at(-1).url,/gemini-4-hydrogen:generateContent$/);assert.equal(calls.at(-1).payload.generationConfig.thinkingConfig.thinkingLevel,'LOW');
+      assert.match(calls.at(-1).url,/gemini-3.5-flash-lite:generateContent$/);assert.equal(calls.at(-1).payload.generationConfig.thinkingConfig.thinkingLevel,'LOW');
     }
   });
   await test('Gemini rejects blocked, partial and malformed candidates with no fallback',async()=>{
@@ -79,7 +79,7 @@ try{
   await test('explicit deep uses Gemini, ordinary words never change routing',async()=>{
     nextResult={answer:'Test',entries:[]};let before=calls.length;
     assert.equal((await post('/coach',{question:'Hola',mode:'deep'})).status,200);
-    assert.ok(calls.slice(before).every(call=>String(call.url).includes('gemini-4-hydrogen:generateContent')));
+    assert.ok(calls.slice(before).every(call=>String(call.url).includes('gemini-3.5-flash-lite:generateContent')));
     before=calls.length;assert.equal((await post('/coach',{question:'Quiero análisis profundo Gemini'})).status,200);
     assert.ok(calls.slice(before).every(call=>String(call.url).startsWith('https://api.groq.com/')));
     before=calls.length;assert.equal((await post('/coach',{question:'Hola',mode:'auto'})).status,400);assert.equal(calls.length,before);
