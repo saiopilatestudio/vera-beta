@@ -5,6 +5,7 @@ import { ownerLogin, ownerSession, ownerLogout, ownerCookie, allowed } from "./o
 import { adminAllowed, business } from "./business.mjs";
 import {journal} from "./journal.mjs";
 import {profileSync} from './profile-sync.mjs';
+import {googleStatus23,googleStart23,googleCallback23} from './google-auth23.mjs';
 import {importDiary21,importInput21,weeklyPlan21,weekDates21} from './planning21.mjs';
 import { rows } from './storage.mjs';
 import { provider, chat, aiConfiguration, requireRoute, synthesize, speechText, ServiceError } from './ai-provider.mjs';
@@ -120,12 +121,24 @@ export const server = http.createServer(async (req, res) => {
   let reservation, activeUid;
   try {
     const path = new URL(req.url, 'http://localhost').pathname;
-    const asset = /^\/([a-z0-9_-]+(?:\.[a-z0-9_-]+)*)\.(js|css|json|png)$/i.exec(path);
+    if(req.method==='GET'&&path==='/auth/google/callback'){
+      let ok=false;
+      try{await googleCallback23(new URL(req.url,'https://vera-beta.onrender.com').searchParams);ok=true;}catch{res.statusCode=400;}
+      res.setHeader('Content-Type','text/html; charset=utf-8');
+      res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'");
+      return res.end('<!doctype html><html lang="es"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VERA · Google</title><style>body{font:18px system-ui;background:#f3faed;color:#193e30;padding:36px;max-width:560px;margin:auto}main{background:white;padding:28px;border-radius:24px}</style><main><h1>'+ (ok?'Google conectado':'No se ha completado la conexión')+'</h1><p>'+(ok?'Vuelve a Vera para continuar con los permisos de salud.':'Vuelve a Vera y comienza de nuevo la conexión con Google.')+'</p></main></html>');
+    }
+    if(req.method==='GET'&&path==='/google/status'){
+      const uid=await authorize(req.headers.authorization);
+      if(!uid){res.writeHead(401);return res.end(JSON.stringify({error:'Inicia sesión.'}));}
+      return res.end(JSON.stringify(await googleStatus23(uid)));
+    }
+    const asset = /^\/([a-z0-9_-]+(?:\.[a-z0-9_-]+)*)\.(js|css|json|png|svg)$/i.exec(path);
     if (req.method === "GET" && asset) {
       const file = new URL("./www"+path, import.meta.url);
       const info = await stat(file).catch(() => null);
       if (!info?.isFile()) { res.writeHead(404); return res.end(); }
-      const mime = {js:"application/javascript",css:"text/css",json:"application/json",png:"image/png"}[asset[2].toLowerCase()] || "application/octet-stream";
+      const mime = {js:"application/javascript",css:"text/css",json:"application/json",png:"image/png",svg:"image/svg+xml"}[asset[2].toLowerCase()] || "application/octet-stream";
       res.writeHead(200, {"Content-Type":mime,"Content-Length":info.size});
       await pipeline(createReadStream(file), res).catch(() => res.destroy());
       return;
@@ -139,7 +152,7 @@ export const server = http.createServer(async (req, res) => {
       return res.end("ok");
     }
     if (req.method === "GET" && req.url === "/capabilities") {
-      return res.end(JSON.stringify({ apiVersion: "2.2", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true} }));
+      return res.end(JSON.stringify({ apiVersion: "2.3", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true} }));
     }
     if (req.method === "GET" && ["/", "/index.html"].includes(req.url)) {
       res.setHeader("Content-Type", "text/html;charset=utf-8");
@@ -151,6 +164,7 @@ export const server = http.createServer(async (req, res) => {
       req.method !== "POST" ||
       ![
         "/owner-login",
+        "/google/start",
         ...partnerPaths,
         "/places",
         "/profile-sync",
@@ -195,6 +209,12 @@ export const server = http.createServer(async (req, res) => {
         JSON.stringify({ error: "Inicia sesión para usar esta función." }),
       );
     }
+    // Identity is enforced on the server too, including requests from older APKs.
+    // Account recovery and synchronization remain accessible to preserve records.
+    if(uid&&!['/session','/logout','/google/start','/profile-sync','/diario','/nickname'].includes(req.url)&&process.env.GOOGLE_CLIENT_ID){
+      const google=await googleStatus23(uid);
+      if(!google.configured||!google.linked)throw new ServiceError('Conecta tu cuenta de Google en Vera para continuar.',403,'GOOGLE_REQUIRED');
+    }
     if (req.url === "/logout") {
       await logout(req.headers.authorization);
       return res.end("{}");
@@ -208,6 +228,7 @@ export const server = http.createServer(async (req, res) => {
       chunks.push(chunk);
     }
     const d = readObject(Buffer.concat(chunks).toString("utf8"));
+    if(req.url==='/google/start')return res.end(JSON.stringify(await googleStart23(uid)));
     if(req.url==="/owner-login"){
       const out=await ownerLogin(d,req.socket.remoteAddress);
       if(d.mode==="browser"){

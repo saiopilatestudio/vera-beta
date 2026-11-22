@@ -68,6 +68,7 @@ const VeraJournal=(()=>{
    }
    if(result.nick&&s.profile.nick===nick)s.profile.nick=result.nick;
    s.diaryLastSync=new Date().toISOString();persist();
+   if(typeof window.exportHealth23==='function')queueMicrotask(()=>{if(active())window.exportHealth23();});
    if(!quiet)msg((s.syncConflicts21||[]).length?'Revisa los cambios simultáneos en Perfil → Guardado de tu cuenta.':'Registros y perfil sincronizados.');
    return true;
   }catch(error){if(active()){lastError='El servidor no ha confirmado el guardado. '+error.message;if(!quiet)msg(lastError);}return false;}

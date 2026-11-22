@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 2.2 beta
+    Vera 2.3 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="2.2 beta" />
+  <meta name="vera-build" content="2.3 beta" />
   <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="exercises-es22.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
   
   <header>
-    <div class="brand14" role="img" aria-label="VERA Performance 2.2 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.2 BETA</small></span></div>
+    <div class="brand14" role="img" aria-label="VERA Performance 2.3 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.3 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -758,7 +758,7 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      return '<details><summary>Diagnóstico técnico · Vera 2.2 beta</summary><p>Build: 220</p><p>Origen: '+safe(origin)+
+      return '<details><summary>Diagnóstico técnico · Vera 2.3 beta</summary><p>Build: 230</p><p>Origen: '+safe(origin)+
         '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube, con funciones separadas. Cada consulta verifica la configuración del servidor; no hay modelos en el dispositivo.</p><p>Sesión autenticada: '+
         (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario, perfil y salud autorizada se guardan automáticamente en tu cuenta cuando hay conexión. Fotos y conversaciones permanecen en este dispositivo.</p></details>';
     }
@@ -2335,7 +2335,9 @@
         "</section>";
     }
     function applyEdit(i) {
+      if(typeof trainingEditContext14!=='undefined'&&trainingEditContext14&&$("correctExercise"))return applyTraining14();
       let l = s.logs[i];
+      if(!l)return msg('El registro ya no existe. Vuelve a abrirlo.');
       if(l.kind==='Entrenamiento')return applyTraining14(i);
       if ($("correctValue") && Number($("correctValue").value) < 0) return;
       l.note = $("correctNote").value;
@@ -3028,5 +3030,5 @@
     render();
     if(!window.VeraNative)verifySession();
   </script>
-<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="online22.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script>
+<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="online22.js"></script><script src="google23.js"></script><script src="training23.js"></script><script src="sleep23.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script><link rel="stylesheet" href="design23.css"><link rel="stylesheet" href="training23.css">
 </html>

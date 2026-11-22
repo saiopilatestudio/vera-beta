@@ -14,6 +14,7 @@ function onlineGate22(){
   $('view').innerHTML='<section class="online22"><span class="eyebrow22">TU CUENTA EN LA NUBE</span><h1>'+(networkDown22?'Necesitas conexión':'Conectando con tu cuenta')+'</h1><p>'+(networkDown22?'Activa los datos móviles o el wifi. Tus registros confirmados están en tu cuenta.':'Estamos recuperando tu perfil y tus registros antes de abrir Vera.')+'</p>'+btn(loadingAccount22?'Conectando…':'Volver a conectar','restoreAccount22()',true)+'</section>';
   return true;
  }
+ if(typeof googleGate23==='function'){const gate=googleGate23();if(gate){$('topTools').style.display='none';$('nav').style.display='none';$('view').innerHTML=gate;return true;}}
  if(!profileComplete22()){
   $('topTools').style.display='none';$('nav').style.display='none';
   $('view').innerHTML='<section class="onboarding22"><span class="eyebrow22">BIENVENIDO A TU NUEVO COMIENZO</span><h1>Hagamos Vera tuya</h1><p>Cuéntanos tu objetivo y cómo quieres entrenar. Guardaremos tu perfil en tu cuenta antes de empezar. Podrás cambiarlo después.</p></section>'+prefs();

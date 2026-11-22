@@ -32,6 +32,8 @@ try:
     subprocess.run(common + ["-d", str(unit), str(root / "beta-android/OriginPolicy.java"),
                             str(root / "tests/audit-android-origin.java")], check=True)
     subprocess.run([str(args.java), "-cp", str(unit), "app.vera.coach.visionbeta.AndroidOriginAudit"], check=True)
+    subprocess.run(common + ["-d", str(unit), str(root / "beta-android/AssetMime.java"), str(root / "tests/audit-android-mime.java")], check=True)
+    subprocess.run([str(args.java), "-cp", str(unit), "app.vera.coach.visionbeta.AndroidMimeAudit"], check=True)
     print("PASS: all beta-android Java sources compile against the supplied Android SDK.")
 finally:
     if tmp.resolve().parent != workspace:

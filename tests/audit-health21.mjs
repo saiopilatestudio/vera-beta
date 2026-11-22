@@ -4,7 +4,7 @@ const context=vm.createContext({console,Date,Math,Map,Set,JSON,Number,String,Err
 vm.runInContext('function sameVeraSession(owner,token,state){return sessionStorage.veraUser===owner&&sessionStorage.veraToken===token&&s===state;}',context);
 vm.runInContext(fs.readFileSync(new URL('../www/health21.js',import.meta.url),'utf8'),context);
 const call=code=>vm.runInContext(code,context),today=context.day();
-context.today=today;
+context.today=today;context.googleLinked23=()=>false;call('requestHealth21(true,true)');assert.equal(requests.length,0,'never ask/read Health Connect before Google link');context.googleLinked23=()=>true;
 call("requestHealth21();healthImport21(healthTicket21.id,'permissions',['nutrition']);healthImport21(healthTicket21.id,'nutrition',[{id:'meal-1',date:today,value:400,protein:20,carbs:40,fat:10,nutrients:{iron_mg:4}}]);");
 assert.equal(context.s.logs.length,1);assert.equal(context.s.logs[0].healthKey,'health_nutrition_meal-1');assert.equal(context.s.logs[0].nutrients.iron_mg,4);assert.equal(saves,1);
 call("healthImport21(healthTicket21.id,'nutrition',[{id:'meal-1',date:today,value:400,protein:20,carbs:40,fat:10,nutrients:{iron_mg:4}}]);");assert.equal(saves,1);

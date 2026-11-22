@@ -32,5 +32,5 @@ Object.assign(nodes,{supProduct:{value:whey.name},supAmount:{value:'30'},supUnit
 nodes.supFact22_kcal.value='110';nodes.supFact22_protein.value='21.4';nodes.supFact22_iron_mg.value='0';
 ctx.saveSupplement(whey);assert.equal(ctx.s.logs.length,1);assert.equal(ctx.s.logs[0].kcal,110);assert.equal(ctx.s.logs[0].value,null);assert.equal(ctx.s.logs[0].date,'2026-11-21');assert.equal(ctx.s.logs[0].nutrients.iron_mg,0);
 nodes.supFact22_kcal.value='-10';ctx.saveSupplement(whey);assert.equal(ctx.s.logs.length,1,'negative value must not save');
-nodes.supFact22_kcal.value='200';ctx.saveSupplement(whey,0);assert.equal(ctx.s.logs.length,1);assert.equal(ctx.s.logs[0].kcal,200);
+nodes.supFact22_kcal.value='200';ctx.beginSupplementEdit23(0);ctx.saveSupplement(whey,0);assert.equal(ctx.s.logs.length,1);assert.equal(ctx.s.logs[0].kcal,200);
 console.log('PASS V2.2 nutrition: official portions, mg/g/capsules, unknowns, legacy kcal repair, meals+supplements+micros, hydration/dedup, pie/bar charts, save/edit and invalid input.');

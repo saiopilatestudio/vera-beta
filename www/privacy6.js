@@ -6,7 +6,7 @@ const VeraPrivacy6={
  async ensureRemote(path='coach',data={},signal){
   if(!sessionStorage.veraToken)throw Error('Inicia sesión para utilizar la IA.');
   if(!this.allowed('cloud'))throw Error('Activa el análisis remoto de esta cuenta desde Perfil → Privacidad.');
-  const upgrade='Actualiza el servidor V2.1 para utilizar esta función. No se han enviado tus datos para análisis.';
+  const upgrade='Esta función no está disponible en el servidor conectado. Reintenta más tarde. No se han enviado tus datos para análisis.';
   let response,config;
   try{response=await fetch(ACCOUNT_HOST+'/capabilities',{method:'GET',credentials:'omit',headers:{Accept:'application/json'},signal:signal?AbortSignal.any([signal,AbortSignal.timeout(75000)]):AbortSignal.timeout(75000)});}
   catch(e){if(signal?.aborted)throw e;throw Error('No se pudo comprobar el servidor. Revisa la conexión y vuelve a intentarlo. No se han enviado datos para análisis.');}
@@ -14,7 +14,12 @@ const VeraPrivacy6={
   try{config=await response.json();}catch{throw Error('No se pudo interpretar la comprobación del servidor. Reintenta más tarde. No se han enviado datos para análisis.');}
   const expected={coach:'groq',coach_deep:'gemini',intro:'groq',photo:'gemini',machine:'gemini',label:'gemini',listen:'groq',speak:'gemini'};
   const route=path==='diary-import'?(data.image?'photo':'coach'):path==='weekly-plan'?'coach':path==='coach'&&data.mode==='deep'?'coach_deep':path,ai=config?.ai,r=ai?.routes?.[route];
-  if(!['2.0','2.1'].includes(config?.apiVersion)||(['diary-import','weekly-plan'].includes(path)&&config?.apiVersion!=='2.1')||ai?.routingVersion!==2||ai?.execution!=='cloud-only'||ai?.localInference!==false||!Array.isArray(ai.providers)||ai.providers.some(p=>!['groq','gemini'].includes(p))||!expected[route]||r?.provider!==expected[route]||!ai.providers.includes(r.provider))throw Error(upgrade);
+  const version=/^2\.(\d+)(?:\.\d+)?$/.exec(String(config?.apiVersion||''));
+  const feature=path==='diary-import'?'diaryImport':path==='weekly-plan'?'weeklyTeam':null;
+  // Minor server upgrades remain compatible. Explicit capabilities win; 2.1
+  // predates feature flags, so retain its original compatible contract.
+  const supportsFeature=!feature||config?.features?.[feature]===true||config?.features?.[feature]===undefined&&config?.apiVersion==='2.1';
+  if(!version||!supportsFeature||ai?.routingVersion!==2||ai?.execution!=='cloud-only'||ai?.localInference!==false||!Array.isArray(ai.providers)||!ai.providers.length||ai.providers.some(p=>!['groq','gemini'].includes(p))||!expected[route]||r?.provider!==expected[route]||!ai.providers.includes(r.provider))throw Error(upgrade);
   if(r.configured!==true)throw Error('El servidor todavía no tiene configurado '+(r.provider==='groq'?'Groq':'Gemini')+' para esta función. Puedes seguir usando el diario manual.');
   if(!this.allowed('cloud'))throw Error('Has revocado el análisis remoto. No se enviarán datos.');
  },

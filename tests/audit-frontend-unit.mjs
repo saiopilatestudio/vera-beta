@@ -54,7 +54,7 @@ results.push('Consentimiento aislado por cuenta');
 const groqCapabilities={apiVersion:'2.0',ai:{routingVersion:2,providers:['groq','gemini'],execution:'cloud-only',localInference:false,speechOutput:'remote',routes:Object.fromEntries(Object.entries({coach:'groq',coach_deep:'gemini',intro:'groq',photo:'gemini',machine:'gemini',label:'gemini',listen:'groq',speak:'gemini'}).map(([k,provider])=>[k,{provider,configured:true,model:'fixture'}]))}};
 for(const fixture of [{ok:false},{ok:true,config:{apiVersion:'2.0',ai:{provider:'openai',configured:true}}},{ok:true,config:{...groqCapabilities,ai:{...groqCapabilities.ai,routes:{...groqCapabilities.ai.routes,coach:{provider:'groq',configured:false}}}}}]){
  let posts=0;ctx.fetch=async(url,options)=>{if(options.method==='POST'){posts++;throw Error('Data must not be sent');}return {ok:fixture.ok,json:async()=>fixture.config};};
- assert.match(await run("api('coach',{question:'private fixture'}).then(()=>'',e=>e.message)"),/Actualiza el servidor V2.1|todavía no tiene configurado/);assert.equal(posts,0);
+ assert.match(await run("api('coach',{question:'private fixture'}).then(()=>'',e=>e.message)"),/Esta función no está disponible|todavía no tiene configurado/);assert.equal(posts,0);
 }
 results.push('Servidor antiguo404, proveedor distinto y Groq sin configurar bloquean POST IA');
 let cloudPosts=0;ctx.fetch=async(url,options)=>{if(String(url).endsWith('/capabilities')){assert.equal(options.method,'GET');assert.equal(options.headers.Authorization,undefined);return {ok:true,json:async()=>groqCapabilities};}cloudPosts++;assert.equal(options.headers.Authorization,'Bearer token-a');return {ok:true,status:200,json:async()=>({answer:'Groq fixture'})};};
@@ -108,7 +108,7 @@ run('VeraPrivacy6.set(true)');let routesPosted=[];
 const withoutGemini=structuredClone(groqCapabilities);for(const route of Object.values(withoutGemini.ai.routes))if(route.provider==='gemini')route.configured=false;
 ctx.fetch=async(url,options)=>String(url).endsWith('/capabilities')?{ok:true,json:async()=>withoutGemini}:{ok:true,status:200,json:async()=>{routesPosted.push(String(url).split('/').at(-1));return {answer:'fixture'};}};
 await run("api('coach',{mode:'standard'})");await assert.rejects(run("api('coach',{mode:'deep'})"),/Gemini/);await assert.rejects(run("api('photo',{})"),/Gemini/);assert.deepEqual(routesPosted,['coach']);
-const invalidRoute=structuredClone(groqCapabilities);invalidRoute.ai.routes.photo.provider='groq';ctx.fetch=async()=>({ok:true,json:async()=>invalidRoute});await assert.rejects(run("api('photo',{})"),/Actualiza/);
+const invalidRoute=structuredClone(groqCapabilities);invalidRoute.ai.routes.photo.provider='groq';ctx.fetch=async()=>({ok:true,json:async()=>invalidRoute});await assert.rejects(run("api('photo',{})"),/no está disponible/);
 results.push('Rutas separadas: Groq funciona sin Gemini; deep y fotos bloqueadas sin su proveedor; proveedor de ruta incorrecto rechazado');
 let postedMode;
 ctx.fetch=async(url,options)=>String(url).endsWith('/capabilities')?{ok:true,json:async()=>groqCapabilities}:{ok:true,status:200,json:async()=>{postedMode=JSON.parse(options.body).mode;return {answer:'fixture',reports:[]};}};

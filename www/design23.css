@@ -1,0 +1,19 @@
+/* Refinement of Aire: softer surfaces, clear hierarchy, accessible controls. */
+:root{--shadow23:0 12px 36px #235c4610}
+header{padding-bottom:18px}.brandIcon14{border-radius:17px;overflow:hidden;box-shadow:0 5px 16px #437a421a;background:#edf8d9}.brandIcon14 img{display:block;object-fit:contain}
+section,.card,.metric21,.weekly21{box-shadow:var(--shadow23);border-color:#dbe9e2}
+button{transition:background .16s ease,box-shadow .16s ease,transform .16s ease}button:active{transform:translateY(1px)}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #2b806d;outline-offset:3px}
+.hero6{background:linear-gradient(125deg,#e7f8c3 0%,#daf1ca 42%,#d9f0f4 100%);box-shadow:0 15px 35px #3d755012}.hero6 .hero-stats6>div{backdrop-filter:blur(8px)}
+.tiles6 button{box-shadow:0 4px 15px #3e725108;border-color:#dce9df}.tiles6 button:hover{box-shadow:0 8px 23px #3e72511a}
+input,select,textarea{background:#fbfdfc!important;border-color:#b7cfc3!important;box-shadow:inset 0 1px 3px #294e3305}
+#nav{box-shadow:0 -8px 32px #285b4710;background:#fcfffcf5;backdrop-filter:blur(16px)}
+#nav button.active,#nav button[aria-current="page"]{color:#174f37}
+.onboarding22{background:linear-gradient(120deg,#f0fadb,#eef9fe);border:1px solid #dcebd4}
+.sleep-summary23{background:linear-gradient(135deg,#f4fbff,#fff 52%,#f0f9df)}
+.sleep-summary23 .eyebrow21{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:#4f7164}
+.sleep-summary23 .metric-grid21{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+.sleep-summary23 .metric-card21{padding:14px;border:1px solid #d4e7dd;border-radius:19px;background:linear-gradient(135deg,#ecf8d8,#def2e7)}
+.sleep-summary23 .metric-card21:nth-child(2){background:linear-gradient(135deg,#eef8fd,#dfedf7);border-color:#d5e5ed}
+.sleep-summary23 .metric-card21 p{font-size:.76rem;margin:0 0 7px}.sleep-summary23 .metric-card21 h3{font-size:1.15rem;line-height:1.2;margin:0 0 7px;letter-spacing:-.03em}.sleep-summary23 .metric-card21 small{font-size:.7rem}
+.sleep-summary23 .sub{font-size:.78rem;color:#536e63}.sleep-summary23>p>button{font-size:.75rem;padding:8px 12px;margin-top:6px}
+@media(prefers-reduced-motion:reduce){button{transition:none}button:active{transform:none}}

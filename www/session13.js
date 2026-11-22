@@ -70,13 +70,23 @@ function commitSet13() {
   s.setDraft={...d,reps:''};save();render();msg('Serie guardada en este dispositivo. Pendiente de sincronizar.');
 }
 
+let trainingEditContext14=null;
 function editTraining14(i){
- const row=s.logs[i],load=trainingLoad14(row);
- $('view').innerHTML='<h1>Corregir entrenamiento</h1><section>'+field('correctExercise','Ejercicio',row.exercise||'','text','required maxlength="100"')+field('correctDate','Fecha',row.date,'date','required max="'+day()+'"')+field('correctKg','Carga introducida (kg)',load.enteredKg,'number','required min="0" step="any"')+'<label>Medida de la carga<select id="correctMode">'+[['total','Peso total'],['side','Por lado × 2'],['assistance','Asistencia']].map(([v,t])=>'<option value="'+v+'" '+(load.mode===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'+field('correctReps','Repeticiones por serie',(row.reps||[]).join(', '))+field('correctRir','RIR opcional',row.rir??'','number','min="0" max="10"')+'<p><small>'+rirHelp14+'</small></p>'+field('correctTrainingNote','Nota técnica',row.trainingNote||'')+'<p>Registro anterior: '+safe(row.note)+'</p><p>'+effects(row).length+' decisiones consultaron este registro.</p>'+btn('Guardar corrección','applyEdit('+i+')',true)+'</section>';
+ trainingEditContext14=null;
+ const row=s.logs[i];
+ if(!validSession||!row||row.kind!=='Entrenamiento'||row.source==='health')return msg('Abre un entrenamiento manual de tu cuenta para corregirlo.');
+ if(!row.id)row.id=uid();
+ const load=trainingLoad14(row);
+ trainingEditContext14={owner:sessionStorage.veraUser,token:sessionStorage.veraToken,state:s,id:row.id,snapshot:JSON.stringify(row)};
+ $('view').innerHTML='<h1>Corregir entrenamiento</h1><section>'+field('correctExercise','Ejercicio',row.exercise||'','text','required maxlength="100"')+field('correctDate','Fecha',row.date,'date','required max="'+day()+'"')+field('correctKg','Carga introducida (kg)',load.enteredKg,'number','required min="0" step="any"')+'<label>Medida de la carga<select id="correctMode">'+[['total','Peso total'],['side','Por lado × 2'],['assistance','Asistencia']].map(([v,t])=>'<option value="'+v+'" '+(load.mode===v?'selected':'')+'>'+t+'</option>').join('')+'</select></label>'+field('correctReps','Repeticiones por serie',(row.reps||[]).join(', '))+field('correctRir','RIR opcional',row.rir??'','number','min="0" max="10"')+'<p><small>'+rirHelp14+'</small></p>'+field('correctTrainingNote','Nota técnica',row.trainingNote||'')+'<p>Registro anterior: '+safe(row.note)+'</p><p>'+effects(row).length+' decisiones consultaron este registro.</p>'+btn('Guardar corrección','applyTraining14()',true)+'</section>';
 }
 function applyTraining14(i){
- const row=s.logs[i];let changes;
+ const context=trainingEditContext14;
+ if(!context||!validSession||!sameVeraSession(context.owner,context.token,context.state)){trainingEditContext14=null;return msg('La cuenta ha cambiado. Vuelve a abrir el entrenamiento para corregirlo.');}
+ const matches=s.logs.filter(row=>row.id===context.id),row=matches[0];
+ if(matches.length!==1||row.kind!=='Entrenamiento'||row.source==='health'||JSON.stringify(row)!==context.snapshot){trainingEditContext14=null;return msg('El entrenamiento ha cambiado o ya no existe. Revisa la versión actual antes de corregirlo.');}
+ let changes;
  try{changes=validateTraining14({exercise:$('correctExercise').value,date:$('correctDate').value,enteredKg:$('correctKg').value,mode:$('correctMode').value,reps:$('correctReps').value,rir:$('correctRir').value,note:$('correctTrainingNote').value});}catch(e){return msg(e.message);}
  if(row.trainingNote==null&&!row.legacyNote)row.legacyNote=row.note;
- Object.assign(row,changes);markAffected(row);save();go('Equipo');msg('Entrenamiento corregido. Las revisiones afectadas están señaladas.');
+ Object.assign(row,changes);trainingEditContext14=null;markAffected(row);save();go('Equipo');msg('Entrenamiento corregido. Las revisiones afectadas están señaladas.');
 }

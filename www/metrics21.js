@@ -24,7 +24,7 @@ function validMetricDate21(value) {
  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value))return false;
  const d=new Date(value+'T12:00:00');return Number.isFinite(+d)&&metricDay21(d)===value;
 }
-function nutritionValue21(row,key) {
+function baseNutritionValue21(row,key) {
  if(key==='kcal'){
   if(row.kind!=='Suplemento')return numberMetric21(row.value??row.kcal);
   const explicit=numberMetric21(row.kcal);if(explicit!==null)return explicit;
@@ -36,6 +36,21 @@ function nutritionValue21(row,key) {
  if(['protein','carbs','fat'].includes(key))return numberMetric21(row[key]);
  const source=row.nutrients||row.nutrition||row.nutrientes||{};
  return numberMetric21(source[key]);
+}
+function mixingLiquidValue23(row,key){
+ const liquid=row.kind==='Suplemento'?row.mixingLiquid:null;
+ if(!liquid||!['water','milk','plant'].includes(liquid.type)||!(numberMetric21(liquid.ml)>0))return null;
+ if(liquid.type==='water')return ['kcal','protein','carbs','fat'].includes(key)?0:null;
+ const value=numberMetric21(liquid.per100ml?.[key]);return value===null?null:value*Number(liquid.ml)/100;
+}
+function nutritionValue21(row,key){
+ const base=baseNutritionValue21(row,key),liquid=mixingLiquidValue23(row,key);
+ if(row.mixingLiquid?.type==='water')return base;
+ return base===null?liquid:liquid===null?base:base+liquid;
+}
+function nutritionPartial23(row,key){
+ if(baseNutritionValue21(row,key)===null)return true;
+ return row.kind==='Suplemento'&&['milk','plant'].includes(row.mixingLiquid?.type)&&mixingLiquidValue23(row,key)===null;
 }
 function metricsSummary21(logs,days=28,today=metricDay21(new Date()),weightMode='all') {
  days=[7,28,90].includes(Number(days))?Number(days):28;
@@ -57,7 +72,7 @@ function metricsSummary21(logs,days=28,today=metricDay21(new Date()),weightMode=
  const nutrition=Object.fromEntries(keys.map(key=>{
   const values=daily.map(row=>row[key]).filter(value=>value!==null),known=meals.filter(row=>nutritionValue21(row,key)!==null).length;
   const total=values.length?values.reduce((a,b)=>a+b,0):null;
-  return [key,{total,average:values.length?total/values.length:null,known,meals:meals.length,days:values.length,partial:known<meals.length}];
+  return [key,{total,average:values.length?total/values.length:null,known,meals:meals.length,days:values.length,partial:known<meals.length||meals.some(row=>nutritionPartial23(row,key))}];
  }));
  const byDate={};
  const weightRows=rows.filter(row=>(weightMode==='fasted'?row.kind==='Peso en ayunas':weightMode==='other'?['Otro pesaje','Peso'].includes(row.kind):['Peso en ayunas','Otro pesaje','Peso'].includes(row.kind))&&numberMetric21(row.value)>0);
@@ -82,10 +97,18 @@ function weightGraph21(weights) {
  return '<svg class="weight-chart21" viewBox="0 0 530 205" role="img" aria-label="Progresión del peso registrado. Los valores exactos se muestran en la tabla inferior."><title>Peso registrado, en kilogramos</title>'+[0,0.5,1].map(f=>'<line class="grid21" x1="55" x2="490" y1="'+(155-115*f)+'" y2="'+(155-115*f)+'"/><text x="7" y="'+(159-115*f)+'">'+metricNumber21(base+span*f)+'</text>').join('')+(points.length>1?'<polyline class="trend21" points="'+points.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ')+'"/>':'')+points.map(p=>'<circle class="point21" cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="5"><title>'+p.date+': '+metricNumber21(p.value)+' kg</title></circle>').join('')+'<text x="55" y="190">'+weights[0].date+'</text><text x="490" y="190" text-anchor="end">'+(weights.length>1?weights.at(-1).date:'')+'</text></svg>';
 }
 function waterSummary22(logs,since,today,goal){
- const seen=new Set(),dates={};
- for(const row of Array.isArray(logs)?logs:[]){if(!row||row.kind!=='Agua'||!validMetricDate21(row.date)||row.date<since||row.date>today||numberMetric21(row.value)===null||(row.id&&seen.has(row.id)))continue;if(row.id)seen.add(row.id);dates[row.date]=(dates[row.date]||0)+Number(row.value);}
- const daily=Object.entries(dates).sort(([a],[b])=>a.localeCompare(b)).map(([date,value])=>({date,value})),total=daily.reduce((sum,r)=>sum+r.value,0),target=numberMetric21(goal);
- return {daily,total,average:daily.length?total/daily.length:null,today:dates[today]??null,goal:target>0?target:null,percent:target>0&&dates[today]!==undefined?dates[today]*100/target:null};
+ const seen=new Set(),dates={},waterDates={},drinkDates={};
+ for(const row of Array.isArray(logs)?logs:[]){
+  if(!row||!validMetricDate21(row.date)||row.date<since||row.date>today||(row.id&&seen.has(row.id)))continue;
+  if(row.id)seen.add(row.id);
+  const liquid=row.kind==='Suplemento'?row.mixingLiquid:null;
+  const value=row.kind==='Agua'?numberMetric21(row.value):liquid&&['water','milk','plant'].includes(liquid.type)?numberMetric21(liquid.ml):null;
+  if(value===null)continue;
+  dates[row.date]=(dates[row.date]||0)+value;
+  const target=row.kind==='Agua'||liquid?.type==='water'?waterDates:drinkDates;target[row.date]=(target[row.date]||0)+value;
+ }
+ const daily=Object.entries(dates).sort(([a],[b])=>a.localeCompare(b)).map(([date,value])=>({date,value,water:waterDates[date]||0,other:drinkDates[date]||0})),total=daily.reduce((sum,r)=>sum+r.value,0),target=numberMetric21(goal);
+ return {daily,total,average:daily.length?total/daily.length:null,today:dates[today]??null,waterToday:waterDates[today]??null,otherToday:drinkDates[today]??null,goal:target>0?target:null,percent:target>0&&dates[today]!==undefined?dates[today]*100/target:null};
 }
 function barsGraph22(rows,key,label,unit,color='#4597b4'){
  const points=rows.filter(row=>numberMetric21(row[key])!==null);
@@ -113,8 +136,8 @@ function renderMetrics21() {
  <p class="coverage21">${data.mealDays} días registrados · ${foodCount} comidas + ${suppCount} suplementos</p>
  <dl class="metric-grid21">${fields.map(([key,label,unit])=>{const n=data.nutrition[key];return `<div class="metric-card21"><dt>${label}</dt><dd>${format(n.average,unit)}</dd><p>Media diaria · ${n.days} días${n.partial?' · datos parciales':''}</p></div>`;}).join('')}</dl>
  <div class="charts22"><article class="chart-card22"><h3>Energía día a día</h3>${barsGraph22(data.daily,'kcal','Energía','kcal','#89ba4e')}</article><article class="chart-card22"><h3>Tu reparto de macros</h3>${macroPie22(data.nutrition)}</article></div>
- <details><summary>Ver detalle nutricional y fuentes</summary><p class="sub">Comidas y suplementos del diario se suman. Si Health Connect aporta el mismo día se muestra la media de ambos totales por nutriente. Google Fit entra a través de Health Connect. Los días vacíos no cuentan como cero. Un registro parcial no representa todo lo consumido.</p><div class="table-scroll21"><table><caption>Totales diarios y media entre fuentes disponibles</caption><thead><tr><th>Fecha / fuente</th>${fields.map(([,name,unit])=>`<th>${name} (${unit})</th>`).join('')}</tr></thead><tbody>${data.daily.map(row=>`<tr><th>${row.date} · Media</th>${fields.map(([key])=>`<td>${metricNumber21(row[key])}</td>`).join('')}</tr>`+[['manual','Diario',row.manualCount],['health','Health Connect',row.healthCount]].filter(([,name,count])=>count).map(([source,name])=>`<tr><th>${name}</th>${fields.map(([key])=>`<td>${metricNumber21(row[source][key])}</td>`).join('')}</tr>`).join('')).join('')}</tbody></table></div></details>
+ <details><summary>Ver detalle nutricional y fuentes</summary><p class="sub">Comidas, suplementos y los nutrientes declarados de sus líquidos se suman. Si Health Connect aporta el mismo día se muestra la media de ambos totales por nutriente. Google Fit entra a través de Health Connect. Los días vacíos no cuentan como cero. Un registro parcial no representa todo lo consumido.</p><div class="table-scroll21"><table><caption>Totales diarios y media entre fuentes disponibles</caption><thead><tr><th>Fecha / fuente</th>${fields.map(([,name,unit])=>`<th>${name} (${unit})</th>`).join('')}</tr></thead><tbody>${data.daily.map(row=>`<tr><th>${row.date} · Media</th>${fields.map(([key])=>`<td>${metricNumber21(row[key])}</td>`).join('')}</tr>`+[['manual','Diario',row.manualCount],['health','Health Connect',row.healthCount]].filter(([,name,count])=>count).map(([source,name])=>`<tr><th>${name}</th>${fields.map(([key])=>`<td>${metricNumber21(row[source][key])}</td>`).join('')}</tr>`).join('')).join('')}</tbody></table></div></details>
  <article class="chart-card22"><h3>Fibra, vitaminas y minerales</h3><p class="sub">Incluye las cantidades declaradas en tus suplementos. Sin dato significa que falta información.</p>${micronutrientTable22(data.nutrition)}</article>
- <article class="hydration22"><span class="eyebrow21">Un hábito que suma</span><h3>Tu agua</h3><dl class="metric-grid21"><div class="metric-card21"><dt>Hoy</dt><dd>${format(water.today,'ml')}</dd><p>${water.goal?`Objetivo personal: ${metricNumber21(water.goal,0)} ml${water.percent!==null?' · '+metricNumber21(water.percent,0)+'%':''}`:'Establece tu objetivo de agua en Perfil.'}</p></div><div class="metric-card21"><dt>Media de días registrados</dt><dd>${format(water.average,'ml')}</dd><p>${water.daily.length} días · ${metricNumber21(water.total/1000)} litros en el periodo</p></div></dl>${barsGraph22(water.daily,'value','Agua','ml','#64b9db')}<p class="sub">Suma el agua que registras; no estima el agua presente en alimentos ni bebidas sin cantidad declarada.</p><button onclick="kind='Agua';go('Registro')">Registrar agua</button></article>
+ <article class="hydration22"><span class="eyebrow21">Un hábito que suma</span><h3>Agua y líquidos de tus suplementos</h3><dl class="metric-grid21"><div class="metric-card21"><dt>Hoy</dt><dd>${format(water.today,'ml')}</dd><p>${water.goal?`Objetivo personal: ${metricNumber21(water.goal,0)} ml${water.percent!==null?' · '+metricNumber21(water.percent,0)+'%':''}`:'Establece tu objetivo de agua en Perfil.'}</p></div><div class="metric-card21"><dt>Media de días registrados</dt><dd>${format(water.average,'ml')}</dd><p>${water.daily.length} días · ${metricNumber21(water.total/1000)} litros en el periodo</p></div></dl>${barsGraph22(water.daily,'value','Líquidos registrados','ml','#64b9db')}<p class="sub">Incluye el agua registrada y el volumen de agua, leche o bebida vegetal de tus suplementos, una sola vez. Es volumen de líquidos, no una estimación de agua pura. La leche y las bebidas suman también los nutrientes de su etiqueta; los campos vacíos siguen sin dato.</p><button onclick="kind='Agua';go('Registro')">Registrar agua</button></article>
  <article class="chart-card22"><h3>Progresión de peso</h3><label>Pesajes incluidos<select onchange="setMetricWeightMode21(this.value)"><option value="all" ${metricWeightMode21==='all'?'selected':''}>Todos los pesajes</option><option value="fasted" ${metricWeightMode21==='fasted'?'selected':''}>Sólo en ayunas</option><option value="other" ${metricWeightMode21==='other'?'selected':''}>Otros pesajes / Health Connect</option></select></label><p class="trend-summary21"><b>${format(data.weightAverage,'kg')}</b> de media${data.weightChange!==null?' · '+(data.weightChange>0?'+':'')+metricNumber21(data.weightChange)+' kg de cambio':''}</p>${weightGraph21(data.weights)}<p class="sub">${data.weights.length} días medidos. Los puntos son medias diarias; la línea une registros y no estima días vacíos.</p><details><summary>Ver pesajes y condiciones</summary><div class="table-scroll21"><table><thead><tr><th>Fecha</th><th>kg</th><th>Fuente / condición</th></tr></thead><tbody>${data.weights.map(row=>`<tr><th>${row.date}</th><td>${metricNumber21(row.value,2)}</td><td>${row.source}<br>${Object.entries(row.conditions).map(([key,value])=>key+': '+metricNumber21(value)+' kg').join(' · ')}</td></tr>`).join('')}</tbody></table></div></details></article></section>`;
 }

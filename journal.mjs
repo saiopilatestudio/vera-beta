@@ -20,7 +20,7 @@ export function validateRecord(id, record) {
   if (!object(record) || record.id !== id || !kinds.has(record.kind))
     invalid('Entrada no admitida.');
   if(record.source==='health'){
-    const healthKinds={steps:'Pasos',sleep:'Sueño',workouts:'Entrenamiento',weight:'Otro pesaje',nutrition:'Comida'};
+    const healthKinds={steps:'Pasos',sleep:'Sueño',workouts:'Entrenamiento',weight:'Otro pesaje',nutrition:'Comida',hydration:'Agua'};
     if(!Object.hasOwn(healthKinds,record.healthType)||healthKinds[record.healthType]!==record.kind||record.healthKey!==id||!id.startsWith('health_'+record.healthType+'_'))invalid('Identidad o tipo de salud no válido.');
   }
   if (typeof record.date !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(record.date)) invalid('Fecha no válida.');
@@ -37,6 +37,14 @@ export function validateRecord(id, record) {
     if(!object(record.nutrients)||Object.entries(record.nutrients).some(([key,value])=>!keys.has(key)||!numeric(value)))invalid('Micronutriente o cantidad no válida.');
   }
   if (record.kind === 'Sueño') {
+    if(record.sleepSpans!==undefined){
+      let previous=-Infinity;
+      if(!Array.isArray(record.sleepSpans)||record.sleepSpans.length>1000||record.sleepSpans.some(pair=>{
+        if(!Array.isArray(pair)||pair.length!==2||!pair.every(Number.isFinite)||pair[0]<0||pair[1]<=pair[0]||pair[1]-pair[0]>86400000||pair[0]<previous)return true;
+        previous=pair[1];return false;
+      }))invalid('Intervalos de sueño no válidos.');
+      if(record.sleepSpans.reduce((sum,[a,b])=>sum+b-a,0)>86400000)invalid('Duración de sueño no válida.');
+    }
     if (!numeric(record.minutes, 1440)) invalid('Duración de sueño no válida.');
     if (record.start !== undefined || record.end !== undefined) {
       if (!Number.isFinite(record.start) || !Number.isFinite(record.end) ||
@@ -44,6 +52,11 @@ export function validateRecord(id, record) {
           (record.value != null && Number(record.value) * 3600000 > record.end - record.start + 1))
         invalid('Intervalo de sueño no válido.');
     }
+  }
+  if(record.mixingLiquid!==undefined){
+    const liquid=record.mixingLiquid;
+    const fields=new Set(['kcal','protein','carbs','fat','fiber_g','sugar_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','vitaminC_mg','vitaminD_ug','vitaminB12_ug','vitaminA_ug','vitaminE_mg','vitaminB1_mg','vitaminB2_mg','vitaminB3_mg','vitaminB5_mg','vitaminB6_mg','biotin_ug','folate_ug','zinc_mg','manganese_mg','copper_mg','iodine_ug','chromium_ug','selenium_ug']);
+    if(record.kind!=='Suplemento'||!object(liquid)||!['water','milk','plant'].includes(liquid.type)||typeof liquid.ml!=='number'||!Number.isFinite(liquid.ml)||liquid.ml<=0||liquid.ml>10000||typeof liquid.name!=='string'||liquid.name.length>200||typeof liquid.source!=='string'||liquid.source.length>300||!object(liquid.per100ml)||Object.entries(liquid.per100ml).some(([k,v])=>!fields.has(k)||typeof v!=='number'||!Number.isFinite(v)||v<0||v>100000))invalid('Líquido del suplemento no válido.');
   }
   const value = JSON.stringify(record);
   if (Buffer.byteLength(value) > 32000 || /data:(image|audio)\//i.test(value)) invalid('Entrada demasiado grande o con contenido multimedia.');

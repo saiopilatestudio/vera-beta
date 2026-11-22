@@ -1,7 +1,7 @@
 /* Health Connect transport is OS-permission based; never an AI or Google OAuth substitute. */
 let healthTicket21=null,healthDebounce21=null,healthApplying21=false,healthLastRequest21=0,healthLastOwner21='';
-const healthKinds21={steps:'Pasos',sleep:'Sueño',workouts:'Entrenamiento',weight:'Otro pesaje',nutrition:'Comida'};
-function healthReady21(){return validSession&&!!sessionStorage.veraUser&&!!sessionStorage.veraToken&&!document.hidden&&!!window.VeraNative?.refreshHealth21;}
+const healthKinds21={steps:'Pasos',sleep:'Sueño',workouts:'Entrenamiento',weight:'Otro pesaje',nutrition:'Comida',hydration:'Agua'};
+function healthReady21(){return typeof googleLinked23==='function'&&googleLinked23()&&validSession&&!!sessionStorage.veraUser&&!!sessionStorage.veraToken&&!document.hidden&&!!window.VeraNative?.refreshHealth21;}
 function requestHealth21(permissions=false,force=false){
  if(!healthReady21())return;
  const owner=sessionStorage.veraUser,now=Date.now();
@@ -40,9 +40,10 @@ function normalizeHealth21(type,rows){
   const key=type==='steps'?r.date:typeof r.id==='string'?r.id.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,65):'';if(!key)continue;
   const id='health_'+type+'_'+key,l=record(r,id);
   if(type==='steps'){if(!number(r.value,1000000)||!Number.isInteger(r.value))continue;l.value=r.value;}
+  if(type==='hydration'){if(!number(r.value,20000))continue;l.value=r.value;}
   if(type==='weight'){if(!number(r.value,1000)||r.value===0)continue;l.value=r.value;l.note+=' · condición de ayuno no indicada';}
   if(type==='workouts'){if(!number(r.minutes,1440))continue;l.value=null;l.minutes=r.minutes;l.note+=' · '+String(r.title||'Sesión').slice(0,250)+' · '+Math.round(r.minutes)+' min';}
-  if(type==='nutrition'){l.value=number(r.value,90000)?r.value:null;l.note+=' · '+String(r.note||'Comida').slice(0,500);for(const k of ['protein','carbs','fat'])l[k]=number(r[k],10000)?r[k]:null;l.nutrients={};for(const k of ['fiber_g','sugar_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','vitaminC_mg','vitaminD_ug','vitaminB12_ug'])if(number(r.nutrients?.[k],1e7))l.nutrients[k]=r.nutrients[k];}
+  if(type==='nutrition'){l.value=number(r.value,90000)?r.value:null;l.note+=' · '+String(r.note||'Comida').slice(0,500);for(const k of ['protein','carbs','fat'])l[k]=number(r[k],10000)?r[k]:null;l.nutrients={};for(const k of ['fiber_g','sugar_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','vitaminC_mg','vitaminD_ug','vitaminB12_ug','vitaminA_ug','vitaminE_mg','vitaminB1_mg','vitaminB2_mg','vitaminB3_mg','vitaminB5_mg','vitaminB6_mg','biotin_ug','folate_ug','zinc_mg','manganese_mg','copper_mg','iodine_ug','chromium_ug','selenium_ug'])if(number(r.nutrients?.[k],1e7))l.nutrients[k]=r.nutrients[k];}
   result.set(id,l);
  }return [...result.values()];
 }
