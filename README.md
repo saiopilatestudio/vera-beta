@@ -1,39 +1,51 @@
-# VERA 2.0 beta
+# VERA 2.1 beta
 
-Aplicación Android y servidor de VERA, build 200. La IA se ejecuta exclusivamente en Groq y Gemini, con una ruta explícita por función. No incluye modelos, motores de inferencia ni descargas de IA local. Los formularios, el diario y los respaldos siguen guardando datos en el dispositivo.
+Aplicación Android y servidor VERA, build 210. Interfaz clara en blanco y verde lima. Toda la IA se ejecuta en Groq o Gemini; no incluye modelos, OCR, voz ni motores de inferencia locales.
 
-## Reparto de funciones
+La guía vigente de esta edición está en [docs/release21/README-V21.md](docs/release21/README-V21.md). El manual PDF y las evidencias acompañan a la APK y especifican el estado de despliegue comprobado.
 
-| Función | Proveedor |
+## Funciones V2.1
+
+- Texto e imágenes de días anteriores: Vera prepara entradas con fecha; al confirmar se incorporan al diario y a la sincronización de la cuenta.
+- Especialistas de entrenamiento, nutrición y recuperación revisan los datos por separado. Vera coordina siete días, muestra las razones y conserva el plan anterior si una revisión falla. Revisión automática opcional y opinión general a petición.
+- Guardado local y sincronización automática por cuenta de registros y estado de perfil. Los conflictos se muestran; no se mezclan cuentas al cerrar sesión. El nickname se valida y recupera desde el servidor.
+- Health Connect se actualiza al volver a la app y tras acciones, sin pulsar sincronizar por cada registro. Requiere Android 14+ y permisos del sistema. Google Fit sólo contribuye si comparte datos con Health Connect; no hay una integración OAuth directa con Google Fit.
+- Métricas de energía, proteína, hidratos, grasas, fibra, vitaminas y minerales confirmados de comidas y suplementos. Distingue cero de desconocido, muestra cobertura y fuentes, y calcula medias diarias entre fuentes sin sumar consumos duplicados.
+- Peso con selector todos/ayunas/otros, media diaria, media del periodo y tabla de fuentes/condiciones.
+- Voz española y visión Gemini revisadas; timeouts compatibles con el arranque lento del servidor gratuito.
+
+## IA y servicios
+
+| Función | Servicio |
 |---|---|
-| Conversación habitual e introducción | Groq |
-| Dictado y transcripción | Groq |
-| Fotos de comida, máquinas y etiquetas | Gemini |
-| Revisión avanzada elegida expresamente | Gemini |
-| Lectura de respuestas en español | Gemini |
+| Conversación habitual, dictado, coordinación semanal | Groq |
+| Captura histórica por texto | Groq |
+| Captura histórica con foto, alimentos, máquinas y etiquetas | Gemini |
+| Revisión avanzada y audio en español | Gemini |
+| Búsqueda de sedes de gimnasio | Google Places, con clave específica independiente |
 
-No hay sustitución automática de proveedor al fallar o faltar una clave. Cada función requiere la configuración correspondiente; una función de Groq no debe bloquearse sólo porque falte configurar Gemini. La app verifica `/capabilities` y la ruta concreta antes de enviar contenido para IA. Consulta `docs/release2/CONFIGURACION-SERVIDOR.md` para el contrato, los modelos y los requisitos del servicio.
+Las claves sólo se guardan en el servidor. `/capabilities` devuelve API 2.1, rutas configuradas, sincronización automática y disponibilidad de Places. Configurado no significa que todas las peticiones reales estén garantizadas: los límites del proveedor se notifican sin simular respuestas ni activar IA local.
 
-## Entrega Android
+**Google Places necesita `GOOGLE_PLACES_KEY`; la clave Gemini no la sustituye.** Si no está configurada, la app lo explica y permite abrir Maps o guardar una sede manualmente. Un resultado de Maps no acredita el inventario de máquinas. Las fotos y placas de material se interpretan mediante Gemini y requieren revisión antes de guardar.
 
-La APK se construye desde `beta-android/`, package `app.vera.coach.visionbeta`, versionName `2.0 beta`, versionCode `200`. `android/` e `ios/` son proyectos Capacitor auxiliares y no corresponden al binario entregado.
+## Android y actualización
 
-La firma V2 es nueva, autorizada por el propietario porque no conserva la anterior. No permite actualizar directamente la APK antigua. Antes de desinstalarla, exporta el respaldo JSON desde Perfil y guarda una copia fuera de la app. El manual acompaña a la APK. Nunca incluyas la copia privada de firma en un repositorio.
+APK construida desde `beta-android/`, package `app.vera.coach.visionbeta`, versionName `2.1 beta`, versionCode `210`. Los directorios `android/` e `ios/` son proyectos Capacitor auxiliares, no el binario distribuido.
+
+Se conserva la firma de la V2.0 entregada: **actualiza encima, sin desinstalar**. Exporta un respaldo previo. Una edición anterior con otra firma necesita respaldo y reinstalación; no pierdas los datos desinstalando sin copia. La carpeta privada de firma del ZIP 2 nunca debe publicarse.
 
 ## Servidor
 
-Requiere Node 24. Ejecuta `npm ci`, `npm test` y `npm start`. Para desarrollo, copia `.env.example` a `.env`, configura credenciales de prueba y ejecuta `node --env-file=.env server.mjs`. No subas `.env` a Git.
+Node 24. Instala con `npm ci`, verifica con `npm test` y arranca con `npm start`. Para desarrollo copia `.env.example` a `.env`, configura credenciales de prueba y usa `node --env-file=.env server.mjs`. Nunca publiques `.env`.
 
-Las claves Groq y Gemini se configuran únicamente en el servidor. Instalar la APK no despliega el backend, no crea claves ni configura facturación. El 22/11/2026 se publicó y desplegó V2 en https://vera-beta.onrender.com, commit 7b35db3c4991d845802da07dab1f4567d9cc70f6. Render confirmó el servicio activo a las 02:18:58 (Europe/Paris). Se conservaron las variables privadas de Groq, Gemini y la base Turso existente. Los errores de red, configuración y cuota se muestran; no generan respuestas locales sustitutas. El prefijo `openai/` de un modelo servido por Groq no significa que se use la API de OpenAI.
+Render: `npm ci --omit=dev`, inicio `npm run start` y comprobación `/health`. Conserva las variables de la base Turso existente. Las claves Groq/Gemini y Places se administran en el entorno del servidor, no en la APK. Las rutas vigentes están documentadas en `docs/release21`; `docs/release2` conserva la configuración y evidencia de la edición anterior y no sustituye la guía V2.1.
 
-La voz se genera remotamente y se reproduce como audio; no utiliza TTS local. La prospección administrativa con búsqueda web no está implementada y devuelve un error explícito. Las funciones disponibles no incluyen automáticamente vídeo, lectura de PDF o todas las capacidades comerciales de los proveedores.
+El acceso público histórico `owner.json` continúa desactivado. Utiliza variables privadas para administración y no reactives contraseñas heredadas.
 
-## Datos y comprobaciones
+## Datos y límites
 
-Se mantiene el diario local con sincronización manual. Fotos originales, perfil, conversación y memoria no tienen sincronización integral. El respaldo JSON no incluye contraseñas, permisos ni fotografías originales. Importarlo reemplaza datos locales: revisa antes de sincronizar.
+El respaldo JSON conserva estado local, sin contraseñas, tokens, permisos ni originales de fotos. Restaurarlo reemplaza el estado local; conserva siempre el original. La sincronización no sube archivos originales de fotos y vídeos.
 
-Las pruebas de código utilizan cuentas sintéticas, SQLite temporal y transporte IA simulado. La compilación y firma no sustituyen pruebas de instalación, cámara, biometría, Health Connect e inferencia real en un teléfono. Los resultados exactos de la entrega están en sus evidencias, con las limitaciones pendientes.
+Las pruebas incluyen lógica/HTTP, cuentas sintéticas, métricas, sincronización, permisos de origen Android, compilación y firma. También se ensayaron llamadas reales con datos sintéticos: voz breve y párrafo, visión, revisión avanzada, importación histórica y plan semanal. La evidencia distingue estas llamadas de las comprobaciones de producción.
 
-El archivo público histórico `owner.json` está desactivado por defecto. Configura el administrador mediante variables privadas y una contraseña nueva. No reactives el acceso heredado. Esta entrega no borra el historial remoto.
-
-Los informes en `docs/audit2026`, `docs/release103` y los documentos anteriores a V2 son históricos: no son instrucciones de configuración de esta entrega. La documentación vigente está en `docs/release2`. Sus revisiones distinguen propuestas, cambios integrados y pruebas pendientes.
+La revisión visual en navegador y las pruebas automáticas no sustituyen la instalación, audio, cámara, biometría y Health Connect en un teléfono real. Los informes de `docs/audit2026`, `docs/release103` y `docs/release2` son históricos.

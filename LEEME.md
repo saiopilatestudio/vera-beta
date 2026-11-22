@@ -1,11 +1,14 @@
-VERA 2.0 beta - lectura inicial
+VERA 2.1 beta - Lectura inicial
 
-La IA usa exclusivamente Groq y Gemini según la función. No contiene modelos locales.
-Lee README.md y docs/release2/CONFIGURACION-SERVIDOR.md.
+Lee README.md y docs/release21/README-V21.md. El manual PDF acompaña a la APK.
 
-La APK requiere Android 8 o posterior. Health Connect requiere Android 14 o posterior.
-La firma es nueva: exporta el respaldo de la versión anterior y guárdalo fuera de la app antes de desinstalarla.
+Actualiza encima de la V2.0 entregada: se conserva la firma y se aumenta versionCode a 210. No desinstales V2.0. Exporta un respaldo antes de actualizar. Versiones con otra firma requieren respaldo y reinstalación.
 
-Instalar la APK no actualiza el servidor. La IA requiere backend V2, claves privadas de los proveedores correspondientes y conexión. La voz española se genera en Gemini; el dictado se transcribe en Groq. No hay alternativas locales ni cambio oculto de proveedor.
+Toda la IA usa Groq y Gemini desde el servidor. No hay modelos ni voz local, ni claves API en el móvil.
+V2.1 incorpora tema blanco/lima, captura histórica al diario, especialistas y plan semanal, guardado automático por cuenta y métricas de nutrición/peso.
 
-El manual PDF explica instalación, restauración y uso. La carpeta privada de firma del segundo ZIP no debe subirse a GitHub ni compartirse.
+Health Connect requiere Android 14+ y permisos del sistema. Se refresca automáticamente tras volver a la app; Google Fit sólo aporta datos si los comparte con Health Connect.
+La búsqueda integrada de gimnasios necesita GOOGLE_PLACES_KEY, distinta de Gemini. Si falta, puedes abrir Maps o guardar la sede manualmente.
+
+Los ZIP son independientes: el primero instala la app; el segundo contiene código y firma privada. No publiques el segundo ZIP completo ni PRIVADO-NO-SUBIR-A-GITHUB.
+Consulta VERIFICACION.txt para el estado final del despliegue y las pruebas.
