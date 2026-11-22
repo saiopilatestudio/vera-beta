@@ -1,0 +1,56 @@
+[
+  {
+    "element": "texto",
+    "foreground": "#183323",
+    "background": "#ffffff",
+    "contrast": 13.67
+  },
+  {
+    "element": "secundario",
+    "foreground": "#4f6254",
+    "background": "#ffffff",
+    "contrast": 6.55
+  },
+  {
+    "element": "acción",
+    "foreground": "#183323",
+    "background": "#c2f447",
+    "contrast": 10.62
+  },
+  {
+    "element": "enlace",
+    "foreground": "#286316",
+    "background": "#ffffff",
+    "contrast": 7.28
+  },
+  {
+    "element": "métricas",
+    "foreground": "#203f1b",
+    "background": "#e6f7bf",
+    "contrast": 10.3
+  },
+  {
+    "element": "texto hero",
+    "foreground": "#183323",
+    "background": "#ceef89",
+    "contrast": 10.63
+  },
+  {
+    "element": "texto secundario hero",
+    "foreground": "#4f6254",
+    "background": "#ceef89",
+    "contrast": 5.09
+  },
+  {
+    "element": "foco",
+    "foreground": "#34741d",
+    "background": "#ffffff",
+    "contrast": 5.73
+  },
+  {
+    "element": "borde campo",
+    "foreground": "#71835f",
+    "background": "#ffffff",
+    "contrast": 4.11
+  }
+]

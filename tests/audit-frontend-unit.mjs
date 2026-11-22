@@ -14,7 +14,7 @@ const run=s=>vm.runInContext(s,ctx);
 const files=['state14.js','session13.js','edition12.js','vision11.js','vera5.js','partners.js','edition10.js','list7.js','catalog6.js','journal.js','privacy6.js','actions6.js'];
 for(const file of files)run(readFileSync(new URL(file,www),'utf8'));
 for(const [,inline] of html.matchAll(/<script>([\s\S]*?)<\/script>/g))run(inline);
-run(readFileSync(new URL('perf6.js',www),'utf8'));run('validSession=true');
+run(readFileSync(new URL('perf6.js',www),'utf8'));run(readFileSync(new URL('metrics21.js',www),'utf8'));run(readFileSync(new URL('health21.js',www),'utf8'));run(readFileSync(new URL('planning21.js',www),'utf8'));run('validSession=true');
 const results=[];
 for(const area of ['Hoy','Entrenamiento','Alimentación','Suplementación','Cardio','Sueño','Equipo','Progreso','Perfil','Plato','Máquinas','Chat']){run(`go(${JSON.stringify(area)})`);assert.ok(node('view').innerHTML.length>40,area);}
 results.push('12 generadores de pantalla sin excepciones (DOM mínimo, no navegador)');
@@ -54,7 +54,7 @@ results.push('Consentimiento aislado por cuenta');
 const groqCapabilities={apiVersion:'2.0',ai:{routingVersion:2,providers:['groq','gemini'],execution:'cloud-only',localInference:false,speechOutput:'remote',routes:Object.fromEntries(Object.entries({coach:'groq',coach_deep:'gemini',intro:'groq',photo:'gemini',machine:'gemini',label:'gemini',listen:'groq',speak:'gemini'}).map(([k,provider])=>[k,{provider,configured:true,model:'fixture'}]))}};
 for(const fixture of [{ok:false},{ok:true,config:{apiVersion:'2.0',ai:{provider:'openai',configured:true}}},{ok:true,config:{...groqCapabilities,ai:{...groqCapabilities.ai,routes:{...groqCapabilities.ai.routes,coach:{provider:'groq',configured:false}}}}}]){
  let posts=0;ctx.fetch=async(url,options)=>{if(options.method==='POST'){posts++;throw Error('Data must not be sent');}return {ok:fixture.ok,json:async()=>fixture.config};};
- assert.match(await run("api('coach',{question:'private fixture'}).then(()=>'',e=>e.message)"),/Actualiza el servidor V2.0|todavía no tiene configurado/);assert.equal(posts,0);
+ assert.match(await run("api('coach',{question:'private fixture'}).then(()=>'',e=>e.message)"),/Actualiza el servidor V2.1|todavía no tiene configurado/);assert.equal(posts,0);
 }
 results.push('Servidor antiguo404, proveedor distinto y Groq sin configurar bloquean POST IA');
 let cloudPosts=0;ctx.fetch=async(url,options)=>{if(String(url).endsWith('/capabilities')){assert.equal(options.method,'GET');assert.equal(options.headers.Authorization,undefined);return {ok:true,json:async()=>groqCapabilities};}cloudPosts++;assert.equal(options.headers.Authorization,'Bearer token-a');return {ok:true,status:200,json:async()=>({answer:'Groq fixture'})};};

@@ -7,7 +7,7 @@ export function aiConfiguration(env = process.env) {
   const groq = route('groq', env.GROQ_CHAT_MODEL || 'openai/gpt-oss-120b');
   const vision = route('gemini', env.GEMINI_VISION_MODEL || 'gemini-4-hydrogen');
   return {routingVersion:2, providers:['groq','gemini'], execution:'cloud-only', localInference:false, verification:'configuration-only', speechOutput:'remote', routes:{
-    coach:{...groq}, coach_deep:route('gemini',env.GEMINI_DEEP_MODEL || 'gemini-4-argon'), intro:{...groq},
+    coach:{...groq}, coach_deep:route('gemini',env.GEMINI_DEEP_MODEL || 'gemini-4-hydrogen'), intro:{...groq},
     photo:{...vision}, machine:{...vision}, label:{...vision},
     listen:route('groq',env.GROQ_SPEECH_MODEL || 'whisper-large-v3-turbo'),
     speak:route('gemini',env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts'),
@@ -20,16 +20,26 @@ export function requireRoute(feature, env = process.env) {
   if (!/^[a-zA-Z0-9._/-]{1,160}$/.test(route.model) || (route.provider === 'gemini' && route.model.includes('/'))) throw new ServiceError('El modelo de IA configurado no es válido.',503,'AI_CONFIG');
   return route;
 }
-async function requestJson(url, headers, body, {env, fetchImpl, deadline, maxBytes = 1000000}) {
-  const remaining = deadline == null ? 75000 : deadline - Date.now();
+async function requestJson(url, headers, body, {env, fetchImpl, deadline, maxBytes = 1000000, attempt = 0}) {
+  const end = deadline ?? Date.now() + 75000;
+  const remaining = end - Date.now();
   if (remaining < 1) throw new ServiceError('La IA ha tardado demasiado. Puedes reintentar.',504,'AI_TIMEOUT');
   const timeout = Math.min(remaining,75000,Math.max(1000,Number(env.VERA_AI_TIMEOUT_MS)||45000));
   try {
     const response = await fetchImpl(url,{method:'POST',redirect:'error',headers:{...headers,...(body instanceof FormData ? {} : {'Content-Type':'application/json'})},body:body instanceof FormData ? body : JSON.stringify(body),signal:AbortSignal.timeout(timeout)});
     if (!response.ok) {
       await response.body?.cancel();
+      // Retry one explicit unavailable response within the original deadline.
+      // Never repeat accepted output or quota errors.
+      if (response.status === 503 && attempt === 0) {
+        if (end - Date.now() > 1500) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return requestJson(url, headers, body, {env, fetchImpl, deadline:end, maxBytes, attempt:1});
+        }
+      }
       if (response.status === 429) { const seconds=Number(response.headers.get('retry-after')); throw new ServiceError('El proveedor ha alcanzado su límite temporal. Reintenta más tarde.',429,'AI_RATE_LIMIT',Number.isFinite(seconds)&&seconds>0?Math.min(Math.ceil(seconds),3600):30); }
-      if ([401,403,404].includes(response.status)) throw new ServiceError('La configuración o el modelo de IA requiere revisión del administrador.',503,'AI_CONFIG');
+      if ([400,401,403,404].includes(response.status)) throw new ServiceError('La configuración o el modelo de IA requiere revisión del administrador.',503,'AI_CONFIG');
+      if (response.status === 503) throw new ServiceError('Gemini o Groq está temporalmente saturado. Tu registro no se ha modificado; vuelve a intentarlo en unos instantes.',503,'AI_BUSY',15);
       throw new ServiceError('El proveedor no ha podido completar la solicitud. Puedes reintentar.',502,'AI_RESPONSE');
     }
     if (Number(response.headers.get('content-length')) > maxBytes) { await response.body?.cancel(); throw new ServiceError('La respuesta de IA supera el límite permitido.',502,'AI_FORMAT'); }
@@ -77,7 +87,7 @@ export async function chat(system,user,json=false,options={}) {
       if(!match)throw new ServiceError('Imagen no válida.',400,'INVALID_IMAGE');
       return {inlineData:{mimeType:match[1],data:match[2]}};
     });
-    const data=await gemini(feature,{systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:8192,thinkingConfig:{thinkingLevel:'low'},...(json?{responseMimeType:'application/json'}:{})}},options);
+    const data=await gemini(feature,{systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:8192,thinkingConfig:{thinkingLevel:'LOW'},...(json?{responseMimeType:'application/json'}:{})}},options);
     const candidate=data?.candidates?.[0];
     if(candidate?.finishReason!=='STOP')throw new ServiceError('La respuesta de IA está incompleta o no disponible. Reintenta.',502,'AI_INCOMPLETE');
     if(!Array.isArray(candidate.content?.parts))throw new ServiceError('La respuesta de IA no tiene el formato esperado.',502,'AI_FORMAT');

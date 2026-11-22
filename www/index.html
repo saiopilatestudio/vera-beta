@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 2.0 beta
+    Vera 2.1 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="2.0 beta" />
+  <meta name="vera-build" content="2.1 beta" />
   <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
   
   <header>
-    <div class="brand14" role="img" aria-label="VERA Performance 2.0 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.0 BETA</small></span></div>
+    <div class="brand14" role="img" aria-label="VERA Performance 2.1 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.1 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -602,6 +602,7 @@
       logs: [],
       turns: [],
       plan: "",
+      autoPlan21: true,
       memory: [],
       endpoint: "",
     });
@@ -609,7 +610,7 @@
     let tab = s.profile.name ? "Hoy" : "Perfil",
       period = 7,
       kind = "Entrenamiento",
-      metric = "Peso en ayunas",
+      metric = "Cintura",
       photoData = "",
       busy = false,
       recording = null;
@@ -643,6 +644,9 @@
       delete s.profile.template;
       markLogs();
       persistVeraState();
+      VeraJournal.schedule();
+      if(typeof queuePlan21==='function')queuePlan21();
+      if(typeof refreshHealthAfterAction21==='function')refreshHealthAfterAction21();
     }
     function msg(t) {
       $("notice").textContent = stateReadError || stateWriteError || t;
@@ -752,9 +756,9 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      return '<details><summary>Diagnóstico técnico · Vera 2.0 beta</summary><p>Build: 200</p><p>Origen: '+safe(origin)+
+      return '<details><summary>Diagnóstico técnico · Vera 2.1 beta</summary><p>Build: 210</p><p>Origen: '+safe(origin)+
         '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube, con funciones separadas. Cada consulta verifica la configuración del servidor; no hay modelos en el dispositivo.</p><p>Sesión autenticada: '+
-        (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario se guarda en este dispositivo. La sincronización manual de registros está disponible en Perfil; fotos y conversaciones quedan fuera.</p></details>';
+        (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario, perfil y salud autorizada se guardan automáticamente en tu cuenta cuando hay conexión. Fotos y conversaciones permanecen en este dispositivo.</p></details>';
     }
     function exportVera() {
       if(blockedStateKey===storageKey())return exportOriginalState();
@@ -777,8 +781,9 @@
         const restored=validateVeraState(d.state);
         // Sync revisions belong to this account/server, never to a portable backup.
         restored.diaryRevisions={};
+        restored.profileRevisions21={};restored.syncConflicts21=[];
         localStorage.setItem(storageKey(),JSON.stringify(restored));
-        s=restored;stateReadError='';stateWriteError='';blockedStateKey='';render();msg('Datos locales restaurados. Revisa el diario antes de sincronizar.');
+        s=restored;stateReadError='';stateWriteError='';blockedStateKey='';VeraJournal.onSession();render();msg('Datos locales restaurados. Se sincronizarán automáticamente con tu cuenta.');
       }catch(e){msg('No se pudo restaurar: '+e.message);}
       finally{input.value='';}
     }
@@ -787,7 +792,7 @@
       return (
         nickPanel()+VeraJournal.panel()+VeraPrivacy6.panel()+prefs() +
         versionInfo() +
-        '<details><summary>Respaldo de mis datos</summary><p>Exporta tus datos antes de reinstalar la aplicación. No hay sincronización automática entre la APK y la web.</p>'+
+        '<details><summary>Respaldo de mis datos</summary><p>Exporta una copia adicional de tus datos. El diario y el perfil se sincronizan automáticamente entre dispositivos de la misma cuenta cuando hay conexión; fotos y conversaciones son locales.</p>'+
         btn("Exportar respaldo JSON", "exportVera()")+
         '<label>Restaurar respaldo<input type="file" accept="application/json,.json" onchange="importVera(this)"></label></details>' +
         "<details><summary>Mi cuenta</summary>" +
@@ -809,8 +814,8 @@
               "</p>",
           )
           .join("") +
-        "</details><details><summary>Datos de salud</summary><p>Importa pasos, sueño y sesiones desde Salud de Apple o Health Connect al diario de este dispositivo.</p>" +
-        btn("Sincronizar Google Fit / Salud conectada", "syncHealth()")+'<p>En Google Fit, activa Perfil → Ajustes → Sincronizar Fit con Salud conectada. Autoriza la lectura en Vera.</p>' +
+        "</details><details><summary>Datos de salud</summary><p>En Android 14 o posterior, Health Connect actualiza automáticamente peso, comidas, pasos, sueño y sesiones mientras usas Vera. Android solicita los permisos de lectura una vez. Los datos autorizados también se guardan en tu cuenta.</p>" +
+        btn("Revisar permisos de Health Connect", "syncHealth()")+'<p>Google Fit y otras aplicaciones sólo aportan datos si los comparten con Health Connect. Sin conexión, los cambios esperan en tu dispositivo. La app cerrada no ejecuta una sincronización continua.</p>' +
         "</details>"
       );
     }
@@ -1051,7 +1056,7 @@
     }
     async function api(path, data, blob = false, options = {}) {
       const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s,privacyRevision=VeraPrivacy6.revision;
-      const remoteAI=["coach","intro","photo","machine","label","listen","speak"].includes(path);
+      const remoteAI=["coach","intro","photo","machine","label","listen","speak","diary-import","weekly-plan"].includes(path);
       if(remoteAI){
         if(!VeraPrivacy6.allowed("cloud"))throw Error("Activa el análisis remoto desde Privacidad.");
         await VeraPrivacy6.ensureRemote(path,data,options.signal);
@@ -1069,7 +1074,7 @@
           Authorization: "Bearer " + sessionStorage.veraToken,
         },
         body: JSON.stringify(data),
-        signal: options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(90000)]):AbortSignal.timeout(path==="places"?5500:90000),
+        signal: options.signal?AbortSignal.any([options.signal,AbortSignal.timeout(120000)]):AbortSignal.timeout(path==="places"?75000:120000),
       });
       if(!sameVeraSession(owner,token,state))throw Error("La sesión ha cambiado. Repite la operación en tu cuenta actual.");
       if (r.status === 401) {
@@ -1447,7 +1452,7 @@
       return tile("Mediciones", "Peso, cintura y sensaciones") + progressBody();
     }
     function progressBody() {
-      return strengthSummary() + macros() + progressCore();
+      return strengthSummary() + progressCore();
     }
     function progressCore() {
       let end = new Date();
@@ -1511,12 +1516,7 @@
         '>28 días</option></select></label><label>Medida<select onchange="metric=this.value;render()">' +
         options(
           [
-            "Peso en ayunas",
             "Cintura",
-            "Comida",
-            "Proteína",
-            "Hidratos",
-            "Grasa",
             "Agua",
             "Sueño",
             "Pasos",
@@ -1725,6 +1725,7 @@
         s.endpoint = u.origin;
         if(!stateReadError)save();
         validSession = true;
+        VeraJournal.onSession();
         go("Hoy");
         msg("Has entrado en tu espacio personal.");
       } catch (e) {
@@ -1739,6 +1740,10 @@
         msg("Espera a que termine la consulta o la grabación.");
         return;
       }
+      try {
+        const synced=await VeraJournal.flush();
+        if(!synced&&!confirm('Hay cambios conservados sólo en este dispositivo. ¿Cerrar sesión? Se recuperarán al volver a entrar en esta misma cuenta; no desinstales la app sin exportar un respaldo.'))return;
+      } catch(e){msg(e.message);return;}
       try {
         await api("logout", {});
       } catch {}
@@ -2681,8 +2686,10 @@
     async function verifySession() {
       if (!sessionStorage.veraToken) return;
       try {
-        await api("session", {});
+        const account=await api("session", {});
+        if(account.nick)s.profile.nick=account.nick;
         validSession = true;
+        save();VeraJournal.onSession();
         tab = "Hoy";
         render();
       } catch (e) {
@@ -2920,10 +2927,7 @@
       const current = attached;
       const food = /comida|alimento|plato|calor[ií]a|macros|prote[ií]na|almuerzo|cena|desayuno/i.test(question);
       const machine = /m[aá]quina|aparato|gimnasio|biomec[aá]nica|ejercicio|equipamiento/i.test(question);
-      if (!food && !machine) {
-        msg("Para analizar esta foto con Gemini, pregunta por la comida o por la máquina que aparece.");
-        return;
-      }
+      if (!machine || food) return importCurrentChat21();
       if (!sessionStorage.veraToken) {
         msg("Inicia sesión para analizar la imagen con la IA visual del servidor.");
         return;
@@ -2973,7 +2977,8 @@
       target.innerHTML='<div id="placeMatches" role="status">Buscando sedes…</div>'+manual;
       const list=$("placeMatches");
       let results=[];
-      try{results=(await api("places",{query})).places||[];}catch{}
+      let placeError='';
+      try{results=(await api("places",{query})).places||[];}catch(e){placeError=e.message;}
       if(!results.length){
         try{
           const url=new URL("https://photon.komoot.io/api/");
@@ -2984,7 +2989,7 @@
       }
       if(!list.isConnected||ticket!==gymTicket||$("gymquery").value.trim()!==query)return;
       places=results.filter(x=>x.name&&x.address);
-      list.innerHTML=places.map((p,i)=>"<p><b>"+safe(p.name)+"</b><br>"+safe(p.address)+"</p>"+btn("Elegir esta sede","choosePlace("+i+")")).join("")||"Sin sedes verificadas. Puedes guardar la dirección manualmente.";
+      list.innerHTML=(placeError?'<p>'+safe(placeError)+'</p>':'')+(places.map((p,i)=>"<p><b>"+safe(p.name)+"</b><br>"+safe(p.address)+" · "+safe(p.reference==='OpenStreetMap'?'OpenStreetMap, verifica la sede':'Google Maps')+"</p>"+btn("Elegir esta sede","choosePlace("+i+")")).join("")||"Sin sedes verificadas. Puedes guardar la dirección manualmente.");
     }
     function manualPlace() {
       if (!$("address").value.trim()) return;
@@ -3026,5 +3031,5 @@
     render();
     if(!window.VeraNative)verifySession();
   </script>
-<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script>
+<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script>
 </html>

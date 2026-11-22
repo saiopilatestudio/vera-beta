@@ -1,4 +1,4 @@
-name: VERA 2.0 beta Android
+name: VERA 2.1 beta Android
 permissions:
   contents: read
 on:
@@ -52,7 +52,7 @@ jobs:
         run: |
           umask 077
           export ECJ="$RUNNER_TEMP/ecj.jar" BETA_KEYSTORE="$RUNNER_TEMP/vera.p12"
-          export APK_OUTPUT="$GITHUB_WORKSPACE/VERA-2.0-beta-$MODE.apk"
+          export APK_OUTPUT="$GITHUB_WORKSPACE/VERA-2.1-beta-$MODE.apk"
           curl -fsSL https://repo.maven.apache.org/maven2/org/eclipse/jdt/ecj/3.38.0/ecj-3.38.0.jar -o "$ECJ"
           echo "97c566b120009c203a2fc8b291f4a9adbc171cf1ccb70f06f6b4e1828c00ce8e  $ECJ" | sha256sum -c -
           build_args=(--ecj "$ECJ" --android-jar "$ANDROID_HOME/platforms/android-35/android.jar" --build-tools "$ANDROID_HOME/build-tools/35.0.0" --work-dir "$RUNNER_TEMP/vera-build" --output "$APK_OUTPUT" --mode "$MODE")
@@ -66,10 +66,10 @@ jobs:
           import json, os
           from pathlib import Path
           metadata = {
-              "release": "VERA 2.0 beta",
+              "release": "VERA 2.1 beta",
               "package": "app.vera.coach.visionbeta",
-              "versionName": "2.0 beta",
-              "versionCode": 200,
+              "versionName": "2.1 beta",
+              "versionCode": 210,
               "mode": os.environ["MODE"],
               "aiProviders": ["groq", "gemini"],
               "routingVersion": 2,
@@ -82,16 +82,16 @@ jobs:
           }
           Path("RELEASE-METADATA.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
           PY
-          sha256sum "VERA-2.0-beta-$MODE.apk" "VERA-2.0-beta-$MODE.apk.build.json" RELEASE-METADATA.json > SHA256.txt
+          sha256sum "VERA-2.1-beta-$MODE.apk" "VERA-2.1-beta-$MODE.apk.build.json" RELEASE-METADATA.json > SHA256.txt
       - name: Eliminar copia temporal de la clave
         if: always()
         run: rm -f "$RUNNER_TEMP/vera.p12"
       - uses: actions/upload-artifact@v4
         with:
-          name: VERA-2.0-beta-${{ inputs.mode }}
+          name: VERA-2.1-beta-${{ inputs.mode }}
           path: |
-            VERA-2.0-beta-*.apk
-            VERA-2.0-beta-*.apk.build.json
+            VERA-2.1-beta-*.apk
+            VERA-2.1-beta-*.apk.build.json
             RELEASE-METADATA.json
             SHA256.txt
           if-no-files-found: error

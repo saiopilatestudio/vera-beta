@@ -22,7 +22,7 @@ services:
       - key: GEMINI_VISION_MODEL
         value: gemini-4-hydrogen
       - key: GEMINI_DEEP_MODEL
-        value: gemini-4-argon
+        value: gemini-4-hydrogen
       - key: GEMINI_TTS_MODEL
         value: gemini-3.8-flash-lite-tts
       - key: GEMINI_TTS_VOICE

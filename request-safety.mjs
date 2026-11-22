@@ -28,7 +28,7 @@ export function coachInput(d) {
   if (typeof d.question !== 'string' || !d.question.trim() || d.question.length > 8000) throw new ServiceError('Escribe una consulta de hasta 8000 caracteres.', 400, 'INVALID_QUESTION');
   if (d.mode != null && !["standard", "deep"].includes(d.mode)) throw new ServiceError("Selecciona el modo estándar o profundo.", 400, "INVALID_MODE");
   const result = { question: d.question, mode: d.mode || "standard" };
-  for (const key of ['profile','memory','logs','gyms','gym','equipment','machines','recovery','nutritionCoverage','contextCoverage','currentPlan','history','plan','turns','date','today','timezone','context']) if (Object.hasOwn(d,key)) result[key] = cleanContext(d[key]);
+  for (const key of ['profile','memory','logs','gyms','gym','equipment','machines','recovery','nutritionCoverage','nutritionSummary21','contextCoverage','currentPlan','history','plan','turns','date','today','timezone','context']) if (Object.hasOwn(d,key)) result[key] = cleanContext(d[key]);
   if (Buffer.byteLength(JSON.stringify(result)) > 100000) throw new ServiceError('El contexto es demasiado grande. Reduce los registros seleccionados.', 413, 'CONTEXT_TOO_LARGE');
   return result;
 }
@@ -41,7 +41,19 @@ export function validateCoachResult(result) {
     const date = new Date(entry.date + 'T00:00:00Z');
     if (!kinds.has(entry.kind) || !Number.isFinite(+date) || date.toISOString().slice(0,10) !== entry.date || +date > Date.now() + 86400000 || (entry.kind === 'Sueño' && entry.value > 24) || (entry.kind === 'Pasos' && entry.value != null && !Number.isSafeInteger(entry.value)) || (entry.note?.length || 0) > 8000) throw new ServiceError('La IA ha propuesto registros no válidos. Revisa la consulta.', 502, 'AI_ENTRIES');
   }
-  return { answer: result.answer, plan: result.plan || '', memory: result.memory || '', entries: (result.entries || []).map(({kind,date,value,note})=>({kind,date,value:value??null,note:note||''})) };
+  const entries=(result.entries||[]).map(e=>{
+    const out={kind:e.kind,date:e.date,value:e.value??null,note:e.note||''};
+    const numeric=(key,max,target=out,source=e)=>{if(source[key]!=null){if(!Number.isFinite(source[key])||source[key]<0||source[key]>max)throw new ServiceError('Valor extraído fuera de rango. Revisa los datos.',502,'AI_ENTRIES');target[key]=source[key];}};
+    for(const key of ['protein','carbs','fat'])numeric(key,3000);
+    if(e.nutrients!=null){if(typeof e.nutrients!=='object'||Array.isArray(e.nutrients))throw new ServiceError('Nutrientes no válidos.',502,'AI_ENTRIES');out.nutrients={};for(const key of ['fiber_g','sugar_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','vitaminC_mg','vitaminD_ug','vitaminB12_ug'])numeric(key,100000,out.nutrients,e.nutrients);}
+    if(e.kind==='Entrenamiento'&&e.exercise!=null){
+      if(typeof e.exercise!=='string'||!e.exercise.trim()||e.exercise.length>100)throw new ServiceError('Ejercicio no válido.',502,'AI_ENTRIES');out.exercise=e.exercise;
+      if(e.reps!=null){if(!Array.isArray(e.reps)||!e.reps.length||e.reps.length>100||e.reps.some(r=>!Number.isInteger(r)||r<1||r>300))throw new ServiceError('Series no válidas.',502,'AI_ENTRIES');out.reps=e.reps;}
+      numeric('kg',2000);numeric('rir',10);out.loadMode='total';out.loadSchema=2;if(out.kg!=null)out.enteredKg=out.kg;
+    }
+    return out;
+  });
+  return { answer: result.answer, plan: result.plan || '', memory: result.memory || '', entries };
 }
 export function validatePhotoResult(result) {
   const invalid = () => { throw new ServiceError('No se ha podido estimar el plato de forma válida. Añade otra foto o indica la ración.', 502, 'AI_PHOTO'); };

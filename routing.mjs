@@ -13,5 +13,6 @@ export function specialists(question){
  const text=String(question||"");
  const explicit=topics.find(([name])=>text.startsWith(name+" · "));
  if(explicit)return [explicit[0]];
+ if(/estado general|revisi[oó]n global/i.test(text))return ['Hipertrofia','Nutrición deportiva','Sueño y recuperación','Medicina deportiva'];
  return topics.filter(([,pattern])=>pattern.test(text)).slice(0,3).map(([name])=>name);
 }

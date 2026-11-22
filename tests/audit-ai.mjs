@@ -17,7 +17,7 @@ test('capabilities are explicit per route, keys private and providers fixed', ()
   assert.deepEqual(cfg.providers,['groq','gemini']);assert.equal(cfg.routingVersion,2);
   assert.equal(cfg.routes.coach.model,'openai/gpt-oss-120b');assert.equal(cfg.routes.coach.configured,true);
   assert.equal(cfg.routes.photo.provider,'gemini');assert.equal(cfg.routes.photo.configured,false);
-  assert.equal(cfg.routes.coach_deep.model,'gemini-4-argon');assert.equal(cfg.routes.speak.model,'gemini-3.8-flash-lite-tts');
+  assert.equal(cfg.routes.coach_deep.model,'gemini-4-hydrogen');assert.equal(cfg.routes.speak.model,'gemini-3.8-flash-lite-tts');
   assert.equal(cfg.localInference,false);assert.equal(cfg.execution,'cloud-only');assert.equal(cfg.verification,'configuration-only');assert.ok(!JSON.stringify(cfg).includes('private'));
 });
 test('missing route key never substitutes another configured vendor', async () => {
@@ -49,6 +49,22 @@ test('429 preserves retry-after without exposing upstream data or automatically 
   const request = createProvider({env:{AI_PROVIDER:'groq',GROQ_API_KEY:'fixture'},fetchImpl:async()=>{calls++;return new Response('private submitted data',{status:429,headers:{'retry-after':'12'}});}});
   await assert.rejects(request('chat/completions',{}),e=>e.status===429&&e.retryAfter===12&&!e.message.includes('private'));
   assert.equal(calls,1);
+});
+test('temporary service saturation retries exactly once and retains the fixed provider', async () => {
+  let calls=0;
+  const request=createGeminiProvider({env:{GEMINI_API_KEY:'test'},fetchImpl:async(url)=>{
+    assert.match(url,/generativelanguage.googleapis.com\/v1beta\/models\/gemini-4-hydrogen:generateContent$/);
+    calls++;return calls===1?new Response('private',{status:503}):Response.json({ok:true});
+  }});
+  assert.deepEqual(await request('photo',{}),{ok:true});assert.equal(calls,2);
+  calls=0;
+  const busy=createGeminiProvider({env:{GEMINI_API_KEY:'test'},fetchImpl:async()=>{calls++;return new Response('private',{status:503});}});
+  await assert.rejects(busy('photo',{}),{status:503,code:'AI_BUSY'});assert.equal(calls,2);
+});
+test('saturation cannot extend the deadline or retry quota failures',async()=>{
+  let calls=0;
+  const request=createGeminiProvider({env:{GEMINI_API_KEY:'test'},fetchImpl:async()=>{calls++;return new Response('',{status:503});}});
+  await assert.rejects(request('photo',{}, {deadline:Date.now()+500}),{code:'AI_BUSY'});assert.equal(calls,1);
 });
 test('timeout and malformed upstream JSON produce actionable errors', async () => {
   const env={GROQ_API_KEY:'fixture',AI_PROVIDER:'groq'};

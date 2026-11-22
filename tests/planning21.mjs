@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {importDiary21,weeklyPlan21,weekDates21,importInput21} from '../planning21.mjs';
+import {validateCoachResult} from '../request-safety.mjs';
+assert.throws(()=>importInput21({text:'hola',date:'2026-02-30'}));
+assert.deepEqual(weekDates21('2026-12-29'),['2026-12-29','2026-12-30','2026-12-31','2027-01-01','2027-01-02','2027-01-03','2027-01-04']);
+const entry={kind:'Comida',date:'2026-11-20',value:600,note:'Cena',protein:40,carbs:60,fat:20,nutrients:{iron_mg:2,vitaminC_mg:null}};
+const output=await importDiary21({text:'Cena del día20',date:'2026-11-20'},async()=>({answer:'Revisar',entries:[entry]}));
+assert.equal(output.entries[0].protein,40);assert.deepEqual(output.entries[0].nutrients,{iron_mg:2});
+assert.throws(()=>validateCoachResult({answer:'x',entries:[{...entry,protein:-1}]}));
+assert.throws(()=>validateCoachResult({answer:'x',entries:[{kind:'Entrenamiento',date:'2026-11-20',exercise:'Press',reps:[0]}]}));
+let calls=0;const ask=async(system,context,json)=>{calls++;return json?{summary:'Semana prudente',changes:'Sin cargas inventadas',days:weekDates21('2026-11-23').map(date=>({date,training:'Registrar sesión',nutrition:'Anotar comidas',recovery:'Anotar sueño'}))}:'Faltan datos para personalizar.';};
+const plan=await weeklyPlan21({week:'2026-11-23',profile:{},logs:[]},ask);assert.equal(calls,4);assert.equal(plan.reports.length,3);assert.equal(plan.days.length,7);assert.deepEqual(plan.days[0].done,{});
+await assert.rejects(weeklyPlan21({week:'2026-11-23'},async(s,c,json)=>json?{summary:'Mal',changes:'',days:[]}:'Datos'),/plan válido/);
+console.log('PASS: historical extraction, structured nutrients, invalid data, 3 specialists + coordinator, seven dates, failed plan rejected');

@@ -17,8 +17,12 @@ function numeric(value, max = Number.MAX_SAFE_INTEGER, integer = false) {
 
 export function validateRecord(id, record) {
   if (record === null) return null;
-  if (!object(record) || record.id !== id || !kinds.has(record.kind) || record.source === 'health')
+  if (!object(record) || record.id !== id || !kinds.has(record.kind))
     invalid('Entrada no admitida.');
+  if(record.source==='health'){
+    const healthKinds={steps:'Pasos',sleep:'Sueño',workouts:'Entrenamiento',weight:'Otro pesaje',nutrition:'Comida'};
+    if(!Object.hasOwn(healthKinds,record.healthType)||healthKinds[record.healthType]!==record.kind||record.healthKey!==id||!id.startsWith('health_'+record.healthType+'_'))invalid('Identidad o tipo de salud no válido.');
+  }
   if (typeof record.date !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(record.date)) invalid('Fecha no válida.');
   const date = new Date(record.date + 'T00:00:00.000Z');
   if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== record.date) invalid('Fecha no válida.');
@@ -28,6 +32,10 @@ export function validateRecord(id, record) {
       !numeric(record.rir, 10) || !numeric(record.rpe, 10)) invalid('Cantidad o unidad no válida.');
   if (record.reps !== undefined && (!Array.isArray(record.reps) || record.reps.length > 100 ||
       record.reps.some(n => !Number.isSafeInteger(n) || n < 1 || n > 300))) invalid('Repeticiones no válidas.');
+  if(record.nutrients!==undefined){
+    const keys=new Set(['fiber_g','sugar_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','vitaminC_mg','vitaminD_ug','vitaminB12_ug']);
+    if(!object(record.nutrients)||Object.entries(record.nutrients).some(([key,value])=>!keys.has(key)||!numeric(value)))invalid('Micronutriente o cantidad no válida.');
+  }
   if (record.kind === 'Sueño') {
     if (!numeric(record.minutes, 1440)) invalid('Duración de sueño no válida.');
     if (record.start !== undefined || record.end !== undefined) {

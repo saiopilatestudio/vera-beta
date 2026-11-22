@@ -22,9 +22,9 @@ java -cp "$out/test-classes" app.vera.coach.visionbeta.AndroidOriginAudit
 (cd "$out/dex" && zip -q "$out/base.apk" classes.dex)
 "$BUILDTOOLS/zipalign" -f -P 16 4 "$out/base.apk" "$out/aligned.apk"
 case "$mode" in
- unsigned) apk="$out/aligned.apk"; dest=${APK_OUTPUT:-VERA-2.0-beta-sin-firmar.apk};;
+ unsigned) apk="$out/aligned.apk"; dest=${APK_OUTPUT:-VERA-2.1-beta-sin-firmar.apk};;
  signed)
-   apk="$out/signed.apk"; dest=${APK_OUTPUT:-VERA-2.0-beta.apk}
+   apk="$out/signed.apk"; dest=${APK_OUTPUT:-VERA-2.1-beta.apk}
    "$BUILDTOOLS/apksigner" sign --ks "$BETA_KEYSTORE" --ks-pass env:BETA_PASS --out "$apk" "$out/aligned.apk";;
 esac
 python3 ../tests/verify_apk.py "$apk" ../www "$BUILDTOOLS" --mode "$mode" --expected-cert-sha256 "${VERA_EXPECTED_CERT_SHA256:-}"

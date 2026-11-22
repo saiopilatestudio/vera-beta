@@ -19,7 +19,7 @@ async function authenticated12(token){
    if(!r.ok)throw Error('No se pudo validar la sesión.');
    const data=await r.json();if(!emailField.isConnected||emailField.value.trim()!==email)return;if(!data.id)throw Error('Actualiza también el servidor para usar el acceso recordado.');
    sessionStorage.veraToken=token;sessionStorage.veraUser=ACCOUNT_HOST+'/'+data.id;localStorage.veraRememberedUser=sessionStorage.veraUser;
-   clearSessionMedia14();s=loadVeraState(storageKey());if(data.nick)s.profile.nick=data.nick;validSession=true;go('Hoy');
+   clearSessionMedia14();s=loadVeraState(storageKey());if(data.nick)s.profile.nick=data.nick;validSession=true;if(!stateReadError)save();VeraJournal.onSession();go('Hoy');
  }catch(e){msg(e.message);}
 }
 async function plate12(el){

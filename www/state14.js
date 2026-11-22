@@ -3,12 +3,24 @@ let stateReadError = '';
 let stateWriteError = '';
 let blockedStateKey = '';
 let blockedSourceKey = '';
+function validateWeeklyPlanState21(value){
+ if(value==null)return;
+ const object=x=>!!x&&typeof x==='object'&&!Array.isArray(x),text=(v,max)=>typeof v==='string'&&v.length<=max;
+ const date=v=>typeof v==='string'&&/^\d{4}-\d\d-\d\d$/.test(v)&&Number.isFinite(+new Date(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
+ const invalid=()=>{throw Error('El respaldo contiene un plan semanal no válido.');};
+ if(!object(value)||!date(value.week)||!text(value.summary,4000)||!text(value.changes,4000)||!Array.isArray(value.days)||value.days.length!==7||!Array.isArray(value.reports)||value.reports.length>12||value.reports.some(r=>!object(r)||!text(r.role,100)||!text(r.text,12000)))invalid();
+ const start=+new Date(value.week+'T00:00:00Z');
+ for(const[i,d]of value.days.entries())if(!object(d)||d.date!==new Date(start+i*86400000).toISOString().slice(0,10)||!['training','nutrition','recovery'].every(k=>text(d[k],1500))||(d.done!==undefined&&(!object(d.done)||Object.entries(d.done).some(([k,v])=>!['training','nutrition','recovery'].includes(k)||typeof v!=='boolean'))))invalid();
+ if(value.generatedAt!==undefined&&(!text(value.generatedAt,40)||!Number.isFinite(Date.parse(value.generatedAt))))invalid();
+ if(value.inputSignature!==undefined&&!text(value.inputSignature,96000))invalid();
+}
 function validateVeraState(value) {
   const object = x => !!x && typeof x === 'object' && !Array.isArray(x);
   if (!object(value) || !object(value.profile) || !Array.isArray(value.logs) || !Array.isArray(value.turns)) throw Error('El respaldo no contiene un diario válido.');
   if (value.logs.some(x => !object(x) || typeof x.kind !== 'string' || typeof x.date !== 'string') || value.turns.some(x => !object(x))) throw Error('Hay registros o conversaciones con formato no válido.');
   for (const key of ['memory','machines']) if (value[key] != null && !Array.isArray(value[key])) throw Error('Formato no válido: '+key+'.');
   if (value.plan != null && typeof value.plan !== 'string') throw Error('El plan debe ser texto.');
+  validateWeeklyPlanState21(value.weeklyPlan21);
   // Build fresh dictionaries to avoid inherited keys from imported JSON.
   const state = {...initial(),...value,profile:{...value.profile},memory:value.memory || []};
   state.turns = value.turns.map(t => ({...t,reports:Array.isArray(t.reports)?t.reports:[]}));
@@ -62,7 +74,7 @@ function buildCoachPayload14(question,specialty){
  const today=day(),start=new Date();start.setDate(start.getDate()-55);const windowStart=day(start);
  const recent=s.logs.filter(row=>row.date>=windowStart&&row.date<=today).sort((a,b)=>a.date.localeCompare(b.date));
  const profileKeys=['name','goal','criteria','likes','age','height','weight','level','days','time','eq','introduced'];
- const logKeys=['id','kind','date','note','value','exercise','reps','kg','enteredKg','loadMode','loadSchema','mode','trainingNote','rir','rpe','group','sore','tired','start','end','minutes','awakeMinutes','restType','protein','carbs','fat','source','unit','amount','productName','gym','machine','rom','effort','pump','soreness','reference'];
+ const logKeys=['id','kind','date','note','value','exercise','reps','kg','enteredKg','loadMode','loadSchema','mode','trainingNote','rir','rpe','group','sore','tired','start','end','minutes','awakeMinutes','restType','protein','carbs','fat','nutrients','healthKey','healthType','healthSource','source','unit','amount','productName','gym','machine','rom','effort','pump','soreness','reference'];
  const memories=activeMem(),matchingMachines=(s.machines||[]).filter(m=>m.gym===s.gym);
  if(memories.length>20||memories.some(v=>text(v).length>500)||matchingMachines.length>10||text(s.plan).length>4000||s.turns.length>4||s.turns.slice(-4).some(t=>text(t.question).length>1200||text(t.answer).length>1800))fieldsShortened=true;
  const payload={
@@ -78,6 +90,10 @@ function buildCoachPayload14(question,specialty){
   today,
   contextCoverage:{total:recent.length,included:0,desde:null,hasta:null,windowStart,windowEnd:today,truncated:false,fieldsShortened:false}
  };
+ if(typeof metricsSummary21==='function'){
+  const summary=metricsSummary21(s.logs,28);
+  payload.nutritionSummary21={method:'media entre fuentes por día; no suma',coverage:{days:summary.days,since:summary.since,today:summary.today,mealDays:summary.mealDays,meals:summary.meals,sources:summary.sources,weightSources:summary.weightSources},nutrition:summary.nutrition,weightAverage:summary.weightAverage,weightChange:summary.weightChange};
+ }
  const updateCoverage=()=>Object.assign(payload.contextCoverage,{included:payload.logs.length,desde:payload.logs[0]?.date||null,hasta:payload.logs.at(-1)?.date||null,truncated:payload.logs.length<recent.length,fieldsShortened});
  const bytes=()=>new TextEncoder().encode(JSON.stringify(payload)).length;
  updateCoverage();
@@ -105,6 +121,7 @@ function clearSessionMedia14(){
 const VeraSpeech14={
  generation:0,controller:null,audio:null,url:null,
  stop(){this.generation++;this.controller?.abort();this.controller=null;if(this.audio){this.audio.pause();this.audio.removeAttribute('src');this.audio.load?.();this.audio=null;}if(this.url){URL.revokeObjectURL(this.url);this.url=null;}const target=$('speechPlayer14');if(target)target.innerHTML='';},
+ async play(){if(!this.audio)return;try{await this.audio.play();}catch{msg('No se pudo iniciar la reproducción. Pulsa el control de audio y comprueba el volumen multimedia del móvil.');}},
  async speak(index){
   this.stop();const generation=this.generation,owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s,revision=VeraPrivacy6.revision;
   const text=String(s.turns[index]?.answer||'').trim();if(!text)return;
@@ -112,14 +129,17 @@ const VeraSpeech14={
   const current=()=>generation===this.generation&&validSession&&sameVeraSession(owner,token,state)&&revision===VeraPrivacy6.revision&&VeraPrivacy6.allowed('cloud');
   const target=$('speechPlayer14');if(!target)return;
   target.innerHTML='<p>Preparando audio en español con Gemini…</p>'+btn('Cancelar audio','VeraSpeech14.stop()');
+  target.scrollIntoView?.({block:'center',behavior:'smooth'});
   try{
    const blob=await api('speak',{text:text.slice(0,3500)},true,{signal});
    if(!current())return;
    if(!['audio/wav','audio/x-wav'].includes(blob.type.split(';')[0]))throw Error('El servidor no devolvió audio WAV válido.');
-   this.url=URL.createObjectURL(blob);this.audio=document.createElement('audio');this.audio.controls=true;this.audio.preload='metadata';this.audio.src=this.url;
+   const player=$('speechPlayer14');if(!player){this.stop();return;}
+   this.url=URL.createObjectURL(blob);this.audio=document.createElement('audio');this.audio.controls=true;this.audio.preload='auto';this.audio.src=this.url;
    this.audio.setAttribute('aria-label','Respuesta de Vera en español, generada por Gemini');
    this.audio.onplay=()=>{if(!current())this.stop();};
-   target.innerHTML='<p>Audio preparado. Pulsa reproducir.'+(text.length>3500?' Se leen los primeros 3500 caracteres.':'')+'</p>'+btn('Cerrar audio','VeraSpeech14.stop()');target.append(this.audio);
-  }catch(e){if(generation===this.generation&&!signal.aborted){this.stop();msg(e.message);}}
+   this.audio.onerror=()=>{if(current())msg('El audio no se pudo reproducir. Vuelve a generar la voz y comprueba el volumen multimedia.');};
+   player.innerHTML='<p>Audio preparado en español. Pulsa reproducir.'+(text.length>3500?' Se leen los primeros 3500 caracteres.':'')+'</p>'+btn('▶ Reproducir voz','VeraSpeech14.play()',true)+btn('Cerrar audio','VeraSpeech14.stop()');player.append(this.audio);player.scrollIntoView?.({block:'center',behavior:'smooth'});
+  }catch(e){if(generation===this.generation&&!signal.aborted){this.stop();const player=$('speechPlayer14');if(player){player.innerHTML='<p role="alert">'+safe(e.message)+'</p>'+btn('Reintentar voz','VeraSpeech14.speak('+index+')');player.scrollIntoView?.({block:'center'});}msg(e.message);}}
  }
 };
