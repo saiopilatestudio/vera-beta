@@ -1,15 +1,16 @@
 {
   "name": "vera-mobile",
   "private": true,
-  "version": "2.1.0-beta.1",
+  "version": "2.2.0-beta.1",
   "type": "module",
   "scripts": {
     "native": "npx cap sync",
     "start": "node server.mjs",
-    "test": "npm run test:legacy && npm run test:audit && npm run test:v21",
+    "test": "npm run test:legacy && npm run test:audit && npm run test:v21 && npm run test:v22",
     "test:legacy": "node tests/acceptance103.mjs && node tests/partners.mjs && node tests/admin103.mjs && node tests/journal.mjs",
     "test:audit": "node tests/audit-backend.mjs && node tests/audit-backend-owner.mjs && node --test --test-isolation=none tests/audit-ai.mjs && node tests/audit-http.mjs && node tests/audit-ai-http.mjs && node tests/audit-frontend-unit.mjs && node tests/audit-backup.mjs",
-    "test:v21": "node tests/planning21.mjs && node tests/planning21-frontend.mjs && node tests/audit-planning21-http.mjs && node tests/audit-persistence21.mjs && node tests/metrics21.mjs && node tests/audit-health21.mjs"
+    "test:v21": "node tests/planning21.mjs && node tests/planning21-frontend.mjs && node tests/audit-planning21-http.mjs && node tests/audit-persistence21.mjs && node tests/metrics21.mjs && node tests/audit-health21.mjs",
+    "test:v22": "node tests/nutrition22.mjs && node tests/social22.mjs && node tests/online22.mjs && node tests/efficiency22.mjs && node tests/exercises22.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

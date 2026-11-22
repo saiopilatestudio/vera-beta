@@ -1,4 +1,4 @@
-"""Verify VERA 2.1 APK identity, signature, alignment and packaged source assets."""
+"""Verify VERA 2.2 APK identity, signature, alignment and packaged source assets."""
 import argparse
 import hashlib
 import os
@@ -8,8 +8,8 @@ import subprocess
 from zipfile import ZipFile
 
 PACKAGE = "app.vera.coach.visionbeta"
-VERSION_NAME = "2.1 beta"
-VERSION_CODE = 210
+VERSION_NAME = "2.2 beta"
+VERSION_CODE = 220
 FORBIDDEN_ASSET_SUFFIXES = (".gguf", ".onnx", ".tflite", ".safetensors", ".wasm", ".traineddata", ".traineddata.gz", ".pt", ".pth", ".p12", ".jks", ".keystore")
 FORBIDDEN_ASSET_NAMES = {"local.js", "local-ai.js", "ort.js", "ocr.js", "ocr-worker.js", "ocr-core.js", "vision-labels.json", "eng.traineddata.gz"}
 

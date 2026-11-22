@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 2.1 beta
+    Vera 2.2 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="2.1 beta" />
-  <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
+  <meta name="vera-build" content="2.2 beta" />
+  <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="exercises-es22.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
   
   <header>
-    <div class="brand14" role="img" aria-label="VERA Performance 2.1 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.1 BETA</small></span></div>
+    <div class="brand14" role="img" aria-label="VERA Performance 2.2 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.2 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -645,6 +645,7 @@
       markLogs();
       persistVeraState();
       VeraJournal.schedule();
+      if(typeof onlineSave22==='function')onlineSave22();
       if(typeof queuePlan21==='function')queuePlan21();
       if(typeof refreshHealthAfterAction21==='function')refreshHealthAfterAction21();
     }
@@ -715,6 +716,7 @@
     function render() {
       VeraSpeech14.stop();
       VeraPartners.stop();
+      if(typeof onlineGate22==='function'&&onlineGate22())return;
       if(stateReadError||stateWriteError)msg(stateReadError||stateWriteError);
       $("topTools").style.display = validSession ? "flex" : "none";
       $("nav").style.display = validSession ? "flex" : "none";
@@ -756,7 +758,7 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      return '<details><summary>Diagnóstico técnico · Vera 2.1 beta</summary><p>Build: 210</p><p>Origen: '+safe(origin)+
+      return '<details><summary>Diagnóstico técnico · Vera 2.2 beta</summary><p>Build: 220</p><p>Origen: '+safe(origin)+
         '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube, con funciones separadas. Cada consulta verifica la configuración del servidor; no hay modelos en el dispositivo.</p><p>Sesión autenticada: '+
         (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario, perfil y salud autorizada se guardan automáticamente en tu cuenta cuando hay conexión. Fotos y conversaciones permanecen en este dispositivo.</p></details>';
     }
@@ -815,7 +817,7 @@
           )
           .join("") +
         "</details><details><summary>Datos de salud</summary><p>En Android 14 o posterior, Health Connect actualiza automáticamente peso, comidas, pasos, sueño y sesiones mientras usas Vera. Android solicita los permisos de lectura una vez. Los datos autorizados también se guardan en tu cuenta.</p>" +
-        btn("Revisar permisos de Health Connect", "syncHealth()")+'<p>Google Fit y otras aplicaciones sólo aportan datos si los comparten con Health Connect. Sin conexión, los cambios esperan en tu dispositivo. La app cerrada no ejecuta una sincronización continua.</p>' +
+        btn("Revisar permisos de Health Connect", "syncHealth()")+'<p>Google Fit y otras aplicaciones sólo aportan datos si los comparten con Health Connect. Vera necesita conexión para consultar y actualizar tu cuenta. La app cerrada no ejecuta una sincronización continua.</p>' +
         "</details>"
       );
     }
@@ -837,6 +839,8 @@
         (c) => c.value,
       );
       s.profile.introduced = true;
+      s.need=Number($('sleepGoal22').value);
+      s.profile.waterGoalMl=$('waterGoal22').value===''?'':Number($('waterGoal22').value);
       delete s.profile.template;
       save();
       go("Hoy");
@@ -1887,13 +1891,7 @@
           "number",
           'min="0" required',
         ) +
-        field(
-          "need",
-          "Objetivo personal de sueño (h)",
-          s.need || 8,
-          "number",
-          'min="4" max="14" step=".25" required',
-        ) +
+        '<p>Objetivo: '+safe(s.need||8)+' h · Se modifica en Perfil.</p>' +
         '<label>Tipo<select id="restType"><option>Noche</option><option>Siesta</option></select></label>' +
         field("muscle", "Grupo muscular (opcional)", "", "text", "maxlength=100") +
         field(
@@ -1921,7 +1919,7 @@
         end = +new Date($("end").value);
       const optional=id=>$(id).value.trim()===''?null:Number($(id).value);
       let minutes;
-      try { minutes=validateSleepInput({start,end,awake:Number($("awake").value),need:Number($("need").value),sore:optional('sore'),tired:optional('tired')}); }
+      try { minutes=validateSleepInput({start,end,awake:Number($("awake").value),need:Number(s.need||8),sore:optional('sore'),tired:optional('tired')}); }
       catch(error){msg(error.message);return;}
       if (
         s.logs.some((l) => l.start < end && l.end > start && l.kind === "Sueño")
@@ -1931,7 +1929,6 @@
         );
         return;
       }
-      s.need = +$("need").value;
       s.logs.push({
         kind: "Sueño",
         date: day(new Date(end)),
@@ -2361,7 +2358,7 @@
       machinePair = null,
       introDraft = null;
     const noticeText =
-      "Vera guarda tu cuenta en el servidor y tu diario en este dispositivo. Cuando consultas al equipo, envía el contexto de entrenamiento al proveedor de IA. Las fotos se envían al solicitar su análisis. El administrador ve el número de cuentas y solicitudes. El catálogo comercial contiene fichas técnicas con licencia independiente. Tus fotos, conversaciones, entrenamientos y datos de salud no se ofrecen a compradores.";
+      "Vera guarda tu cuenta, perfil y registros en el servidor. Necesitas conexión para usar la app. Cuando consultas al equipo, envía el contexto de entrenamiento al proveedor de IA. Las fotos se envían al solicitar su análisis. El administrador ve el número de cuentas y solicitudes. El catálogo comercial contiene fichas técnicas con licencia independiente. Tus fotos, conversaciones, entrenamientos y datos de salud no se ofrecen a compradores.";
     function gate() {
       const remembered=(!registering&&(window.VeraNative?.savedEmail?.()||localStorage.veraLoginEmail))||"";
       const savedSession=remembered&&window.VeraNative?.hasSavedSession?.();
@@ -2391,7 +2388,7 @@
           : "") +
         '<button class="primary">' +
         (registering ? "Crear cuenta" : "Iniciar sesión") +
-        "</button></form>" + (window.VeraNative?.unlock&&localStorage.veraRememberedUser?btn("Abrir mi diario sin conexión","VeraNative.unlock()"):"") +
+        "</button></form>" +
         btn(
           registering ? "Ya tengo cuenta" : "Crear una cuenta",
           "registering=!registering;render()",
@@ -2602,7 +2599,7 @@
       const body = chatPage();
       return (
         (!s.turns.length ? greeting() : "") +
-        '<section><h3>Vera · Groq y Gemini</h3><p>Conversación y dictado: Groq. Fotos, revisión avanzada y voz en español: Gemini. Cada función necesita su proveedor configurado, conexión, sesión y permiso. Sin conexión puedes registrar tu diario manualmente.</p><label>Tipo de consulta<select onchange="s.coachMode=this.value;save()"><option value="standard" ' + (s.coachMode!=='deep'?'selected':'') + '>Conversación · Groq</option><option value="deep" ' + (s.coachMode==='deep'?'selected':'') + '>Revisión avanzada · Gemini</option></select></label><small>La revisión avanzada se usa sólo al seleccionarla; no implica mayor certeza.</small><div id="speechPlayer14" aria-live="polite"></div></section>' +
+        '<section><h3>Vera · Groq y Gemini</h3><p>Conversación y dictado: Groq. Fotos, revisión avanzada y voz en español: Gemini. Cada función necesita su proveedor configurado, conexión, sesión y permiso. Necesitas conexión para usar Vera.</p><label>Tipo de consulta<select onchange="s.coachMode=this.value;save()"><option value="standard" ' + (s.coachMode!=='deep'?'selected':'') + '>Conversación · Groq</option><option value="deep" ' + (s.coachMode==='deep'?'selected':'') + '>Revisión avanzada · Gemini</option></select></label><small>La revisión avanzada se usa sólo al seleccionarla; no implica mayor certeza.</small><div id="speechPlayer14" aria-live="polite"></div></section>' +
         body
           .replace(
             "<section><label>Habla con Vera",
@@ -2885,7 +2882,7 @@
           "number",
           'min="25" max="350" step=".1"',
         ) +
-        '</details><button class="primary">Guardar preferencias</button></section></form>'
+        '</details>'+field('sleepGoal22','Objetivo de sueño (horas)',s.need||8,'number','min=4 max=14 step=.25 required')+field('waterGoal22','Objetivo de agua (ml/día, opcional)',p.waterGoalMl||'','number','min=100 max=10000 step=50')+'<button class="primary">Guardar preferencias</button></section></form>'
       );
     }
     function roster() {
@@ -2984,7 +2981,7 @@
           const url=new URL("https://photon.komoot.io/api/");
           url.searchParams.set("q",query);url.searchParams.set("limit","5");
           const response=await fetch(url,{signal:AbortSignal.timeout(6500)});
-          if(response.ok)results=(await response.json()).features.map(({properties:p})=>({name:p.name||p.street||query,address:[p.street,p.housenumber,p.postcode,p.city,p.country].filter(Boolean).join(", "),reference:"OpenStreetMap"}));
+          if(response.ok)results=(await response.json()).features.filter(({properties:p})=>p.osm_value==='fitness_centre'||p.osm_value==='sports_centre'||/gimnasio|fitness|gym/i.test(p.name||'')).map(({properties:p})=>({name:p.name||p.street||query,address:[p.street,p.housenumber,p.postcode,p.city,p.country].filter(Boolean).join(", "),reference:"OpenStreetMap"}));
         }catch{}
       }
       if(!list.isConnected||ticket!==gymTicket||$("gymquery").value.trim()!==query)return;
@@ -3031,5 +3028,5 @@
     render();
     if(!window.VeraNative)verifySession();
   </script>
-<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script>
+<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="online22.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script>
 </html>

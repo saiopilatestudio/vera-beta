@@ -1,18 +1,24 @@
-# VERA 2.1 beta
+# VERA 2.2 beta
 
-Aplicación Android y servidor VERA, build 210. Interfaz clara en blanco y verde lima. Toda la IA se ejecuta en Groq o Gemini; no incluye modelos, OCR, voz ni motores de inferencia locales.
+Android build 220. Actualiza V2.0/V2.1 con la misma firma. Toda la IA se ejecuta en Groq o Gemini desde el servidor. No hay claves API ni modelos locales en la APK.
 
-La guía vigente de esta edición está en [docs/release21/README-V21.md](docs/release21/README-V21.md). El manual PDF y las evidencias acompañan a la APK y especifican el estado de despliegue comprobado.
+## Cambios 2.2
 
-## Funciones V2.1
+- Acceso online obligatorio, sin entrada al diario desconectado. Caché de recuperación para envíos interrumpidos; confirmaciones del servidor y conflictos visibles, con aislamiento entre cuentas.
+- Alta inicial obligatoria con perfil, objetivos y entrenamiento; sueño y agua editables en Perfil y guardados en el servidor.
+- Identidad gráfica y navegación móvil nuevas: blanco, lima, celeste, degradados suaves; icono nativo actualizado.
+- Voz Gemini inicia al solicitarla sin un segundo botón de reproducción.
+- Cinco referencias Zumub verificadas, suplementos con kcal explícitas y 25 campos de micronutrientes; comidas y suplementos sumados. Agua, barras, círculo de macros y puntos de peso.
+- 876 nombres de ejercicios en español, con identificadores y alias originales conservados.
+- Juntos: salas privadas, objetivo conjunto, duelo de series y constancia de siete días, progreso, ánimo y revancha. Declaraciones de sesión, no verificación por sensores.
+- Consulta normal: una llamada de IA. Revisiones explícitas con especialistas. Contexto acotado con cobertura explícita; revisión automática diaria como máximo, con tres registros y perfil inicial. Límites gratuitos del proveedor siguen vigentes.
+- Google Places: integración servidor con clave privada, filtro de gimnasios y campos limitados. Activación requiere GOOGLE_PLACES_KEY y proyecto con facturación. Su ausencia se informa; no se presenta OpenStreetMap como Google.
 
-- Texto e imágenes de días anteriores: Vera prepara entradas con fecha; al confirmar se incorporan al diario y a la sincronización de la cuenta.
-- Especialistas de entrenamiento, nutrición y recuperación revisan los datos por separado. Vera coordina siete días, muestra las razones y conserva el plan anterior si una revisión falla. Revisión automática opcional y opinión general a petición.
-- Guardado local y sincronización automática por cuenta de registros y estado de perfil. Los conflictos se muestran; no se mezclan cuentas al cerrar sesión. El nickname se valida y recupera desde el servidor.
-- Health Connect se actualiza al volver a la app y tras acciones, sin pulsar sincronizar por cada registro. Requiere Android 14+ y permisos del sistema. Google Fit sólo contribuye si comparte datos con Health Connect; no hay una integración OAuth directa con Google Fit.
-- Métricas de energía, proteína, hidratos, grasas, fibra, vitaminas y minerales confirmados de comidas y suplementos. Distingue cero de desconocido, muestra cobertura y fuentes, y calcula medias diarias entre fuentes sin sumar consumos duplicados.
-- Peso con selector todos/ayunas/otros, media diaria, media del periodo y tabla de fuentes/condiciones.
-- Voz española y visión Gemini revisadas; timeouts compatibles con el arranque lento del servidor gratuito.
+## Validación
+
+`npm test` incluye regresión, HTTP/SQLite, aislamiento de cuentas, perfil y diario, IA simulada, nutrición, retos, ejercicios y acceso online. `tests/audit-android-native.py` comprueba puente/orígenes y compila Java; `beta-android/build.py` compila y verifica firma/assets. Evidencias de entrega distinguen simulaciones, proveedores reales y pruebas visuales; no acreditan ejecución en todos los teléfonos.
+
+Fuentes y alcance: [nutrición](docs/NUTRICION-V22.md), [Juntos](docs/INVESTIGACION-JUNTOS-V22.md). Documentos release21 y anteriores son históricos.
 
 ## IA y servicios
 

@@ -33,7 +33,7 @@ export function validateRecord(id, record) {
   if (record.reps !== undefined && (!Array.isArray(record.reps) || record.reps.length > 100 ||
       record.reps.some(n => !Number.isSafeInteger(n) || n < 1 || n > 300))) invalid('Repeticiones no válidas.');
   if(record.nutrients!==undefined){
-    const keys=new Set(['fiber_g','sugar_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','vitaminC_mg','vitaminD_ug','vitaminB12_ug']);
+    const keys=new Set(['fiber_g','sugar_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','vitaminC_mg','vitaminD_ug','vitaminB12_ug','vitaminA_ug','vitaminE_mg','vitaminB1_mg','vitaminB2_mg','vitaminB3_mg','vitaminB5_mg','vitaminB6_mg','biotin_ug','folate_ug','zinc_mg','manganese_mg','copper_mg','iodine_ug','chromium_ug','selenium_ug']);
     if(!object(record.nutrients)||Object.entries(record.nutrients).some(([key,value])=>!keys.has(key)||!numeric(value)))invalid('Micronutriente o cantidad no válida.');
   }
   if (record.kind === 'Sueño') {

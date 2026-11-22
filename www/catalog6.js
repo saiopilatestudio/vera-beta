@@ -1,5 +1,7 @@
 const VeraCatalog=(()=>{
 let items=[],selected,type,revision=0;
+const muscleNames22={abdominals:'Abdominales',hamstrings:'Isquiotibiales',quadriceps:'Cuádriceps',calves:'Gemelos',glutes:'Glúteos',adductors:'Aductores',abductors:'Abductores',biceps:'Bíceps',triceps:'Tríceps',forearms:'Antebrazos',chest:'Pecho',shoulders:'Hombros',lats:'Dorsales',traps:'Trapecios','middle back':'Espalda media','lower back':'Zona lumbar',neck:'Cuello'};
+const spanishExercises22=exerciseRows.map(x=>({...x,name:typeof VeraExerciseNames22==='object'?(VeraExerciseNames22[x.id]||x.name):x.name,keywords:[x.name,x.keywords||''].join(' '),primaryMuscles:x.primaryMuscles.map(m=>muscleNames22[m]||m)}));
 const titles={exercise:'Buscar ejercicio',food:'Buscar alimento o plato',supplement:'Buscar producto por marca o código'};
 function panel(t){type=t;revision++;return '<section><label>'+titles[t]+'<input id="lookup6" type="search" placeholder="'+(t==='exercise'?'Press banca, remo, sentadilla…':'Nombre, marca o EAN…')+'"></label>'+btn('Buscar','VeraCatalog.search()',true)+'<div id="results6" aria-live="polite"></div></section>';}
 const clean=v=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
@@ -8,9 +10,10 @@ function near(a,b){if(a===b)return true;if(Math.min(a.length,b.length)<4||Math.a
 function tokens(v){return clean(v).split(/ +/).filter(t=>!['de','con','en','el','la','peso','al'].includes(t)).map(t=>aliases[t]||aliases[Object.keys(aliases).find(a=>near(a,t))]||t);}
 function rank(query,list){const q=[...new Set(tokens(query))];return list.map(x=>{const words=tokens(x.name+' '+(x.keywords||'')+' '+(x.id||''));const score=q.reduce((n,t)=>n+(words.includes(t)?3:words.some(w=>near(t,w))?2:0),0);return {x,score:score>=2*q.length?score/(1+words.length*.008):0};}).filter(a=>a.score>0).sort((a,b)=>b.score-a.score).slice(0,25).map(a=>a.x);}
 async function search(){const q=$('lookup6').value.trim(),target=$('results6'),ticket=++revision;if(!q)return;const category=type;
-const local=rank(q,category==='exercise'?exerciseRows:localProducts[category]);
+const local=rank(q,category==='exercise'?spanishExercises22:localProducts[category]);
 function paint(found,notice=''){if(ticket!==revision||!target.isConnected)return;items=found;target.innerHTML=(category==='supplement'?compare10(found):found.map((x,i)=>btn(safe(x.name),'VeraCatalog.pick('+i+')')).join(''))+'<p>'+safe(notice)+'</p>'; }
 if(category==='exercise'){paint(local.map(x=>({...x,group:x.primaryMuscles.join(', '),source:'Free Exercise DB',url:'https://github.com/yuhonas/free-exercise-db'})),local.length?'':'Prueba otro nombre o un movimiento más corto.');return;}
+if(category==='supplement'&&clean(q).includes('zumub')){const official=local.filter(x=>x.brand==='Zumub'&&String(x.id).startsWith('ZUMUB-'));if(official.length){paint(official,'Etiquetas del fabricante. Comprueba el sabor y la presentación de tu envase.');return;}}
 if(category==='supplement'&&!/^\d{8,14}$/.test(q)){
  paint(local,'Buscando marcas y etiquetas en internet…');
  const term=clean(q).replace(/multivitaminico[s]?/g,'multivitamin').replace(/creatina/g,'creatine').replace(/bcaas/g,'bcaa').replace(/proteina/g,'protein').replace(/glutamina/g,'glutamine');

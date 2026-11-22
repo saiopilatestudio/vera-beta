@@ -1,7 +1,7 @@
 const VeraJournal=(()=>{
  let running=null,timer=null,lastError='',sessionView=null;
- const profileKeys=['name','goal','criteria','likes','age','height','weight','level','days','time','eq','introduced'];
- const stateKeys=['plan','weeklyPlan21','autoPlan21','gym','gyms','machines','memory','expiry','supplementUnits','coachMode'];
+ const profileKeys=['name','goal','criteria','likes','age','height','weight','level','days','time','eq','introduced','waterGoalMl'];
+ const stateKeys=['plan','weeklyPlan21','autoPlan21','gym','gyms','machines','memory','expiry','supplementUnits','coachMode','need'];
  const signature=value=>JSON.stringify(value??null),clone=value=>JSON.parse(signature(value));
  function fields(){const values={};for(const key of profileKeys)if(Object.hasOwn(s.profile,key))values['profile.'+key]=s.profile[key];for(const key of stateKeys)if(Object.hasOwn(s,key)){
   if(!s.profileRevisions21?.[key]&&((key==='plan'&&s[key]==='')||(key==='memory'&&s[key]?.length===0)))continue;
@@ -14,7 +14,7 @@ const VeraJournal=(()=>{
    [...new Set([...Object.keys(localFields),...Object.keys(fieldBase)])].filter(key=>signature(localFields[key])!==(fieldBase[key]?.raw??'null')).length;
  }
  function body(){const count=pending(),conflicts=s.syncConflicts21||[];
-  return '<h3>Guardado de tu cuenta</h3><p role=status>'+(stateWriteError?safe(stateWriteError):running?'Sincronizando registros y perfil…':count?count+' cambios guardados en este dispositivo; pendientes de enviar.':s.diaryLastSync?'Guardado en tu cuenta · '+safe(new Date(s.diaryLastSync).toLocaleString('es-ES')):'Recuperando el diario y perfil de tu cuenta.')+'</p>'+(lastError?'<p>'+safe(lastError)+'</p>':'')+
+  return '<h3>Guardado de tu cuenta</h3><p role=status>'+(stateWriteError?safe(stateWriteError):running?'Sincronizando registros y perfil…':count?count+' cambios pendientes de confirmar en el servidor.':s.diaryLastSync?'Guardado en tu cuenta · '+safe(new Date(s.diaryLastSync).toLocaleString('es-ES')):'Recuperando el diario y perfil de tu cuenta.')+'</p>'+(lastError?'<p>'+safe(lastError)+'</p>':'')+
    btn('Comprobar guardado','VeraJournal.sync()')+'<small>Registros, perfil y datos autorizados de Health Connect se sincronizan automáticamente con tu cuenta. Fotos y conversaciones permanecen en este dispositivo.</small>'+conflicts.map((c,i)=>'<details><summary>Revisar dos cambios: '+safe(c.kind==='record'?(c.local?.note||c.remote?.note||c.key):c.key)+'</summary><p>Hay cambios en dos dispositivos. Conservamos ambas versiones hasta que elijas.</p><p>Este dispositivo: '+safe(signature(c.local))+'</p><p>Cuenta: '+safe(signature(c.remote))+'</p>'+btn('Conservar este dispositivo','VeraJournal.resolve('+i+',false)')+btn('Usar versión de la cuenta','VeraJournal.resolve('+i+',true)')+'</details>').join('');
  }
  function status(){return '<section class=sync14 id=syncStatus21>'+body()+'</section>';}
@@ -23,7 +23,7 @@ const VeraJournal=(()=>{
  // Acknowledgements are local metadata writes, not a new user action: avoid
  // starting Health Connect or another plan request for every server reply.
  function persist(){markLogs();persistVeraState();}
- function schedule(delay=1000){clearTimeout(timer);if(!validSession||!sessionStorage.veraToken)return;timer=setTimeout(()=>sync({quiet:true}),delay);}
+ function schedule(delay=0){clearTimeout(timer);if(!validSession||!sessionStorage.veraToken)return;timer=setTimeout(()=>sync({quiet:true}),delay);}
  function conflict(kind,key,local,remote,rev){s.syncConflicts21 ||= [];const entry={kind,key,local:clone(local),remote:clone(remote),rev};const at=s.syncConflicts21.findIndex(c=>c.kind===kind&&c.key===key);if(at<0)s.syncConflicts21.push(entry);else s.syncConflicts21[at]=entry;}
  function blocked(kind,key){return (s.syncConflicts21||[]).some(c=>c.kind===kind&&c.key===key);}
  function syncable(record){return record.source!=='health'||(record.healthKey===record.id&&record.id?.startsWith('health_')&&record.healthType);}
@@ -70,7 +70,7 @@ const VeraJournal=(()=>{
    s.diaryLastSync=new Date().toISOString();persist();
    if(!quiet)msg((s.syncConflicts21||[]).length?'Revisa los cambios simultáneos en Perfil → Guardado de tu cuenta.':'Registros y perfil sincronizados.');
    return true;
-  }catch(error){if(active()){lastError='Los cambios se conservan en este dispositivo. '+error.message;if(!quiet)msg(lastError);}return false;}
+  }catch(error){if(active()){lastError='El servidor no ha confirmado el guardado. '+error.message;if(!quiet)msg(lastError);}return false;}
   finally{if(active())refresh();}
  }
  function sync(options={}){

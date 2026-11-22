@@ -23,7 +23,7 @@ function saveSupplement(x,i=-1){
 const oldHome8=home;
 home=()=>oldHome8()+VeraJournal.status()+'<section><h3>Estado del cuerpo hoy</h3><p>'+safe(readiness().text)+'</p>'+btn('Registrar descanso',"go(\'Sueño\')")+'</section>';
 window.lockDiary=()=>{validSession=false;if(recording?.state==='recording')recording.stop();render();};
-window.openDiary=()=>{const user=localStorage.veraRememberedUser;if(user)sessionStorage.veraUser=user;clearSessionMedia14();s=loadVeraState(storageKey(),!user?'vera.v1':'');validSession=true;VeraJournal.onSession();go('Hoy');};
+window.openDiary=()=>{validSession=false;render();msg('Inicia sesión con conexión para abrir tu cuenta.');};
 if(!localStorage.getItem('vera.notice8')){
  const dialog=document.createElement('dialog');dialog.innerHTML='<h2>Tus datos en Vera</h2><p>'+safe(noticeText)+'</p><p>Después de entrar, cada cuenta elige si permite análisis remoto con Groq y Gemini. Puedes usar el diario sin IA.</p><button id="continue8">Continuar</button>';document.body.append(dialog);dialog.addEventListener('cancel',e=>e.preventDefault());dialog.showModal();
  $('continue8').onclick=()=>{localStorage.setItem('vera.notice8','1');dialog.remove();};

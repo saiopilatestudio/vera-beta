@@ -11,7 +11,7 @@ const document={getElementById:id=>nodes.get(id)||null,querySelectorAll:()=>[],a
 for(const id of ['topTools','nav','view','notice'])node(id);
 const ctx=vm.createContext({console,document,localStorage:storage,sessionStorage:{veraUser:'https://test/alice',veraToken:'token-a'},window:{VeraNative:{},setInterval(){}},location:{origin:'https://test',hostname:'test'},crypto:{randomUUID},setTimeout:()=>0,clearTimeout(){},setInterval(){},scrollTo(){},Date,URL,Blob,AbortSignal,AbortController,TextEncoder,confirm:()=>true,fetch:()=>{throw Error('Unexpected network access');}});
 const run=s=>vm.runInContext(s,ctx);
-const files=['state14.js','session13.js','edition12.js','vision11.js','vera5.js','partners.js','edition10.js','list7.js','catalog6.js','journal.js','privacy6.js','actions6.js'];
+const files=['state14.js','session13.js','edition12.js','vision11.js','vera5.js','partners.js','edition10.js','list7.js','exercises-es22.js','catalog6.js','journal.js','privacy6.js','actions6.js'];
 for(const file of files)run(readFileSync(new URL(file,www),'utf8'));
 for(const [,inline] of html.matchAll(/<script>([\s\S]*?)<\/script>/g))run(inline);
 run(readFileSync(new URL('perf6.js',www),'utf8'));run(readFileSync(new URL('metrics21.js',www),'utf8'));run(readFileSync(new URL('health21.js',www),'utf8'));run(readFileSync(new URL('planning21.js',www),'utf8'));run('validSession=true');
@@ -131,14 +131,14 @@ run("const earlier14=new Date();earlier14.setDate(earlier14.getDate()-1);s.logs=
 results.push('Marcas independientes del orden de llegada; no se inventa cronología entre series del mismo día');
 run("s.logs=[0,27,28,-1].map(n=>{const d=new Date();d.setDate(d.getDate()-n);return {kind:'Entrenamiento',date:day(d),exercise:'Prensa',kg:10,reps:[1]}});s.logs.push({kind:'Entrenamiento',date:'2026-02-30',kg:10,reps:[1]})");assert.equal(run('trainingRows14(28).length'),2);assert.equal(run('trainingVolume14(trainingRows14(28))'),20);
 results.push('Ventana28 incluye hoy/hoy-27 y excluye hoy-28, mañana y fecha inválida');
-// Remote audio stays inert until the user presses the native HTML media control.
-let audioPaused=0,audioCreated=0,audioPostResolve;
-document.createElement=tag=>{assert.equal(tag,'audio');audioCreated++;return {setAttribute(){},pause(){audioPaused++;},removeAttribute(){},load(){}};};node('speechPlayer14').append=()=>{};
+// Remote audio starts after explicit speech request, without a second play button.
+let audioPaused=0,audioCreated=0,audioPlayed=0,audioPostResolve;
+document.createElement=tag=>{assert.equal(tag,'audio');audioCreated++;return {async play(){audioPlayed++;},setAttribute(){},pause(){audioPaused++;},removeAttribute(){},load(){}};};node('speechPlayer14').append=()=>{};
 run("s=initial();s.turns=[{answer:'Respuesta de prueba'}];validSession=true");
 ctx.fetch=async(url,options)=>String(url).endsWith('/capabilities')?{ok:true,json:async()=>groqCapabilities}:new Promise(resolve=>audioPostResolve=resolve);
 let speech=run('VeraSpeech14.speak(0)');for(let i=0;i<30&&!audioPostResolve;i++)await Promise.resolve();assert.ok(audioPostResolve);run('VeraSpeech14.stop()');audioPostResolve({ok:true,status:200,blob:async()=>new Blob(['fixture'],{type:'audio/wav'})});await speech;assert.equal(audioCreated,0);
 audioPostResolve=null;speech=run('VeraSpeech14.speak(0)');for(let i=0;i<30&&!audioPostResolve;i++)await Promise.resolve();run('VeraPrivacy6.set(false)');audioPostResolve({ok:true,status:200,blob:async()=>new Blob(['fixture'],{type:'audio/wav'})});await speech;assert.equal(audioCreated,0);
-run('VeraPrivacy6.set(true)');audioPostResolve=null;speech=run('VeraSpeech14.speak(0)');for(let i=0;i<30&&!audioPostResolve;i++)await Promise.resolve();audioPostResolve({ok:true,status:200,blob:async()=>new Blob(['fixture'],{type:'audio/wav'})});await speech;assert.equal(audioCreated,1);assert.equal(run('VeraSpeech14.audio.controls'),true);assert.equal(run('VeraSpeech14.audio.autoplay'),undefined);run('render()');assert.equal(audioPaused,1);assert.equal(run('VeraSpeech14.url'),null);
+run('VeraPrivacy6.set(true)');audioPostResolve=null;speech=run('VeraSpeech14.speak(0)');for(let i=0;i<30&&!audioPostResolve;i++)await Promise.resolve();audioPostResolve({ok:true,status:200,blob:async()=>new Blob(['fixture'],{type:'audio/wav'})});await speech;assert.equal(audioCreated,1);assert.equal(run('VeraSpeech14.audio.controls'),false);assert.equal(audioPlayed,1);assert.equal(run('VeraSpeech14.audio.autoplay'),undefined);run('render()');assert.equal(audioPaused,1);assert.equal(run('VeraSpeech14.url'),null);
 results.push('Audio remoto WAV con controles sin autoplay; cancelar/revocar descarta respuesta pendiente; navegar pausa y liberaURL');
 run('VeraPrivacy6.set(true)');audioPostResolve=null;speech=run('VeraSpeech14.speak(0)');for(let i=0;i<30&&!audioPostResolve;i++)await Promise.resolve();const priorAudioCreated=audioCreated;run("sessionStorage.veraUser='https://test/other';sessionStorage.veraToken='other-token';s=initial();VeraPrivacy6.set(true)");audioPostResolve({ok:true,status:200,blob:async()=>new Blob(['fixture'],{type:'audio/wav'})});await speech;assert.equal(audioCreated,priorAudioCreated);assert.equal(run('VeraSpeech14.url'),null);
 results.push('Audio pendiente de A no crea reproductor ni URL al abrir cuenta B');

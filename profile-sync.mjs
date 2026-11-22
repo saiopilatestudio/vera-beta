@@ -1,8 +1,8 @@
 import { db, rows } from './storage.mjs';
 
 await rows('CREATE TABLE IF NOT EXISTS account_state(uid TEXT, field TEXT, rev INTEGER NOT NULL, data TEXT, PRIMARY KEY(uid,field))');
-const profileFields = new Set(['name','goal','criteria','likes','age','height','weight','level','days','time','eq','introduced']);
-const stateFields = new Set(['plan','weeklyPlan21','autoPlan21','gym','gyms','machines','memory','expiry','supplementUnits','coachMode']);
+const profileFields = new Set(['name','goal','criteria','likes','age','height','weight','level','days','time','eq','introduced','waterGoalMl']);
+const stateFields = new Set(['plan','weeklyPlan21','autoPlan21','gym','gyms','machines','memory','expiry','supplementUnits','coachMode','need']);
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const invalid = message => {throw Object.assign(Error(message),{status:422});};
 function weeklyPlan(value){
@@ -30,6 +30,8 @@ function validate(field, value) {
   safe(value);
   if (value !== null) {
     if(field==='weeklyPlan21')weeklyPlan(value);
+    if(field==='need'&&(!Number.isFinite(value)||value<4||value>14))invalid('Objetivo de sueño no válido.');
+    if(field==='profile.waterGoalMl'&&value!==''&&(!Number.isFinite(value)||value<100||value>10000))invalid('Objetivo de agua no válido.');
     if (['plan','gym','coachMode'].includes(field) && typeof value !== 'string') invalid('Texto de perfil no válido.');
     if (['memory','machines','profile.eq'].includes(field) && !Array.isArray(value)) invalid('Lista de perfil no válida.');
     if (['weeklyPlan21','gyms','expiry','supplementUnits'].includes(field) && !object(value)) invalid('Objeto de perfil no válido.');

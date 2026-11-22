@@ -1,52 +1,53 @@
-// The server calculates scores from confirmed sets and enforces membership.
+// Private challenges: scores and membership are checked by the server.
 const VeraPartners=(()=>{
- let timer,generation=0,pending=false,active=null,lastKey="";
+ let timer,generation=0,pending=false,active=null,lastKey='',rooms=[],filter='active';
+ const labels={together:'Objetivo compartido',challenge:'Duelo por series',week:'Constancia · 7 días'};
+ const states={pending:'Invitación pendiente',active:'En marcha',finished:'Completado',declined:'Invitación rechazada',expired:'Invitación caducada'};
+ const totals=r=>{const t={host:0,guest:0};for(const c of r.counts||[])t[c.side]+=c.n;return t;};
  function stop(){clearTimeout(timer);generation++;pending=false;}
  function page(){
-   active=null;lastKey="";const g=generation;
-   timer=setTimeout(()=>refresh(g),0);
-   return '<section><h2>Entrenar en pareja</h2><p id="partnerNick"></p><form id="pairInvite" onsubmit="event.preventDefault();VeraPartners.invite()"><label>Nick de tu compañero<input name="nick" placeholder="@nombre" required></label><label>Nombre de la sesión<input name="title" maxlength="80" required></label><label>Ejercicios, uno por línea<textarea name="plan" required></textarea></label><label>Series por ejercicio<input type="number" name="target" value="3" min="1" max="8" required></label><label>Modalidad<select name="mode"><option value="together">Entrenar juntos</option><option value="challenge">Reto por series</option></select></label><button class="primary">Invitar por nick</button></form></section><section id="pairRooms"></section><section id="pairDetail" hidden></section><p role="status" id="pairStatus"></p>';
+   stop();active=null;lastKey='';rooms=[];filter='active';const g=generation;timer=setTimeout(()=>refresh(g),0);
+   return '<section class="social22-hero"><span class="eyebrow">MEJOR EN COMPAÑÍA</span><h2>Un objetivo. Vuestro equipo.</h2><p>Sumad constancia, celebrad cada sesión y avanzad a vuestro ritmo.</p><p id="partnerNick"></p><div id="pairStats" class="social22-stats"></div></section><section class="social22-start"><h3>Elegid vuestro próximo reto</h3><div class="social22-templates"><button onclick="VeraPartners.template(\'week\')"><strong>7 días de constancia</strong><small>Un día activo, un punto</small></button><button onclick="VeraPartners.template(\'together\')"><strong>Un objetivo compartido</strong><small>Sumad vuestras series</small></button><button onclick="VeraPartners.template(\'challenge\')"><strong>Duelo amistoso</strong><small>Mismo plan, vuestro ritmo</small></button></div><details id="pairCreate"><summary>Crear una invitación privada</summary><form id="pairInvite" onsubmit="event.preventDefault();VeraPartners.invite()"><label>Nick de tu compañero<input name="nick" placeholder="@nombre" autocomplete="off" required></label><label>Nombre del reto<input name="title" maxlength="80" value="Nuestra semana activa" required></label><label>Modalidad<select name="mode" onchange="VeraPartners.modeChanged()"><option value="week">Constancia durante 7 días</option><option value="together">Objetivo compartido de series</option><option value="challenge">Duelo por series</option></select></label><label id="pairPlanLabel" hidden>Ejercicios, uno por línea<textarea name="plan">Sentadilla\nRemo\nPress de banca</textarea></label><label><span id="pairTargetLabel">Objetivo personal de días activos</span><input type="number" name="target" value="3" min="1" max="7" required></label><p id="pairRule">Una sesión declarada por día. El reto termina tras siete días de calendario UTC, incluido hoy.</p><button class="primary">Enviar invitación</button></form></details></section><section><div class="social22-heading"><h2>Vuestros retos</h2><button onclick="VeraPartners.reload()" aria-label="Actualizar retos">Actualizar</button></div><div class="social22-tabs" role="group" aria-label="Filtrar retos"><button id="pairTabActive" aria-pressed="true" onclick="VeraPartners.filter(\'active\')">En marcha</button><button id="pairTabHistory" aria-pressed="false" onclick="VeraPartners.filter(\'history\')">Historial</button></div><div id="pairRooms"></div></section><section id="pairDetail" class="social22-detail" hidden></section><p role="status" id="pairStatus"></p>';
  }
  const call=(action,d)=>api('partners/'+action,d);
  function note(value){const n=$('pairStatus');if(n)n.textContent=value;}
- function button(parent,label,fn){const b=document.createElement('button');b.textContent=label;b.onclick=fn;parent.append(b);return b;}
- function line(parent,text,tag='p'){const el=document.createElement(tag);el.textContent=text;parent.append(el);return el;}
+ function button(parent,label,fn,className=''){const b=document.createElement('button');b.textContent=label;b.onclick=fn;if(className)b.className=className;parent.append(b);return b;}
+ function line(parent,text,tag='p',className=''){const el=document.createElement(tag);el.textContent=text;if(className)el.className=className;parent.append(el);return el;}
+ function progress(parent,value,max,label){const box=document.createElement('div');box.className='social22-score';line(box,label);const p=document.createElement('progress');p.max=max;p.value=Math.min(value,max);p.setAttribute('aria-label',label);box.append(p);line(box,value+' / '+max,'strong');parent.append(box);}
  function draw(r){
-   const panel=$('pairDetail');panel.hidden=false;const key=JSON.stringify(r);
-   if(key===lastKey)return;lastKey=key;
-   const prev=panel.querySelector('select')?.value;panel.replaceChildren();line(panel,r.title,'h2');
-   const totals={host:0,guest:0};for(const c of r.counts)totals[c.side]+=c.n;
-   for(const side of ['host','guest'])line(panel,'@'+r[side]+' · '+totals[side]+' de '+(r.plan.length*r.target)+' series'+(r[side+'Done']?' · Terminado':''));
+   const panel=$('pairDetail');if(!panel)return;panel.hidden=false;const key=JSON.stringify(r);if(key===lastKey)return;lastKey=key;const prev=panel.querySelector('select')?.value;panel.replaceChildren();line(panel,labels[r.mode],'span','eyebrow');line(panel,r.title,'h2');line(panel,states[r.state]||'Reto','p','social22-state');
+   const t=totals(r),target=r.mode==='week'?r.target:r.plan.length*r.target,unit=r.mode==='week'?'días activos':'series';
+   if(r.mode==='together')progress(panel,t.host+t.guest,target*2,'Progreso del equipo · '+unit);
+   for(const side of ['host','guest']){progress(panel,t[side],target,'@'+r[side]+(side===r.side?' · tú':'')+' · '+unit);if(t[side]>=target)line(panel,'✓ @'+r[side]+' ha logrado su objetivo','p','social22-badge');}
+   if(r.mode==='week'){
+     line(panel,'Hasta '+new Date(r.ends-1).toLocaleDateString('es-ES',{timeZone:'UTC',day:'numeric',month:'long'})+' · cierre a las 00:00 UTC');const grid=document.createElement('div');grid.className='social22-days';
+     for(let i=0;i<7;i++){const d=new Date(r.created);d.setUTCDate(d.getUTCDate()+i);const date=d.toISOString().slice(0,10),checked=(r.days||[]).some(x=>x.side===r.side&&x.day===date);const cell=line(grid,(checked?'✓ ':'')+d.toLocaleDateString('es-ES',{timeZone:'UTC',weekday:'short'}),'span',checked?'complete':'');cell.setAttribute('aria-label',date+(checked?' · sesión declarada':' · sin sesión'));}panel.append(grid);line(panel,'Cuenta una sesión completada y declarada por ti cada día. No es una clasificación de peso, carga o calorías.','small');
+   }else{const list=document.createElement('ul');for(let i=0;i<r.plan.length;i++){const own=(r.counts||[]).find(x=>x.side===r.side&&x.exercise===i)?.n||0;line(list,r.plan[i]+' · '+own+'/'+r.target,'li');}panel.append(list);}
    if(r.state==='pending'){
-     line(panel,'Pendiente de aceptación.');
-     if(r.side==='guest')for(const [label,accept] of [['Aceptar y empezar',true],['Rechazar',false]])button(panel,label,()=>act('respond',{id:r.id,accept}));
-   }else if(r.state==='active'&&!r[r.side+'Done']){
-     const select=document.createElement('select');select.setAttribute('aria-label','Ejercicio');panel.append(select);
-     r.plan.forEach((name,i)=>select.add(new Option(name,String(i))));if(prev)select.value=prev;
-     button(panel,'Registrar serie',()=>act('set',{id:r.id,exercise:Number(select.value),event:crypto.randomUUID()}));
-     button(panel,'Terminar mi parte',()=>act('finish',{id:r.id}));
-   }else if(r.state==='finished'&&r.mode==='challenge'){
-     line(panel,totals.host===totals.guest?'Empate':'Ganador · @'+r[totals.host>totals.guest?'host':'guest']);
-   }else line(panel,({declined:'Invitación rechazada',finished:'Sesión terminada',active:'Esperando al compañero'})[r.state]||r.state);
+     if(r.side==='guest')for(const [label,accept] of [['Aceptar reto',true],['Rechazar',false]])button(panel,label,()=>act('respond',{id:r.id,accept}),accept?'primary':'');else line(panel,'Tu compañero debe aceptar para empezar.');
+   }else if(r.state==='active'){
+     if(r.mode==='week'){const done=(r.days||[]).some(x=>x.side===r.side&&x.day===r.today);if(done)line(panel,'✓ La sesión de hoy ya está registrada.','p','social22-badge');else button(panel,'He completado mi sesión de hoy',()=>act('checkin',{id:r.id,completed:true}),'primary');
+     }else if(!r[r.side+'Done']){const select=document.createElement('select');select.setAttribute('aria-label','Ejercicio para registrar una serie');panel.append(select);r.plan.forEach((name,i)=>select.add(new Option(name,String(i))));if(prev)select.value=prev;button(panel,'Registrar serie completada',()=>act('set',{id:r.id,exercise:Number(select.value),event:crypto.randomUUID()}),'primary');button(panel,'Terminar mi sesión',()=>act('finish',{id:r.id}));}else line(panel,'Has terminado. Tu compañero puede completar su parte.');
+   }else if(r.state==='finished'){line(panel,r.mode==='together'?(t.host+t.guest>=target*2?'¡Objetivo del equipo conseguido!':'Cada sesión suma. Preparad el siguiente objetivo.'):(t.host===t.guest?'Misma constancia: empate.':'Primera posición · @'+r[t.host>t.guest?'host':'guest']),'h3');}
+   if(['active','finished'].includes(r.state)){if((r.cheers||[]).includes(r.side))line(panel,'Ánimo enviado a tu compañero ♥','p','social22-badge');else button(panel,'♥ Dar ánimos',()=>act('cheer',{id:r.id}));if((r.cheers||[]).includes(r.side==='host'?'guest':'host'))line(panel,'Tu compañero te ha enviado ánimos.');}
+   if(['finished','declined','expired'].includes(r.state))button(panel,'Repetir este reto',()=>rematch(r));
+ }
+ function paintRooms(){
+   const panel=$('pairRooms');if(!panel)return;panel.replaceChildren();const visible=rooms.filter(r=>filter==='active'?['pending','active'].includes(r.state):!['pending','active'].includes(r.state));if(!visible.length)line(panel,filter==='active'?'Tu próximo reto empieza con una invitación. Elige una modalidad y el nick de tu compañero.':'Aquí aparecerán vuestros retos terminados.');
+   for(const r of visible){const card=document.createElement('article');card.className='social22-room';line(card,labels[r.mode],'small');button(card,r.title,()=>{active=r.id;lastKey='';draw(r);$('pairDetail')?.scrollIntoView({behavior:'smooth',block:'start'});reload();},'social22-room-title');line(card,'Con @'+r[r.side==='host'?'guest':'host']+' · '+states[r.state]);const t=totals(r);if(r.state!=='pending')line(card,t[r.side]+' '+(r.mode==='week'?'días activos':'series')+' · '+(r.state==='finished'?'Resultado final':'En curso'),'strong');panel.append(card);}
+   $('pairTabActive')?.setAttribute('aria-pressed',String(filter==='active'));$('pairTabHistory')?.setAttribute('aria-pressed',String(filter==='history'));const stats=$('pairStats');if(stats){stats.replaceChildren();const finished=rooms.filter(r=>r.state==='finished'),goals=finished.filter(r=>totals(r)[r.side]>=(r.mode==='week'?r.target:r.target*r.plan.length));for(const [v,label] of [[rooms.filter(r=>r.state==='active').length,'en marcha'],[finished.length,'retos cerrados'],[goals.length,'objetivos logrados']]){const item=document.createElement('div');line(item,String(v),'strong');line(item,label,'small');stats.append(item);}line(stats,'Tus últimos 50 retos privados','small');}
  }
  async function refresh(g=generation){
-   if(g!==generation||!$('pairRooms'))return;
-   try{
-     const out=await call('list',{});if(g!==generation)return;
-     $('partnerNick').textContent='Tu nick · @'+out.nick;
-     const panel=$('pairRooms');panel.replaceChildren();line(panel,'Mis sesiones','h2');
-     if(!out.rooms.length)line(panel,'Todavía no tienes invitaciones.');
-     for(const r of out.rooms)button(panel,r.title+' · @'+r[r.side==='host'?'guest':'host'],()=>{active=r.id;refresh(++generation);});
-     const wanted=active;if(wanted){const result=await call('room',{id:wanted});if(g===generation&&wanted===active)draw(result.room);}
-   }catch(e){if(g===generation)note(e.message);}
-   finally{if(g===generation){clearTimeout(timer);timer=setTimeout(()=>refresh(g),4500);}}
+   if(g!==generation||!$('pairRooms'))return;try{const out=await call('list',{});if(g!==generation||!$('pairRooms'))return;rooms=out.rooms;$('partnerNick').textContent='Tu nick · @'+out.nick;paintRooms();if(active){const r=rooms.find(x=>x.id===active);if(r)draw(r);}note('Actualizado con tu cuenta.');}catch(e){if(g===generation)note(e.message);}finally{if(g===generation){clearTimeout(timer);timer=setTimeout(()=>refresh(g),document.hidden?60000:12000);}}
  }
  async function act(action,data){
-   if(pending)return;pending=true;const g=++generation;clearTimeout(timer);
-   try{const out=await call(action,data);if(g!==generation)return;active=out.room.id;draw(out.room);note(action==='set'?'Serie confirmada.':'');}
-   catch(e){if(g===generation)note(e.message);}
-   finally{if(g===generation){pending=false;refresh(g);}}
+   if(pending)return;pending=true;const g=++generation;clearTimeout(timer);note('Guardando…');try{const out=await call(action,data);if(g!==generation||!$('pairDetail'))return;active=out.room.id;draw(out.room);note(action==='set'?'Serie guardada en tu cuenta.':action==='checkin'?'Día activo guardado en tu cuenta.':'Guardado en tu cuenta.');}catch(e){if(g===generation)note(e.message);}finally{if(g===generation){pending=false;refresh(g);}}
  }
- function invite(){const f=new FormData($('pairInvite'));act('invite',{nick:f.get('nick'),title:f.get('title'),plan:String(f.get('plan')).split(/\n/).map(x=>x.trim()).filter(Boolean),target:Number(f.get('target')),mode:f.get('mode')});}
- return {page,stop,invite};
+ function form(){return $('pairInvite')?.elements;}
+ function modeChanged(){const f=form();if(!f)return;const week=f.mode.value==='week';$('pairPlanLabel').hidden=week;f.plan.required=!week;$('pairTargetLabel').textContent=week?'Objetivo personal de días activos':'Series por ejercicio';f.target.max=week?'7':'8';if(+f.target.value>+f.target.max)f.target.value=f.target.max;$('pairRule').textContent=week?'Una sesión declarada por día. El reto termina tras siete días de calendario UTC, incluido hoy.':'El mismo objetivo para ambos. Solo cuentan las series que confirméis en el reto.';}
+ function template(mode){const f=form();if(!f)return;f.mode.value=mode;f.title.value=mode==='week'?'Nuestra semana activa':mode==='together'?'Más fuertes juntos':'Nuestro duelo amistoso';f.target.value='3';modeChanged();$('pairCreate').open=true;f.nick.focus();}
+ function rematch(r){template(r.mode);const f=form();f.nick.value='@'+r[r.side==='host'?'guest':'host'];f.title.value=r.title;f.plan.value=r.plan.join('\n');f.target.value=String(r.target);$('pairCreate').scrollIntoView({behavior:'smooth',block:'start'});}
+ function invite(){const f=new FormData($('pairInvite')),mode=f.get('mode');act('invite',{nick:f.get('nick'),title:f.get('title'),plan:mode==='week'?['Sesión del día']:String(f.get('plan')).split(/\n/).map(x=>x.trim()).filter(Boolean),target:Number(f.get('target')),mode});}
+ function reload(){if(pending)return;clearTimeout(timer);refresh(++generation);}
+ return {page,stop,invite,template,modeChanged,reload,filter(value){filter=value==='history'?'history':'active';paintRooms();}};
 })();

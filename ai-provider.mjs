@@ -77,7 +77,7 @@ export async function chat(system,user,json=false,options={}) {
   let value;
   if(route.provider==='groq') {
     if(Array.isArray(user))throw new ServiceError('Las imágenes requieren la ruta de visión Gemini.',400,'AI_PATH');
-    const data=await provider('chat/completions',{model:route.model,messages:[{role:'system',content:system},{role:'user',content:user}],max_completion_tokens:3000,...(json?{response_format:{type:'json_object'}}:{})},false,options);
+    const data=await provider('chat/completions',{model:route.model,...(route.model.startsWith('openai/gpt-oss-')?{reasoning_effort:'low'}:{}),messages:[{role:'system',content:system},{role:'user',content:user}],max_completion_tokens:options.maxTokens||3000,...(json?{response_format:{type:'json_object'}}:{})},false,options);
     if(data?.choices?.[0]?.finish_reason!=='stop')throw new ServiceError('La respuesta de IA está incompleta. Reintenta.',502,'AI_INCOMPLETE');
     value=data.choices[0].message?.content;
   } else {
@@ -87,7 +87,7 @@ export async function chat(system,user,json=false,options={}) {
       if(!match)throw new ServiceError('Imagen no válida.',400,'INVALID_IMAGE');
       return {inlineData:{mimeType:match[1],data:match[2]}};
     });
-    const data=await gemini(feature,{systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:8192,thinkingConfig:{thinkingLevel:'LOW'},...(json?{responseMimeType:'application/json'}:{})}},options);
+    const data=await gemini(feature,{systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:options.maxTokens||8192,thinkingConfig:{thinkingLevel:'LOW'},...(json?{responseMimeType:'application/json'}:{})}},options);
     const candidate=data?.candidates?.[0];
     if(candidate?.finishReason!=='STOP')throw new ServiceError('La respuesta de IA está incompleta o no disponible. Reintenta.',502,'AI_INCOMPLETE');
     if(!Array.isArray(candidate.content?.parts))throw new ServiceError('La respuesta de IA no tiene el formato esperado.',502,'AI_FORMAT');

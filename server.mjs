@@ -1,4 +1,5 @@
 import {partnerAction,partnerPaths} from "./partners.mjs";
+import {compactContext22} from './efficiency22.mjs';
 import {specialists} from "./routing.mjs";
 import { ownerLogin, ownerSession, ownerLogout, ownerCookie, allowed } from "./owner.mjs";
 import { adminAllowed, business } from "./business.mjs";
@@ -45,14 +46,14 @@ async function coach(d, uid) {
   for (const row of records) {
     const record = cleanContext(JSON.parse(row.data));
     const bytes = Buffer.byteLength(JSON.stringify(record));
-    if (contextBytes + bytes > 50000) break;
+    if (contextBytes + bytes > 12000) break;
     d.confirmedContext.push(record); contextBytes += bytes;
   }
   d.confirmedContextCoverage = { included: d.confirmedContext.length, limitedToMostRecent: true };
-  d.contextNotice = "confirmedContext procede de la cuenta autenticada. logs y perfil son contexto del cliente, no confirmación de persistencia. Los registros pueden solaparse: no sumes dos veces el mismo id. No dispones de todo el historial ni herramientas de escritura.";
-  const context = JSON.stringify(d);
+  d.contextNotice = "confirmedContext procede de la cuenta autenticada. logs y perfil son contexto del cliente, no confirmación de persistencia. Los registros pueden solaparse: no sumes dos veces el mismo id. No dispones de todo el historial. VERA sí puede guardar registros permanentemente en la cuenta: proponlos en entries y el usuario pulsa Guardar para que la app los escriba en el servidor. No afirmes que solo se conservan en esta conversación. No confirmes guardado antes de recibir confirmación de la app.";
+  const context = JSON.stringify(compactContext22(d,{maxBytes:6000}));
   const reportResults = await Promise.allSettled(
-    specialists(d.question).map(async role => ({
+    (/estado general|revisi[oó]n global|revisi[oó]n semanal|revisi[oó]n mensual/i.test(d.question)?specialists(d.question):[]).map(async role => ({
       role,
       text: await chat(
         guard +
@@ -61,7 +62,7 @@ async function coach(d, uid) {
           ". " +
           roles[role] +
           " Responde en 1–3 frases con tu propuesta, dato observado y limitación. Si no procede, indícalo.",
-        context, false, { deadline, feature },
+        context, false, { deadline, feature, maxTokens:1200 },
       ),
     })),
   );
@@ -71,8 +72,8 @@ async function coach(d, uid) {
   const result = await chat(
     guard +
       " Antes de personalizar un plan, comprueba objetivo, experiencia, disponibilidad, material y restricciones comunicadas. Si falta información decisiva, pide el dato o identifica la propuesta como general; no inventes cargas ni un 1RM. Distingue el rendimiento observado de una estimación y conserva la aceptación explícita antes de cambiar un plan activo. Eres Vera, coordinadora. Integra discrepancias. Usa solo registros confirmados y memoria explícita. Responde a la pregunta concreta. Si te piden un plan, entrega ejercicios, series, repeticiones, descansos y alternativas, comidas y cantidades ajustadas al perfil cuando tengas datos. Revisión semanal o mensual: compara periodos, indica cobertura y qué se cambia. Devuelve JSON con answer (texto), plan (texto del plan semanal o de 4 semanas SOLO si se solicita o se modifica; en otro caso cadena vacía), memory (una preferencia duradera explícitamente expresada o cadena vacía). Incluye también entries: array de registros candidatos SOLO si el mensaje comunica consumos, actividad o mediciones realizadas. Cada entrada {kind,date,value,note}. kind debe ser Entrenamiento, Comida, Bebida, Agua, Suplemento, Peso en ayunas, Otro pesaje, Cintura, Sueño, Pasos, Cardio, Posing o Sensaciones. Unidades kcal, ml, kg, cm, horas, pasos o minutos según tipo. value null si desconocido. date ISO local YYYY-MM-DD. Conserva detalle de series, cargas, dosis y unidades en note. Nunca des por guardado lo pendiente de confirmar. Indica qué dato motivó la decisión, cuándo revisarla y qué dato concreto cambiaría la decisión. Usa el gimnasio activo y su material. Si falta cobertura de peso en ayunas y comidas, aplaza los ajustes calóricos automáticos.",
-    JSON.stringify({ input: d, reports }),
-    true, { deadline, feature },
+    JSON.stringify({ input: compactContext22(d,{maxBytes:8000}), reports }),
+    true, { deadline, feature, maxTokens:/plan|semana|mensual/i.test(d.question)?2500:1400 },
   );
   return { ...validateCoachResult(result), reports };
 }
@@ -138,7 +139,7 @@ export const server = http.createServer(async (req, res) => {
       return res.end("ok");
     }
     if (req.method === "GET" && req.url === "/capabilities") {
-      return res.end(JSON.stringify({ apiVersion: "2.1", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true} }));
+      return res.end(JSON.stringify({ apiVersion: "2.2", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true} }));
     }
     if (req.method === "GET" && ["/", "/index.html"].includes(req.url)) {
       res.setHeader("Content-Type", "text/html;charset=utf-8");
@@ -227,23 +228,25 @@ export const server = http.createServer(async (req, res) => {
       const r = await fetch(
         "https://places.googleapis.com/v1/places:searchText",
         {
+          redirect: "error",
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": process.env.GOOGLE_PLACES_KEY,
             "X-Goog-FieldMask":
-              "places.id,places.displayName,places.formattedAddress,places.googleMapsUri,places.editorialSummary",
+              "places.id,places.displayName,places.formattedAddress,places.googleMapsUri",
           },
           body: JSON.stringify({
             textQuery: q,
             includedType: "gym",
+            strictTypeFiltering: true,
             languageCode: "es",
             maxResultCount: 5,
           }),
           signal: AbortSignal.timeout(12000),
         },
       );
-      if (!r.ok) throw Error("Google Places no responde.");
+      if (!r.ok) throw new ServiceError(r.status===403?'Google Places necesita revisar la clave, la API habilitada o la facturación del proyecto.':r.status===429?'Google Places ha alcanzado su cuota. Reintenta más tarde.':'No se pudo consultar Google Places.',r.status===429?429:503,'PLACES_UNAVAILABLE');
       const result = await r.json();
       return res.end(
         JSON.stringify({
@@ -252,15 +255,7 @@ export const server = http.createServer(async (req, res) => {
             name: p.displayName?.text,
             address: p.formattedAddress,
             reference: p.googleMapsUri,
-            equipment: [
-              "elíptica",
-              "cinta de correr",
-              "bicicleta estática",
-              "banco de pesas",
-              "prensa de piernas",
-            ].filter((x) =>
-              (p.editorialSummary?.text || "").toLowerCase().includes(x),
-            ),
+            equipment: [],
           })),
         }),
       );

@@ -73,7 +73,7 @@ function buildCoachPayload14(question,specialty){
  };
  const today=day(),start=new Date();start.setDate(start.getDate()-55);const windowStart=day(start);
  const recent=s.logs.filter(row=>row.date>=windowStart&&row.date<=today).sort((a,b)=>a.date.localeCompare(b.date));
- const profileKeys=['name','goal','criteria','likes','age','height','weight','level','days','time','eq','introduced'];
+ const profileKeys=['name','goal','criteria','likes','age','height','weight','level','days','time','eq','introduced','waterGoalMl'];
  const logKeys=['id','kind','date','note','value','exercise','reps','kg','enteredKg','loadMode','loadSchema','mode','trainingNote','rir','rpe','group','sore','tired','start','end','minutes','awakeMinutes','restType','protein','carbs','fat','nutrients','healthKey','healthType','healthSource','source','unit','amount','productName','gym','machine','rom','effort','pump','soreness','reference'];
  const memories=activeMem(),matchingMachines=(s.machines||[]).filter(m=>m.gym===s.gym);
  if(memories.length>20||memories.some(v=>text(v).length>500)||matchingMachines.length>10||text(s.plan).length>4000||s.turns.length>4||s.turns.slice(-4).some(t=>text(t.question).length>1200||text(t.answer).length>1800))fieldsShortened=true;
@@ -135,11 +135,14 @@ const VeraSpeech14={
    if(!current())return;
    if(!['audio/wav','audio/x-wav'].includes(blob.type.split(';')[0]))throw Error('El servidor no devolvió audio WAV válido.');
    const player=$('speechPlayer14');if(!player){this.stop();return;}
-   this.url=URL.createObjectURL(blob);this.audio=document.createElement('audio');this.audio.controls=true;this.audio.preload='auto';this.audio.src=this.url;
+   this.url=URL.createObjectURL(blob);this.audio=document.createElement('audio');this.audio.controls=false;this.audio.preload='auto';this.audio.src=this.url;
    this.audio.setAttribute('aria-label','Respuesta de Vera en español, generada por Gemini');
    this.audio.onplay=()=>{if(!current())this.stop();};
    this.audio.onerror=()=>{if(current())msg('El audio no se pudo reproducir. Vuelve a generar la voz y comprueba el volumen multimedia.');};
-   player.innerHTML='<p>Audio preparado en español. Pulsa reproducir.'+(text.length>3500?' Se leen los primeros 3500 caracteres.':'')+'</p>'+btn('▶ Reproducir voz','VeraSpeech14.play()',true)+btn('Cerrar audio','VeraSpeech14.stop()');player.append(this.audio);player.scrollIntoView?.({block:'center',behavior:'smooth'});
+   player.innerHTML='<p>Vera está hablando…'+(text.length>3500?' Se leen los primeros 3500 caracteres.':'')+'</p>'+btn('Detener voz','VeraSpeech14.stop()');
+   this.audio.onended=()=>{if(current())this.stop();};
+   await this.audio.play();
+
   }catch(e){if(generation===this.generation&&!signal.aborted){this.stop();const player=$('speechPlayer14');if(player){player.innerHTML='<p role="alert">'+safe(e.message)+'</p>'+btn('Reintentar voz','VeraSpeech14.speak('+index+')');player.scrollIntoView?.({block:'center'});}msg(e.message);}}
  }
 };
