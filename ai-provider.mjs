@@ -77,7 +77,8 @@ export async function chat(system,user,json=false,options={}) {
   let value;
   if(route.provider==='groq') {
     if(Array.isArray(user))throw new ServiceError('Las imágenes requieren la ruta de visión Gemini.',400,'AI_PATH');
-    const data=await provider('chat/completions',{model:route.model,...(route.model.startsWith('openai/gpt-oss-')?{reasoning_effort:'low'}:{}),messages:[{role:'system',content:system},{role:'user',content:user}],max_completion_tokens:options.maxTokens||3000,...(json?{response_format:{type:'json_object'}}:{})},false,options);
+    const responseFormat=options.schema?{type:'json_schema',json_schema:{name:'vera_response',strict:true,schema:options.schema}}:{type:'json_object'};
+    const data=await provider('chat/completions',{model:route.model,...(route.model.startsWith('openai/gpt-oss-')?{reasoning_effort:'low'}:{}),messages:[{role:'system',content:system},{role:'user',content:user}],max_completion_tokens:options.maxTokens||3000,...(json?{response_format:responseFormat}:{})},false,options);
     if(data?.choices?.[0]?.finish_reason!=='stop')throw new ServiceError('La respuesta de IA está incompleta. Reintenta.',502,'AI_INCOMPLETE');
     value=data.choices[0].message?.content;
   } else {

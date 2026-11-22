@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 2.3 beta
+    Vera 2.4 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="2.3 beta" />
+  <meta name="vera-build" content="2.4 beta" />
   <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="exercises-es22.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
   
   <header>
-    <div class="brand14" role="img" aria-label="VERA Performance 2.3 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.3 BETA</small></span></div>
+    <div class="brand14" role="img" aria-label="VERA Performance 2.4 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.4 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -758,7 +758,7 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      return '<details><summary>Diagnóstico técnico · Vera 2.3 beta</summary><p>Build: 230</p><p>Origen: '+safe(origin)+
+      return '<details><summary>Diagnóstico técnico · Vera 2.4 beta</summary><p>Build: 240</p><p>Origen: '+safe(origin)+
         '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube, con funciones separadas. Cada consulta verifica la configuración del servidor; no hay modelos en el dispositivo.</p><p>Sesión autenticada: '+
         (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario, perfil y salud autorizada se guardan automáticamente en tu cuenta cuando hay conexión. Fotos y conversaciones permanecen en este dispositivo.</p></details>';
     }
@@ -1058,9 +1058,12 @@
       save();
       go("Hoy");
     }
+    const aiCooldown24 = new Map();
     async function api(path, data, blob = false, options = {}) {
       const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s,privacyRevision=VeraPrivacy6.revision;
-      const remoteAI=["coach","intro","photo","machine","label","listen","speak","diary-import","weekly-plan"].includes(path);
+      const remoteAI=["coach","intro","photo","machine","label","listen","speak","diary-import","weekly-plan"].includes(path)||path==='workouts/weekly'&&!data?.readOnly;
+      const cooldownKey=ACCOUNT_HOST+'|'+owner+'|'+path;
+      if(remoteAI&&aiCooldown24.get(cooldownKey)>Date.now())throw Error('Espera '+Math.ceil((aiCooldown24.get(cooldownKey)-Date.now())/1000)+' segundos antes de volver a pedir esta función. Tu registro se conserva.');
       if(remoteAI){
         if(!VeraPrivacy6.allowed("cloud"))throw Error("Activa el análisis remoto desde Privacidad.");
         await VeraPrivacy6.ensureRemote(path,data,options.signal);
@@ -1087,11 +1090,16 @@
         validSession = false;
         render();
       }
-      if (!r.ok)
-        throw Error(
-          (await r.json().catch(() => ({}))).error ||
-            "El servidor no responde.",
-        );
+      if (!r.ok) {
+        const failure=await r.json().catch(() => ({}));
+        const retry=Number(r.headers.get('Retry-After'));
+        if(remoteAI&&r.status===429&&Number.isFinite(retry)&&retry>0){
+          const seconds=Math.min(Math.ceil(retry),3600);
+          aiCooldown24.set(cooldownKey,Date.now()+seconds*1000);
+          throw Error((failure.error||'Límite temporal de IA.')+' Puedes reintentar en '+seconds+' segundos.');
+        }
+        throw Error(failure.error||'El servidor no responde.');
+      }
       const result=await (blob ? r.blob() : r.json());
       if(!sameVeraSession(owner,token,state))throw Error("La sesión ha cambiado. Repite la operación en tu cuenta actual.");
       if(remoteAI&&(!VeraPrivacy6.allowed("cloud")||privacyRevision!==VeraPrivacy6.revision))throw Error("Has revocado el análisis remoto. No se incorpora la respuesta recibida.");
@@ -1116,7 +1124,7 @@
               VeraActions.markdown(t.answer) +
               "</div>" + btn("Escuchar en español · Gemini", "VeraSpeech14.speak("+s.turns.indexOf(t)+")") +
               contextCoverage14(t) + VeraActions.review(t) + proposals(t) +
-              (typeof t.plan==="string"&&t.plan ? "<details><summary>Propuesta de plan</summary><p class=pre>"+safe(t.plan)+"</p>"+btn("Usar este plan","adoptPlan("+s.turns.indexOf(t)+")")+"</details>" : "") +
+              (typeof t.plan==="string"&&t.plan ? "<details><summary>Propuesta de plan</summary><p class=pre>"+safe(t.plan)+"</p>"+btn("Usar este plan","adoptPlan("+s.turns.indexOf(t)+")")+(/entrena|rutina|ejercicio|fuerza|hipertrof|tabla/i.test(t.question+' '+t.plan)?btn("Crear tabla de ejercicios","requestWorkout24(s.turns["+s.turns.indexOf(t)+"].question)",true):'')+"</details>" : "") +
 
               (t.memory && !s.memory.includes(t.memory)
                 ? btn(
@@ -3030,5 +3038,5 @@
     render();
     if(!window.VeraNative)verifySession();
   </script>
-<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="online22.js"></script><script src="google23.js"></script><script src="training23.js"></script><script src="sleep23.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script><link rel="stylesheet" href="design23.css"><link rel="stylesheet" href="training23.css">
+<link rel="stylesheet" href="perf6.css"><script src="perf6.js"></script><script src="metrics21.js"></script><script src="health21.js"></script><script src="planning21.js"></script><script src="nutrition22.js"></script><script src="nutrition24.js"></script><script src="online22.js"></script><script src="google23.js"></script><script src="training23.js"></script><script src="sleep23.js"></script><script src="workouts24.js"></script><link rel="stylesheet" href="design22.css"><script src="design22.js"></script><link rel="stylesheet" href="design23.css"><link rel="stylesheet" href="training23.css"><link rel="stylesheet" href="workouts24.css">
 </html>

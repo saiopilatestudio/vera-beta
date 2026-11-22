@@ -1,9 +1,9 @@
 const VeraCatalog=(()=>{
-let items=[],selected,type,revision=0;
+let items=[],selected,type,revision=0,completion24=null;
 const muscleNames22={abdominals:'Abdominales',hamstrings:'Isquiotibiales',quadriceps:'Cuádriceps',calves:'Gemelos',glutes:'Glúteos',adductors:'Aductores',abductors:'Abductores',biceps:'Bíceps',triceps:'Tríceps',forearms:'Antebrazos',chest:'Pecho',shoulders:'Hombros',lats:'Dorsales',traps:'Trapecios','middle back':'Espalda media','lower back':'Zona lumbar',neck:'Cuello'};
 const spanishExercises22=exerciseRows.map(x=>({...x,name:typeof VeraExerciseNames22==='object'?(VeraExerciseNames22[x.id]||x.name):x.name,keywords:[x.name,x.keywords||''].join(' '),primaryMuscles:x.primaryMuscles.map(m=>muscleNames22[m]||m)}));
 const titles={exercise:'Buscar ejercicio',food:'Buscar alimento o plato',supplement:'Buscar producto por marca o código'};
-function panel(t){type=t;revision++;return '<section><label>'+titles[t]+'<input id="lookup6" type="search" placeholder="'+(t==='exercise'?'Press banca, remo, sentadilla…':'Nombre, marca o EAN…')+'"></label>'+btn('Buscar','VeraCatalog.search()',true)+'<div id="results6" aria-live="polite"></div></section>';}
+function panel(t){type=t;revision++;completion24=null;return '<section><label>'+titles[t]+'<input id="lookup6" type="search" placeholder="'+(t==='exercise'?'Press banca, remo, sentadilla…':'Nombre, marca o EAN…')+'"></label>'+btn('Buscar','VeraCatalog.search()',true)+(t==='food'&&typeof foodProductForm24==='function'?btn('Añadir alimento desde su etiqueta','foodProductForm24({})'):'')+'<div id="results6" aria-live="polite"></div></section>';}
 const clean=v=>String(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
 const aliases={hipertrophy:"hypertrophy",nutrtition:"nutrition",mancuernas:'dumbbell',mancuerna:'dumbbell',pecho:'bench',banca:'bench',plano:'bench',inclinado:'incline',declinado:'decline',sentadilla:'squat',sentadillas:'squat',remo:'row',barra:'barbell',polea:'cable',jalon:'pulldown',dominadas:'pullup',aperturas:'flyes',laterales:'lateral',prensa:'press',piernas:'leg',maquina:'machine',muerto:'deadlift',hombros:'shoulder',multivitamin:'multivitaminico',glutamine:'glutamina',bcaas:'bcaa',creatine:'creatina',proteina:'whey'};
 function near(a,b){if(a===b)return true;if(Math.min(a.length,b.length)<4||Math.abs(a.length-b.length)>1)return false;let i=0,j=0,errors=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++errors>1)return false;if(a.length>=b.length)i++;if(b.length>=a.length)j++;}return errors+a.length-i+b.length-j<=1;}
@@ -13,20 +13,41 @@ async function search(){const q=$('lookup6').value.trim(),target=$('results6'),t
 const local=rank(q,category==='exercise'?spanishExercises22:localProducts[category]);
 function paint(found,notice=''){if(ticket!==revision||!target.isConnected)return;items=found;target.innerHTML=(category==='supplement'?compare10(found):found.map((x,i)=>btn(safe(x.name),'VeraCatalog.pick('+i+')')).join(''))+'<p>'+safe(notice)+'</p>'; }
 if(category==='exercise'){paint(local.map(x=>({...x,group:x.primaryMuscles.join(', '),source:'Free Exercise DB',url:'https://github.com/yuhonas/free-exercise-db'})),local.length?'':'Prueba otro nombre o un movimiento más corto.');return;}
+// Account catalog first: private confirmed labels and exact official variants require no AI call.
+if(['supplement','food'].includes(category)&&typeof productFromServer24==='function'){
+ const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s;
+ paint(local,'Buscando fichas confirmadas de tu cuenta…');
+ try{const result=await api('products/search',{query:/^\d{8,14}$/.test(q)?'':q,kind:category,limit:25,...(/^\d{8,14}$/.test(q)?{barcode:q}:{})});
+  if(!sameVeraSession(owner,token,state)||ticket!==revision||!target.isConnected)return;
+  const products=(result.products||[]).map(productFromServer24);if(products.length){paint(products,'Comprueba el nombre completo, la variante y la porción de tu envase. Las fichas privadas pertenecen sólo a tu cuenta.');return;}
+ }catch(error){if(!sameVeraSession(owner,token,state)||ticket!==revision||!target.isConnected)return;}
+}
 if(category==='supplement'&&clean(q).includes('zumub')){const official=local.filter(x=>x.brand==='Zumub'&&String(x.id).startsWith('ZUMUB-'));if(official.length){paint(official,'Etiquetas del fabricante. Comprueba el sabor y la presentación de tu envase.');return;}}
 if(category==='supplement'&&!/^\d{8,14}$/.test(q)){
  paint(local,'Buscando marcas y etiquetas en internet…');
  const term=clean(q).replace(/multivitaminico[s]?/g,'multivitamin').replace(/creatina/g,'creatine').replace(/bcaas/g,'bcaa').replace(/proteina/g,'protein').replace(/glutamina/g,'glutamine');
  const c=new AbortController(),timer=setTimeout(()=>c.abort(),12000);
  try{const response=await fetch('https://api.ods.od.nih.gov/dsld/v9/search-filter?q='+encodeURIComponent(term)+'&size=30',{signal:c.signal});if(!response.ok)throw Error();const data=await response.json();
- const found=data.hits.map(h=>{const v=h._source;return {brand:v.brandName,pack:(v.netContents||[]).map(y=>y.display).filter(Boolean).join(', '),name:v.brandName+' · '+v.fullName,id:'DSLD-'+h._id,url:'https://dsld.od.nih.gov/label/'+h._id,n:{},source:'NIH · etiqueta DSLD',form:v.physicalState?.langualCodeDescription};});
+ const found=data.hits.map(h=>{const v=h._source;return {brand:v.brandName,pack:(v.netContents||[]).map(y=>y.display).filter(Boolean).join(', '),name:v.brandName+' · '+v.fullName,id:'DSLD-'+h._id,url:'https://dsld.od.nih.gov/label/'+h._id,n:{},source:'NIH · referencia de producto: tabla pendiente de introducir',form:v.physicalState?.langualCodeDescription};});
  paint([...found,...local.filter(x=>!found.some(y=>y.id===x.id))],found.length?'Selecciona la marca y comprueba la presentación.':'Sin coincidencias en DSLD.');if(found.length)return;
  }catch{}finally{clearTimeout(timer);}
 }
 paint(local,'Consultando más productos…');const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),5500);
 try{const code=/^\d{8,14}$/.test(q),url=code?'https://world.openfoodfacts.org/api/v2/product/'+q+'.json':'https://search.openfoodfacts.org/search?q='+encodeURIComponent(q)+'&page_size=20&fields=code,brands,product_name,quantity,nutriments';const response=await fetch(url,{signal:controller.signal});if(!response.ok)throw Error();const data=await response.json();const remote=(code?[data.product]:data.hits||[]).filter(x=>x?.product_name&&!local.some(y=>y.id===x.code)).map(x=>({name:[x.brands,x.product_name,x.quantity].filter(Boolean).join(' · '),id:x.code,n:x.nutriments||{},source:'Open Food Facts',url:'https://world.openfoodfacts.org/product/'+x.code}));paint([...local,...remote],local.length||remote.length?'':'Sin coincidencias. Revisa el nombre o usa una foto de la etiqueta.');}
 catch{paint(local,local.length?'Resultados del catálogo local.':'Catálogo en línea sin conexión. Prueba una foto de la etiqueta.');}finally{clearTimeout(timeout);}}
-function pick(i){revision++;selected=items[i];const x=selected;if(type==='supplement')return supplementForm(x);$('results6').innerHTML='<h3>'+safe(x.name)+'</h3><p>'+safe(x.source)+' · '+safe(x.id)+'</p>'+(type==='exercise'?field('set6','Repeticiones por serie','10,10,10')+field('kg6','Carga (kg)','','number','min="0" step=".1"'):field('grams6','Cantidad consumida en gramos','','number','min=".1" step=".1"')+'<p>'+safe(x.n['energy-kcal_100g']??'Sin dato')+' kcal / 100 g</p>')+btn('Confirmar registro','VeraCatalog.record()',true);}
+function selectForSupplement(index){
+ const row=s.logs[index];if(!row||row.kind!=='Suplemento')return;
+ const context={owner:sessionStorage.veraUser,token:sessionStorage.veraToken,state:s,id:row.id,row,snapshot:JSON.stringify(row)};
+ go('Suplementación');completion24=context;$('lookup6').value=row.productName||row.note||'';msg('Busca y selecciona la referencia exacta de este suplemento. Se conservarán su fecha, dosis y líquido.');
+}
+function pick(i){revision++;selected=items[i];const x=selected;
+ if(type==='supplement'){
+  if(completion24){const context=completion24;if(!sameVeraSession(context.owner,context.token,context.state)){completion24=null;return msg('La cuenta ha cambiado. Vuelve a abrir el suplemento.');}
+   const index=context.id?s.logs.findIndex(r=>r.id===context.id):s.logs.indexOf(context.row);if(index<0||JSON.stringify(s.logs[index])!==context.snapshot){completion24=null;return msg('El suplemento ha cambiado. Vuelve a abrirlo.');}
+   completion24=null;return supplementForm(x,index,true);
+  }return supplementForm(x);
+ }
+ if(type==='food'&&typeof foodProductForm24==='function')return foodProductForm24(x);$('results6').innerHTML='<h3>'+safe(x.name)+'</h3><p>'+safe(x.source)+' · '+safe(x.id)+'</p>'+(type==='exercise'?field('set6','Repeticiones por serie','10,10,10')+field('kg6','Carga (kg)','','number','min="0" step=".1"'):field('grams6','Cantidad consumida en gramos','','number','min=".1" step=".1"')+'<p>'+safe(x.n['energy-kcal_100g']??'Sin dato')+' kcal / 100 g</p>')+btn('Confirmar registro','VeraCatalog.record()',true);}
 function record(){const x=selected,l={date:day(),note:x.name,reference:x.url,catalogId:x.id,source:x.source};if(type==='supplement')return saveSupplement(x);if(type==='exercise'){try{Object.assign(l,{kind:'Entrenamiento',group:x.group,value:null},validateTraining14({exercise:x.name,enteredKg:$('kg6').value,reps:$('set6').value,mode:'total',rir:null}));}catch(e){return msg(e.message);}}else{const g=+$('grams6').value;if(!(Number.isFinite(g)&&g>0))return msg('Indica los gramos consumidos.');Object.assign(l,{kind:type==='food'?'Comida':'Suplemento',grams:g,note:x.name+' · '+g+' g',label:x.n});for(const [k,v] of Object.entries({value:'energy-kcal',protein:'proteins',carbs:'carbohydrates',fat:'fat'})){const n=x.n[v+'_100g'];l[k]=n==null?null:Number(n)*g/100;}}s.logs.push(l);save();render();msg('Registro guardado en este dispositivo. Pendiente de sincronizar.');}
 function fromPhoto(name){go('Alimentación');$('lookup6').value=name;search();}
-return {panel,search,pick,record,fromPhoto};})();
+return {panel,search,pick,record,fromPhoto,selectForSupplement};})();

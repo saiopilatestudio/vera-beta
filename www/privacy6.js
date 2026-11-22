@@ -13,9 +13,9 @@ const VeraPrivacy6={
   if(!response.ok)throw Error(upgrade);
   try{config=await response.json();}catch{throw Error('No se pudo interpretar la comprobación del servidor. Reintenta más tarde. No se han enviado datos para análisis.');}
   const expected={coach:'groq',coach_deep:'gemini',intro:'groq',photo:'gemini',machine:'gemini',label:'gemini',listen:'groq',speak:'gemini'};
-  const route=path==='diary-import'?(data.image?'photo':'coach'):path==='weekly-plan'?'coach':path==='coach'&&data.mode==='deep'?'coach_deep':path,ai=config?.ai,r=ai?.routes?.[route];
+  const route=path==='diary-import'?(data.image?'photo':'coach'):['weekly-plan','workouts/weekly'].includes(path)?'coach':path==='coach'&&data.mode==='deep'?'coach_deep':path,ai=config?.ai,r=ai?.routes?.[route];
   const version=/^2\.(\d+)(?:\.\d+)?$/.exec(String(config?.apiVersion||''));
-  const feature=path==='diary-import'?'diaryImport':path==='weekly-plan'?'weeklyTeam':null;
+  const feature=path==='diary-import'?'diaryImport':path==='weekly-plan'?'weeklyTeam':path==='workouts/weekly'?'weeklyWorkouts':null;
   // Minor server upgrades remain compatible. Explicit capabilities win; 2.1
   // predates feature flags, so retain its original compatible contract.
   const supportsFeature=!feature||config?.features?.[feature]===true||config?.features?.[feature]===undefined&&config?.apiVersion==='2.1';

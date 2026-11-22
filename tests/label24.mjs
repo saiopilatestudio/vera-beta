@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {validateLabel24, nutrientKeys24, labelPrompt24} from '../nutrition-label24.mjs';
+const multi={brand:'Zumub',product:'Multivitamina + Mineral',variant:'100 cápsulas',form:'capsule',portion:1,unit:'cápsulas',identityConfidence:'high',facts:{vitaminC_mg:60,vitaminB12_ug:1,vitaminD_ug:5,zinc_mg:15,folate_ug:200}};
+assert.deepEqual(validateLabel24(multi).facts,multi.facts);
+assert.equal(validateLabel24(multi).unit,'cápsulas');
+assert.ok(!('protein' in validateLabel24(multi).facts));
+assert.equal(nutrientKeys24.length,29);
+assert.deepEqual(validateLabel24({...multi,portion:null}).facts,{});
+assert.equal(validateLabel24({...multi,portion:null}).unit,'');
+assert.throws(()=>validateLabel24({...multi,facts:{vitaminD_ug:'5'}}),/etiqueta/);
+assert.throws(()=>validateLabel24({...multi,facts:{vitaminC_mg:-1}}),/etiqueta/);
+assert.throws(()=>validateLabel24({...multi,portion:-1}),/etiqueta/);
+assert.throws(()=>validateLabel24({...multi,portion:30,unit:'g',facts:{protein:28,carbs:10,fat:2}}),/etiqueta/);
+assert.deepEqual(validateLabel24({brand:'Zumub',product:'Whey',form:'powder'}).facts,{});
+assert.ok(!('potassium_mg' in validateLabel24(multi).facts));
+assert.match(labelPrompt24,/no porcentajes VRN/);
+console.log('PASS label24 · 25 micronutrientes, unidades, base obligatoria, ausencias y cantidades inválidas');

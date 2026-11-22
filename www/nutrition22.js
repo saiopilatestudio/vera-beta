@@ -14,8 +14,8 @@ const nutritionLabels22=[['kcal','Energía','kcal'],['protein','Proteína','g'],
 function supplementFacts22(x,amount,unit){
  const gram=unit==='g'?amount:unit==='mg'?amount/1000:null;
  let factor=null;
- if(x.facts&&x.portion>0){if(unit===x.unit)factor=amount/x.portion;else if(x.unit==='g'&&gram!==null)factor=gram/x.portion;else if(unit==='raciones')factor=amount;}
- if(factor!==null)return Object.fromEntries(Object.entries(x.facts).map(([key,n])=>[key,n*factor]));
+ if(x.facts&&x.portion>0){if(unit===x.unit)factor=amount/x.portion;else if(['g','mg'].includes(x.unit)&&gram!==null)factor=gram/(x.unit==='mg'?x.portion/1000:x.portion);else if(unit==='raciones')factor=amount;}
+ if(factor!==null)return Object.fromEntries(Object.entries(x.facts).filter(([key,n])=>nutritionLabels22.some(([known])=>known===key)&&numberMetric21(n)!==null).map(([key,n])=>[key,Number(n)*factor]));
  if(gram===null)return {};
  const n=x.n||{},out={};
  for(const [key,label,scale] of [['kcal','energy-kcal',1],['protein','proteins',1],['carbs','carbohydrates',1],['fat','fat',1],['fiber_g','fiber',1],['sugar_g','sugars',1],['sodium_mg','sodium',1000],['potassium_mg','potassium',1000],['calcium_mg','calcium',1000],['iron_mg','iron',1000],['magnesium_mg','magnesium',1000],['vitaminC_mg','vitamin-c',1000],['vitaminD_ug','vitamin-d',1000000],['vitaminB12_ug','vitamin-b12',1000000]]){
@@ -24,26 +24,34 @@ function supplementFacts22(x,amount,unit){
  return out;
 }
 function supplementTable22(x){
- if(!x.facts)return '';
- return '<details open class="label-table22"><summary>Tabla nutricional · '+x.portion+' '+x.unit+'</summary><p class="sub">Comprueba que coincide con el sabor y la etiqueta de tu envase. Los campos no declarados permanecen vacíos.</p><table><tbody>'+nutritionLabels22.filter(([key])=>x.facts[key]!==undefined).map(([key,name,unit])=>'<tr><th>'+name+'</th><td>'+metricNumber21(x.facts[key],2)+' '+unit+'</td></tr>').join('')+'</tbody></table>'+(x.active?'<p>'+safe(x.active)+'</p>':'')+'<a href="'+safe(x.url)+'" target="_blank" rel="noopener noreferrer">Ver etiqueta oficial de Zumub</a></details>';
+ if(!x.facts||!(x.portion>0)||!x.unit||(!Object.keys(x.facts).some(key=>numberMetric21(x.facts[key])!==null)&&!x.active))return '';
+ return '<details open class="label-table22"><summary>Tabla nutricional · '+x.portion+' '+x.unit+'</summary><p class="sub">Comprueba que coincide con el sabor y la etiqueta de tu envase. Los campos no declarados permanecen vacíos.</p><table><tbody>'+nutritionLabels22.filter(([key])=>x.facts[key]!==undefined).map(([key,name,unit])=>'<tr><th>'+name+'</th><td>'+metricNumber21(x.facts[key],2)+' '+unit+'</td></tr>').join('')+'</tbody></table>'+(x.active?'<p>'+safe(x.active)+'</p>':'')+(/^https:\/\//.test(x.url||'')?'<a href="'+safe(x.url)+'" target="_blank" rel="noopener noreferrer">Consultar fuente de la etiqueta</a>':'')+'</details>';
 }
 let supplementEditingContext23=null;
 function supplementAccount23(){return typeof sessionStorage==='undefined'?{owner:'',token:''}:{owner:sessionStorage.veraUser,token:sessionStorage.veraToken};}
 function beginSupplementEdit23(index){const row=s.logs[index];supplementEditingContext23=row?.kind==='Suplemento'?{...supplementAccount23(),state:s,row,id:row.id,snapshot:JSON.stringify(row)}:null;}
-supplementForm=function(x,i=-1){
+supplementForm=function(x,i=-1,replaceFacts=false){
  if(i>=0)beginSupplementEdit23(i);else supplementEditingContext23=null;
  const l=s.logs[i]||{},node=$('results6');if(!node)return;
- x=zumubProducts22.find(p=>p.id===(x.id||l.catalogId))||x;
- const units=['g','mg','ml','cápsulas','comprimidos','scoops','gotas','gominolas','raciones'];
+ x=(x.facts&&x.portion>0?x:zumubProducts22.find(p=>p.id===(x.id||l.catalogId)))||x;
+ const units=x.kind==='food'?['g','mg','ml','raciones']:['g','mg','ml','cápsulas','comprimidos','scoops','gotas','gominolas','raciones'];
  const guessed=l.unit||x.unit||(s.supplementUnits||{})[x.id||x.name]||presentation10(x)||'raciones';
- const amount=l.amount??l.grams??(x.unit==='g'?x.portion:1),initial=i>=0?{...l,...l.nutrients,kcal:baseNutritionValue21(l,'kcal')}:supplementFacts22(x,amount,guessed);
+ const amount=l.amount??l.grams??(x.portion>0?x.portion:1),initial=i>=0&&!replaceFacts?{...l,...l.nutrients,kcal:baseNutritionValue21(l,'kcal')}:supplementFacts22(x,amount,guessed);
  const input=([key,name,unit])=>field('supFact22_'+key,name+' ('+unit+')',initial[key]??'','number','min="0" step="any"');
- node.innerHTML='<h3>Tu suplemento, completo</h3>'+field('supProduct','Marca y referencia',x.name||'')+field('supDate22','Fecha',l.date||day(),'date')+field('supAmount','Cantidad tomada',amount,'number','min="0.001" step="any"')+selectField('supUnit','Unidad',units,guessed)+supplementTable22(x)+'<details open><summary>Nutrición de la cantidad tomada</summary><p class="sub">Se sumará a tus comidas en Progreso. Puedes completar tu etiqueta; vacío significa desconocido. Cambiar la cantidad recalcula los datos de la etiqueta seleccionada.</p><div class="nutrition-inputs22">'+nutritionLabels22.slice(0,4).map(input).join('')+'</div><details><summary>Fibra, azúcares, vitaminas y minerales</summary><div class="nutrition-inputs22">'+nutritionLabels22.slice(4).map(input).join('')+'</div></details></details>'+mixingLiquidForm23(l.mixingLiquid)+'<button id="saveSupp8" class="primary">Guardar suplemento</button>';
- const recalc=()=>{const facts=supplementFacts22(x,Number($('supAmount').value),$('supUnit').value);for(const [key]of nutritionLabels22)$('supFact22_'+key).value=facts[key]===undefined?'':Number(facts[key].toFixed(4));};
+ node.innerHTML='<h3>'+(x.kind==='food'?'Tu alimento, completo':'Tu suplemento, completo')+'</h3><p class="sub">'+safe(x.source||'Etiqueta manual')+'</p>'+field('supProduct','Marca y referencia',x.name||'')+field('supDate22','Fecha',l.date||day(),'date')+field('supAmount','Cantidad tomada',amount,'number','min="0.001" step="any"')+selectField('supUnit','Unidad',units,guessed)+supplementTable22(x)+'<details open><summary>Nutrición de la cantidad tomada</summary><p class="sub">Se sumará a tus comidas en Progreso. Puedes completar tu etiqueta; vacío significa desconocido. Cambiar la cantidad recalcula los datos de la etiqueta seleccionada.</p><div class="nutrition-inputs22">'+nutritionLabels22.slice(0,4).map(input).join('')+'</div><details><summary>Fibra, azúcares, vitaminas y minerales</summary><div class="nutrition-inputs22">'+nutritionLabels22.slice(4).map(input).join('')+'</div></details></details>'+(x.kind==='food'?'':mixingLiquidForm23(l.mixingLiquid))+(typeof productReview24==='function'?productReview24(x):'')+'<button id="saveSupp8" class="primary">'+(x.kind==='food'?'Guardar alimento':'Guardar suplemento')+'</button>'+(i>=0&&typeof completeSupplement24==='function'?btn('Completar etiqueta con una ficha exacta','completeSupplement24()'):'');
+ let lastAmount=Number(amount),lastUnit=guessed;
+ const recalc=()=>{const nextAmount=Number($('supAmount').value),nextUnit=$('supUnit').value,current={};
+  if(!Number.isFinite(nextAmount)||nextAmount<=0)return;
+  for(const [key]of nutritionLabels22){const n=numberMetric21($('supFact22_'+key).value);if(n!==null)current[key]=n;}
+  const compatible=lastUnit===nextUnit||(['g','mg'].includes(lastUnit)&&['g','mg'].includes(nextUnit));
+  const facts=compatible&&lastAmount>0?supplementFacts22({facts:current,portion:lastAmount,unit:lastUnit},nextAmount,nextUnit):supplementFacts22(x,nextAmount,nextUnit);
+  for(const [key]of nutritionLabels22)$('supFact22_'+key).value=facts[key]===undefined?'':Number(facts[key].toFixed(4));lastAmount=nextAmount;lastUnit=nextUnit;
+ };
  $('supAmount').onchange=recalc;$('supUnit').onchange=recalc;
- $('saveSupp8').onclick=()=>saveSupplement(x,i);node.scrollIntoView?.({block:'start'});
+ $('saveSupp8').onclick=()=>saveSupplement(x,i);if(typeof bindProductReview24==='function')bindProductReview24(x);node.scrollIntoView?.({block:'start'});
 };
 saveSupplement=function(x,i=-1){
+ if(x.kind==='food'&&typeof saveFoodProduct24==='function')return saveFoodProduct24(x);
  if(i>=0){
   const context=supplementEditingContext23,account=supplementAccount23();
   if(!context||context.state!==s||context.owner!==account.owner||context.token!==account.token){supplementEditingContext23=null;return msg('La cuenta o el registro ha cambiado. Vuelve a abrir el suplemento.');}
@@ -59,7 +67,7 @@ saveSupplement=function(x,i=-1){
  s.supplementUnits||={};s.supplementUnits[x.id||l.catalogId||name]=unit;
  if(i>=0)s.logs[i]=l;else s.logs.push(l);supplementEditingContext23=null;save();render();msg('Suplemento enviado para guardar en tu cuenta.');
 };
-editSupplement=function(i){const l=s.logs[i];if(l?.kind==='Suplemento')supplementForm(zumubProducts22.find(p=>p.id===l.catalogId)||{name:l.productName||l.note||'',id:l.catalogId,n:l.label||{},url:l.reference,source:l.source},i);};
+editSupplement=function(i){const l=s.logs[i];if(l?.kind==='Suplemento')supplementForm(zumubProducts22.find(p=>p.id===l.catalogId)||{name:l.productName||l.note||'',id:l.catalogId,n:l.label||{},url:l.reference,source:l.source,portion:l.amount,unit:l.unit,facts:{kcal:baseNutritionValue21(l,'kcal'),protein:l.protein,carbs:l.carbs,fat:l.fat,...l.nutrients}},i);};
 
 // The liquid belongs to the same record: editing/deleting the dose also edits/deletes it.
 function mixingLiquidForm23(liquid){

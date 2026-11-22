@@ -1,17 +1,18 @@
 {
   "name": "vera-mobile",
   "private": true,
-  "version": "2.3.0-beta.1",
+  "version": "2.4.0-beta.1",
   "type": "module",
   "scripts": {
     "native": "npx cap sync",
     "start": "node server.mjs",
-    "test": "npm run test:legacy && npm run test:audit && npm run test:v21 && npm run test:v22 && npm run test:v23",
+    "test": "npm run test:legacy && npm run test:audit && npm run test:v21 && npm run test:v22 && npm run test:v23 && npm run test:v24",
     "test:legacy": "node tests/acceptance103.mjs && node tests/partners.mjs && node tests/admin103.mjs && node tests/journal.mjs",
     "test:audit": "node tests/audit-backend.mjs && node tests/audit-backend-owner.mjs && node --test --test-isolation=none tests/audit-ai.mjs && node tests/audit-http.mjs && node tests/audit-ai-http.mjs && node tests/audit-frontend-unit.mjs && node tests/audit-backup.mjs",
     "test:v21": "node tests/planning21.mjs && node tests/planning21-frontend.mjs && node tests/audit-planning21-http.mjs && node tests/audit-persistence21.mjs && node tests/metrics21.mjs && node tests/audit-health21.mjs",
     "test:v22": "node tests/nutrition22.mjs && node tests/social22.mjs && node tests/online22.mjs && node tests/efficiency22.mjs && node tests/exercises22.mjs",
-    "test:v23": "node tests/compatibility23.mjs && node tests/training23.mjs && node tests/nutrition23.mjs && node tests/sleep23.mjs && node tests/nutrition23-persistence.mjs && node tests/audit-google23.mjs && node tests/audit-google-http23.mjs && node tests/audit-health-export23.mjs && node tests/audit-google-gate23.mjs"
+    "test:v23": "node tests/compatibility23.mjs && node tests/training23.mjs && node tests/nutrition23.mjs && node tests/sleep23.mjs && node tests/nutrition23-persistence.mjs && node tests/audit-google23.mjs && node tests/audit-google-http23.mjs && node tests/audit-health-export23.mjs && node tests/audit-google-gate23.mjs",
+    "test:v24": "node tests/label24.mjs && node tests/api-cooldown24.mjs && node tests/product-catalog24.mjs && node tests/efficiency24.mjs && node tests/products-label-http24.mjs && node tests/nutrition24.mjs && node tests/photo-catalog24.mjs && node tests/nutrition24-persistence.mjs && node tests/workouts24.mjs && node tests/workouts24-frontend.mjs && node tests/workouts-http24.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

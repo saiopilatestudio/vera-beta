@@ -6,8 +6,12 @@ import { adminAllowed, business } from "./business.mjs";
 import {journal} from "./journal.mjs";
 import {profileSync} from './profile-sync.mjs';
 import {googleStatus23,googleStart23,googleCallback23} from './google-auth23.mjs';
+import { searchProducts24, confirmProduct24, labelCatalogMatches24 } from './product-catalog24.mjs';
+import { cachedLabel24 } from './efficiency24.mjs';
+import { labelPrompt24, validateLabel24 } from './nutrition-label24.mjs';
+import { weeklyWorkout24 } from './workouts24.mjs';
 import {importDiary21,importInput21,weeklyPlan21,weekDates21} from './planning21.mjs';
-import { rows } from './storage.mjs';
+import { rows, db } from './storage.mjs';
 import { provider, chat, aiConfiguration, requireRoute, synthesize, speechText, ServiceError } from './ai-provider.mjs';
 import { readObject, validateImage, validateAudio, coachInput, validateCoachResult, cleanContext, validatePhotoResult, validateTranscript, introInput, validateIntroResult } from './request-safety.mjs';
 import http from "node:http";
@@ -152,7 +156,7 @@ export const server = http.createServer(async (req, res) => {
       return res.end("ok");
     }
     if (req.method === "GET" && req.url === "/capabilities") {
-      return res.end(JSON.stringify({ apiVersion: "2.3", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true} }));
+      return res.end(JSON.stringify({ apiVersion: "2.4", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true,weeklyWorkouts:true,productCatalog:true,labelNutrition:true} }));
     }
     if (req.method === "GET" && ["/", "/index.html"].includes(req.url)) {
       res.setHeader("Content-Type", "text/html;charset=utf-8");
@@ -170,6 +174,9 @@ export const server = http.createServer(async (req, res) => {
         "/profile-sync",
         "/diary-import",
         "/weekly-plan",
+        "/workouts/weekly",
+        "/products/search",
+        "/products/confirm",
         "/admin/end",
         "/admin/catalog",
         "/machine",
@@ -291,6 +298,27 @@ export const server = http.createServer(async (req, res) => {
       const out = await account(req.url, d, req.socket.remoteAddress);
       return res.end(JSON.stringify(out));
     }
+    // Catalog reads and repeat results do not reserve an AI request.
+    if(req.url==='/products/search')return res.end(JSON.stringify(await searchProducts24(uid,d)));
+    if(req.url==='/products/confirm')return res.end(JSON.stringify(await confirmProduct24(uid,d)));
+    const reserveAI24=async(feature)=>{
+      requireRoute(feature);
+      if(inFlight.has(uid))throw new ServiceError('Ya hay una solicitud de IA en curso. Espera a que termine.',429,'AI_BUSY',5);
+      if(inFlight.size>=20)throw new ServiceError('El servicio está ocupado. Reintenta en unos segundos.',503,'AI_BUSY',5);
+      inFlight.add(uid);activeUid=uid;
+      reservation=await consume(uid);
+    };
+    if(req.url==='/workouts/weekly')return res.end(JSON.stringify(await weeklyWorkout24(uid,d,{db,ask:chat,beforeGenerate:()=>reserveAI24('coach')})));
+    if(req.url==='/label'){
+      validateImage(d.image);
+      const note=typeof d.note==='string'?d.note.trim().slice(0,500):'';
+      const result=await cachedLabel24(uid,d.image,async()=>{
+        await reserveAI24('label');
+        return validateLabel24(await chat(labelPrompt24,[...(note?[{type:'text',text:'Aclaración del usuario, no confirmación de etiqueta: '+note}]:[]),{type:'image_url',image_url:{url:d.image}}],true,{feature:'label',maxTokens:2200}));
+      },{version:'gemini:label24-v1:'+aiConfiguration().routes.label.model,note});
+      const label=result.result;
+      return res.end(JSON.stringify({...label,catalogMatches:await labelCatalogMatches24(uid,label),cache:result.cache}));
+    }
     if (req.url === "/coach") coachInput(d);
     const feature = req.url === '/diary-import' ? (d.image?'photo':'coach') : req.url === '/weekly-plan' ? 'coach' : req.url === "/coach" && d.mode === "deep" ? "coach_deep" : req.url.slice(1);
     requireRoute(feature);
@@ -330,10 +358,6 @@ export const server = http.createServer(async (req, res) => {
         ],
         true, { feature },
       );
-    }
-    if(req.url==="/label"){
-      if(!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(d.image||""))throw Error("Selecciona una foto de la etiqueta.");
-      result=await chat(guard+" Lee exclusivamente los caracteres visibles de la etiqueta de suplemento. Devuelve JSON {brand,product,form}. Usa cadenas vacías para texto ilegible. No inventes composición ni dosis.",[{type:"image_url",image_url:{url:d.image}}],true,{feature});
     }
     if (req.url === "/coach") result = await coach(d, uid);
     if (req.url === "/photo") result = await photo(d);

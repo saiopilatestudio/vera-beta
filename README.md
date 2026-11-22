@@ -1,59 +1,37 @@
-# VERA 2.2 beta
+# VERA 2.4 beta
 
-Android build 220. Actualiza V2.0/V2.1 con la misma firma. Toda la IA se ejecuta en Groq o Gemini desde el servidor. No hay claves API ni modelos locales en la APK.
+Android build 240, paquete `app.vera.coach.visionbeta`. IA exclusivamente en Groq y Gemini, con credenciales sólo en el servidor. La APK se construye desde `beta-android/`; los proyectos Capacitor de `android/` e `ios/` son auxiliares.
 
-## Cambios 2.2
+## Cambios de esta entrega
 
-- Acceso online obligatorio, sin entrada al diario desconectado. Caché de recuperación para envíos interrumpidos; confirmaciones del servidor y conflictos visibles, con aislamiento entre cuentas.
-- Alta inicial obligatoria con perfil, objetivos y entrenamiento; sueño y agua editables en Perfil y guardados en el servidor.
-- Identidad gráfica y navegación móvil nuevas: blanco, lima, celeste, degradados suaves; icono nativo actualizado.
-- Voz Gemini inicia al solicitarla sin un segundo botón de reproducción.
-- Cinco referencias Zumub verificadas, suplementos con kcal explícitas y 25 campos de micronutrientes; comidas y suplementos sumados. Agua, barras, círculo de macros y puntos de peso.
-- 876 nombres de ejercicios en español, con identificadores y alias originales conservados.
-- Juntos: salas privadas, objetivo conjunto, duelo de series y constancia de siete días, progreso, ánimo y revancha. Declaraciones de sesión, no verificación por sensores.
-- Consulta normal: una llamada de IA. Revisiones explícitas con especialistas. Contexto acotado con cobertura explícita; revisión automática diaria como máximo, con tres registros y perfil inicial. Límites gratuitos del proveedor siguen vigentes.
-- Google Places: integración servidor con clave privada, filtro de gimnasios y campos limitados. Activación requiere GOOGLE_PLACES_KEY y proyecto con facturación. Su ausencia se informa; no se presenta OpenStreetMap como Google.
+- Tabla semanal estructurada con ejercicios en español, series, repeticiones, RIR y descansos. Usa perfil e historial confirmados en el servidor. Semana actual/siguiente, petición personalizada y referencias anteriores; abrir una propuesta no registra actividad.
+- Primera generación con perfil completo, Google/Health Connect y consentimiento remoto. Actualización tras cambios relevantes y tres minutos de inactividad o al finalizar sesión. Caché por cuenta/contexto/petición y una llamada a Groq con esquema estricto; se conserva la tabla anterior ante fallos.
+- Catálogo persistente SQLite/Turso: ocho etiquetas oficiales Zumub y fichas privadas confirmadas de alimentos y suplementos. Búsqueda por nombre, alias, variante y código de barras. Los aciertos no llaman a la IA.
+- Fotografías conservan porción, unidad, cuatro valores de macros/energía y hasta 25 campos de micronutrientes. Caché exacta de lectura por cuenta durante 24 horas; no guarda la foto original. Las variantes propuestas requieren selección explícita.
+- Completar suplementos antiguos sin duplicarlos, conservando fecha, dosis y líquido. Agua/leche y nutrientes de la mezcla siguen sumándose. Los valores no declarados no se convierten en cero.
+- Respeto de Retry-After para no repetir inmediatamente consultas limitadas. Las cuotas gratuitas de los proveedores permanecen.
 
-## Validación
+## Ejecutar y comprobar
 
-`npm test` incluye regresión, HTTP/SQLite, aislamiento de cuentas, perfil y diario, IA simulada, nutrición, retos, ejercicios y acceso online. `tests/audit-android-native.py` comprueba puente/orígenes y compila Java; `beta-android/build.py` compila y verifica firma/assets. Evidencias de entrega distinguen simulaciones, proveedores reales y pruebas visuales; no acreditan ejecución en todos los teléfonos.
+Node 24: `npm ci`, `npm test`, `npm start`. Desarrollo con base de prueba y variables del servidor: `node --env-file=.env server.mjs`. Nunca publiques `.env`, claves API, clave de firma o su contraseña.
 
-Fuentes y alcance: [nutrición](docs/NUTRICION-V22.md), [Juntos](docs/INVESTIGACION-JUNTOS-V22.md). Documentos release21 y anteriores son históricos.
+Render: instalación `npm ci --omit=dev`, inicio `npm run start`, comprobación `/health`. Conserva `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN`. Las migraciones crean tablas propias sin borrar el diario. `/capabilities` declara API 2.4 y capacidades de tablas, catálogo y lectura nutricional.
 
-Visión y revisión Gemini usan `gemini-3.5-flash-lite`, verificado con texto e imagen sintéticos el 22/11/2026 después de observar timeouts en Hydrogen/3.8 Flash. La voz conserva `gemini-3.8-flash-lite-tts`.
+Las pruebas cubren lógica, HTTP/SQLite, aislamiento de cuentas, cuotas, caché, etiquetas, tablas y edición. Las evidencias distinguen transportes simulados de llamadas reales con datos ficticios. La revisión web y compilación no equivalen a una prueba completa en un teléfono físico.
 
-## IA y servicios
+## Android y servicios
 
-| Función | Servicio |
-|---|---|
-| Conversación habitual, dictado, coordinación semanal | Groq |
-| Captura histórica por texto | Groq |
-| Captura histórica con foto, alimentos, máquinas y etiquetas | Gemini |
-| Revisión avanzada y audio en español | Gemini |
-| Búsqueda de sedes de gimnasio | Google Places, con clave específica independiente |
+Instala encima de versiones con la misma firma; no desinstales para actualizar. El acceso completo requiere Android 14+, Google vinculado y permisos de Health Connect. OAuth Google está en modo de prueba; el administrador debe autorizar otras cuentas o completar la publicación del cliente.
 
-Las claves sólo se guardan en el servidor. `/capabilities` devuelve API 2.1, rutas configuradas, sincronización automática y disponibilidad de Places. Configurado no significa que todas las peticiones reales estén garantizadas: los límites del proveedor se notifican sin simular respuestas ni activar IA local.
+Google Fit sólo aporta datos que comparta con Health Connect. Google Places requiere `GOOGLE_PLACES_KEY`, API y facturación propias; la clave Gemini no la sustituye. Una sede encontrada no acredita su inventario de máquinas.
 
-**Google Places necesita `GOOGLE_PLACES_KEY`; la clave Gemini no la sustituye.** Si no está configurada, la app lo explica y permite abrir Maps o guardar una sede manualmente. Un resultado de Maps no acredita el inventario de máquinas. Las fotos y placas de material se interpretan mediante Gemini y requieren revisión antes de guardar.
+Play Protect pertenece a Android y no se suprime desde Vera. Google Play requiere su proceso de publicación y revisión; tampoco garantiza ausencia de comprobaciones. Esta entrega es una APK beta firmada.
 
-## Android y actualización
+## Documentación
 
-APK construida desde `beta-android/`, package `app.vera.coach.visionbeta`, versionName `2.1 beta`, versionCode `210`. Los directorios `android/` e `ios/` son proyectos Capacitor auxiliares, no el binario distribuido.
+- [Tablas semanales e investigación](docs/WORKOUTS24.md).
+- [Nutrición y fichas reutilizables](docs/NUTRICION-V24.md).
+- [Catálogo, fuentes oficiales y ahorro](CATALOGO_AHORRO_V24.md).
+- [Google y Health Connect](GOOGLE_HEALTH_V23.md).
 
-Se conserva la firma de la V2.0 entregada: **actualiza encima, sin desinstalar**. Exporta un respaldo previo. Una edición anterior con otra firma necesita respaldo y reinstalación; no pierdas los datos desinstalando sin copia. La carpeta privada de firma del ZIP 2 nunca debe publicarse.
-
-## Servidor
-
-Node 24. Instala con `npm ci`, verifica con `npm test` y arranca con `npm start`. Para desarrollo copia `.env.example` a `.env`, configura credenciales de prueba y usa `node --env-file=.env server.mjs`. Nunca publiques `.env`.
-
-Render: `npm ci --omit=dev`, inicio `npm run start` y comprobación `/health`. Conserva las variables de la base Turso existente. Las claves Groq/Gemini y Places se administran en el entorno del servidor, no en la APK. Las rutas vigentes están documentadas en `docs/release21`; `docs/release2` conserva la configuración y evidencia de la edición anterior y no sustituye la guía V2.1.
-
-El acceso público histórico `owner.json` continúa desactivado. Utiliza variables privadas para administración y no reactives contraseñas heredadas.
-
-## Datos y límites
-
-El respaldo JSON conserva estado local, sin contraseñas, tokens, permisos ni originales de fotos. Restaurarlo reemplaza el estado local; conserva siempre el original. La sincronización no sube archivos originales de fotos y vídeos.
-
-Las pruebas incluyen lógica/HTTP, cuentas sintéticas, métricas, sincronización, permisos de origen Android, compilación y firma. También se ensayaron llamadas reales con datos sintéticos: voz breve y párrafo, visión, revisión avanzada, importación histórica y plan semanal. La evidencia distingue estas llamadas de las comprobaciones de producción.
-
-La revisión visual en navegador y las pruebas automáticas no sustituyen la instalación, audio, cámara, biometría y Health Connect en un teléfono real. Los informes de `docs/audit2026`, `docs/release103` y `docs/release2` son históricos.
+Los documentos V2.3 y anteriores son históricos. El manual PDF y VERIFICACION.txt de los ZIPs indican el estado concreto de compilación, despliegue y comprobaciones.

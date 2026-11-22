@@ -1,0 +1,22 @@
+import {readFileSync} from 'node:fs';
+const base=new URL('../',import.meta.url);let harness=readFileSync(new URL('tests/audit-frontend-unit.mjs',base),'utf8').split('const results=[];')[0];harness=harness.replace("new URL('../www/',import.meta.url)",'new URL('+JSON.stringify(new URL('www/',base).href)+')');
+harness+=`
+ctx.queueMicrotask=()=>{};ctx.workoutTimers=[];ctx.setTimeout=(fn,delay)=>{ctx.workoutTimers.push({fn,delay});return ctx.workoutTimers.length;};
+run(readFileSync(new URL('training23.js',www),'utf8'));run(readFileSync(new URL('workouts24.js',www),'utf8'));
+run("s=initial();s.profile={introduced:true,goal:'Fuerza',level:'Principiante',days:3};validSession=true;VeraPrivacy6.allowed=()=>true;VeraJournal.flush=async()=>true;googleLinked23=()=>true;healthAccess23=()=>({complete:true})");
+run('queuePlan21()');assert.equal(ctx.workoutTimers.at(-1).delay,1500,'Initial profile generates without needing logs');
+ctx.weeklyFixture={version:24,week:run('workoutWeek24()'),summary:'Tabla real',adaptation:'Según perfil',status:'ready',coverage:{included:0,partial:false},days:[{date:run('day()'),type:'training',title:'Fuerza',reason:'Según disponibilidad',exercises:[{id:'test',name:'Sentadilla',sets:3,reps:[8,12],rir:3,restSeconds:90,cue:'Control',progression:'Técnica',previous:null}]}]};
+run("api=async(route,data)=>({plan:weeklyFixture,request:'',cached:false,stale:false,inputSignature:'server'})");
+assert.equal(await run('runWorkout24(false)'),true);assert.equal(run('s.logs.length'),0);assert.match(run('workoutPanel24()'),/Sentadilla/);
+const compactPanel=run('workoutPanel24()');assert.match(compactPanel,/workout-overview24/);assert.ok(compactPanel.includes('<strong>1</strong> sesiones'));assert.ok(compactPanel.indexOf('Por qué esta tabla')<compactPanel.indexOf('Tabla real'),'Long summary belongs inside explanatory details');
+run("workoutExercise24(day(),'test')");assert.equal(run('s.logs.length'),0);assert.equal(run('s.setDraft.exercise'),'Sentadilla');assert.equal(run('s.setDraft.kg'),'');assert.equal(run('s.setDraft.reps'),'');assert.equal(run('s.restSeconds13'),90);
+run("s.logs.push({id:'real',kind:'Entrenamiento',date:day(),exercise:'Sentadilla',kg:0,reps:[10]});queuePlan21()");assert.equal(ctx.workoutTimers.at(-1).delay,180000,'No per-set regeneration');
+run('const realLoad24=loadWorkouts24,realRender24=render;loadWorkouts24=async()=>{};render=()=>{};');const previousWeek=run('workoutWeek24()');const selectedWeek=run('workoutWeek24()===monday21()?workoutNextWeek24():monday21()');run('workoutSelectWeek24('+JSON.stringify(selectedWeek)+')');assert.equal(run('workoutWeek24()'),selectedWeek);assert.equal(run('workoutPlan24'),null);assert.equal(run('workoutLoaded24'),false);run("workoutSelectWeek24('2099-01-01')");assert.equal(run('workoutWeek24()'),selectedWeek,'Only current/next week offered');run('loadWorkouts24=realLoad24;render=realRender24');ctx.weeklyFixture.week=selectedWeek;
+let release;ctx.waiting=new Promise(resolve=>release=resolve);run("api=async()=>{await waiting;return {plan:weeklyFixture,request:'old',stale:false}};");
+const pending=run('runWorkout24(false)');await Promise.resolve();run("sessionStorage.veraUser='another';workoutAccount24()");release();await pending;assert.equal(run('workoutPlan24'),null,'No plan from old account');
+run('VeraPrivacy6.allowed=()=>false');assert.equal(await run('runWorkout24(false)'),false,'No remote AI after revocation');
+run('VeraPrivacy6.allowed=()=>true;googleLinked23=()=>false');assert.equal(run('workoutReady24()'),false,'No automatic AI behind Google onboarding');
+run('googleLinked23=()=>true;healthAccess23=()=>({complete:false})');assert.equal(run('workoutReady24()'),false,'No automatic AI without required Health permissions');
+console.log('PASS workouts24 frontend: automatic first profile, usable exercise draft without ghost sets, debounce, account race and consent.');
+`;
+await import('data:text/javascript;base64,'+Buffer.from(harness).toString('base64'));

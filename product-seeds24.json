@@ -1,0 +1,205 @@
+{
+  "version": "2026-11-22.3",
+  "products": [
+    {
+      "id": "ZUMUB-WHEY-CONCENTRATE-CHOC",
+      "name": "Zumub · 100% Whey Concentrada · Chocolate",
+      "brand": "Zumub",
+      "variant": "Chocolate",
+      "kind": "supplement",
+      "form": "powder",
+      "portion": 30,
+      "unit": "g",
+      "facts": {
+        "kcal": 110,
+        "protein": 21.4,
+        "carbs": 1.7,
+        "fat": 1.8,
+        "fiber_g": 0.6,
+        "sugar_g": 1.2,
+        "sodium_mg": 120
+      },
+      "url": "https://www.zumub.com/ES/proteinas/suero/100-whey-concentrate-1kg-p-10326",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "100% Whey Concentrada · Chocolate",
+        "100% Whey Concentrate Chocolate"
+      ],
+      "reviewedAt": "2026-11-22"
+    },
+    {
+      "id": "ZUMUB-WHEY-ISOLATE-CHOC",
+      "name": "Zumub · 100% Whey Aislada · Chocolate",
+      "brand": "Zumub",
+      "variant": "Chocolate",
+      "kind": "supplement",
+      "form": "powder",
+      "portion": 30,
+      "unit": "g",
+      "facts": {
+        "kcal": 109,
+        "protein": 24.7,
+        "carbs": 1,
+        "fat": 0.6,
+        "fiber_g": 0.6,
+        "sugar_g": 0.5,
+        "sodium_mg": 120
+      },
+      "url": "https://www.zumub.com/ES/aislados-de-suero/100-whey-isolate-flav-1kg",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "100% Whey Aislada · Chocolate",
+        "100% Whey Isolate Chocolate"
+      ],
+      "reviewedAt": "2026-11-22"
+    },
+    {
+      "id": "ZUMUB-OAT-CHOC",
+      "name": "Zumub · Harina de avena · Chocolate",
+      "brand": "Zumub",
+      "variant": "Chocolate",
+      "kind": "food",
+      "form": "powder",
+      "portion": 100,
+      "unit": "g",
+      "facts": {
+        "kcal": 370,
+        "protein": 12,
+        "carbs": 59,
+        "fat": 7,
+        "fiber_g": 10,
+        "sugar_g": 1,
+        "sodium_mg": 0
+      },
+      "url": "https://www.zumub.com/ES/nutricion-deportiva/avena/harina-de-avena-1kg",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "Harina de avena · Chocolate",
+        "Oat Flour Chocolate"
+      ],
+      "reviewedAt": "2026-11-22"
+    },
+    {
+      "id": "ZUMUB-MULTIVITAMIN",
+      "name": "Zumub · Multivitamina + Mineral",
+      "brand": "Zumub",
+      "variant": "No aplica",
+      "kind": "supplement",
+      "form": "capsule",
+      "portion": 1,
+      "unit": "cápsulas",
+      "facts": {
+        "vitaminC_mg": 60,
+        "vitaminD_ug": 5,
+        "vitaminB12_ug": 1,
+        "calcium_mg": 80,
+        "iron_mg": 14,
+        "vitaminA_ug": 160,
+        "vitaminE_mg": 5,
+        "vitaminB1_mg": 0.98,
+        "vitaminB2_mg": 1.4,
+        "vitaminB3_mg": 16,
+        "vitaminB5_mg": 5.5,
+        "vitaminB6_mg": 1.15,
+        "biotin_ug": 50,
+        "folate_ug": 200,
+        "zinc_mg": 15,
+        "manganese_mg": 0.89,
+        "copper_mg": 0.82,
+        "iodine_ug": 150,
+        "chromium_ug": 16,
+        "selenium_ug": 23
+      },
+      "url": "https://www.zumub.com/ES/multivitamina/zumub-multi-vitamin-mineral-100-capsulas",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "Multivitamina + Mineral",
+        "Multivitamin + Mineral",
+        "Multivitamin + Mineral 100 capsules",
+        "Multivitamínico minerales"
+      ],
+      "barcode": "5600985801514",
+      "reviewedAt": "2026-11-22"
+    },
+    {
+      "id": "ZUMUB-CREATINE-PRO",
+      "name": "Zumub · Creatina Monohidrato Profesional · Sin sabor",
+      "brand": "Zumub",
+      "variant": "Sin sabor",
+      "kind": "supplement",
+      "form": "powder",
+      "portion": 3,
+      "unit": "g",
+      "facts": {},
+      "url": "https://www.zumub.com/ES/creatina-creatina-monohidrato-c-213_165_74/creatine-monohydrate-professional-100g",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "Creatina Monohidrato Profesional · Sin sabor",
+        "Creatine Monohydrate Professional",
+        "Creatina monohidrato profesional sin sabor"
+      ],
+      "active": "Monohidrato de creatina: 3 g por 3 g. La etiqueta no declara calorías ni macronutrientes.",
+      "reviewedAt": "2026-11-22"
+    },
+    {
+      "id": "ZUMUB-VITAMIN-C-1000-TABLET",
+      "name": "Zumub · Vitamina C 1000 mg · Comprimidos",
+      "brand": "Zumub",
+      "variant": "1000 mg · Comprimidos",
+      "kind": "supplement",
+      "form": "tablet",
+      "portion": 1,
+      "unit": "comprimidos",
+      "facts": {
+        "vitaminC_mg": 1000
+      },
+      "url": "https://www.zumub.com/ES/vitamina-c/vitamin1000mg-50-tabletas",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "Vitamina C 1000 mg · Comprimidos"
+      ],
+      "barcode": "",
+      "reviewedAt": "2026-11-22"
+    },
+    {
+      "id": "ZUMUB-VITAMIN-C-1000-EFFERVESCENT",
+      "name": "Zumub · Vitamina C 1000 mg · Efervescente",
+      "brand": "Zumub",
+      "variant": "1000 mg · Efervescente",
+      "kind": "supplement",
+      "form": "tablet",
+      "portion": 1,
+      "unit": "comprimidos",
+      "facts": {
+        "vitaminC_mg": 1000
+      },
+      "url": "https://www.zumub.com/ES/vitamina-c/vitamina1000-mg-20-comprimidos-efervescentes",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "Vitamina C 1000 mg · Efervescente"
+      ],
+      "barcode": "5600985808087",
+      "reviewedAt": "2026-11-22"
+    },
+    {
+      "id": "ZUMUB-VITAMIN-D3-50-SOFTGEL",
+      "name": "Zumub · Vitamina D3 50 µg · Cápsula blanda",
+      "brand": "Zumub",
+      "variant": "50 µg · Cápsula blanda",
+      "kind": "supplement",
+      "form": "capsule",
+      "portion": 1,
+      "unit": "cápsulas",
+      "facts": {
+        "vitaminD_ug": 50
+      },
+      "url": "https://www.zumub.com/ES/vitamina-d/vitamin3-120-capsulas",
+      "source": "Zumub · etiqueta del fabricante · 22/11/2026",
+      "aliases": [
+        "Vitamina D3 50 µg · Cápsula blanda"
+      ],
+      "barcode": "",
+      "reviewedAt": "2026-11-22"
+    }
+  ]
+}

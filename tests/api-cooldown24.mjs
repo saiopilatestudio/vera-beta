@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+const html=readFileSync(new URL('../www/index.html',import.meta.url),'utf8');
+const api=html.slice(html.indexOf('    const aiCooldown24 ='),html.indexOf('    function chatPage()'));
+let calls=0,now=1000,mode='429';
+const context=vm.createContext({Map,Date:{now:()=>now},Math,Number,Error,AbortSignal,s:{},ACCOUNT_HOST:'https://server.invalid',sessionStorage:{veraUser:'alice',veraToken:'a'},VeraPrivacy6:{revision:0,allowed:()=>true,ensureRemote:async()=>{}},sameVeraSession:()=>true,render(){},fetch:async()=>{calls++;return {status:mode==='429'?429:200,ok:mode!=='429',headers:{get:()=> '7'},json:async()=> mode==='429'?{error:'Cuota temporal'}:{ok:true}};}});
+vm.runInContext(api,context);
+const run=s=>vm.runInContext(s,context);
+await assert.rejects(run("api('label',{})"),/7 segundos/);
+await assert.rejects(run("api('label',{})"),/7 segundos/);assert.equal(calls,1);
+mode='ok';assert.equal((await run("api('products/search',{query:'Zumub'})")).ok,true);assert.equal(calls,2);
+run("sessionStorage.veraUser='bob'");assert.equal((await run("api('label',{})")).ok,true);assert.equal(calls,3);
+run("sessionStorage.veraUser='alice'");now+=7100;assert.equal((await run("api('label',{})")).ok,true);assert.equal(calls,4);
+console.log('PASS cooldown24 · respeta Retry-After, no repite petición, catálogo accesible y cuentas aisladas');
