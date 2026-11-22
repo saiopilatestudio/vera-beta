@@ -26,7 +26,7 @@ El manual PDF tiene ocho páginas, renderizadas e inspeccionadas. Los dos ZIP se
 
 No se ha instalado ni probado esta APK en un teléfono real. Quedan pendientes cámara, micrófono y reproducción, biometría, Health Connect, revisión visual en Android y uso integrado de las APIs desde el teléfono. Las pruebas de API sustituyen el transporte de los proveedores; no miden su precisión, latencia real o coste.
 
-Esta entrega no despliega Render ni cambia cuentas reales. Para usar IA hay que desplegar el backend V2 y configurar las claves y condiciones del proveedor de cada función. Tener una clave presente no acredita que sea válida. El manual y CONFIGURACION-SERVIDOR.md describen la preparación.
+El 22/11/2026 se publicó y desplegó V2 en https://vera-beta.onrender.com, commit 7b35db3c4991d845802da07dab1f4567d9cc70f6. Render confirmó el servicio activo a las 02:18:58 (Europe/Paris). Se conservaron las variables privadas de Groq, Gemini y la base Turso existente. Tener una clave presente no acredita que todas las funciones, cuotas o condiciones de facturación estén resueltas. La configuración y el alcance de las pruebas se detallan en CONFIGURACION-SERVIDOR.md.
 
 El segundo ZIP contiene un archivo de código separado y una carpeta privada con la nueva clave de firma. No publicar ese ZIP completo. Guardar la clave para futuras actualizaciones. Antes de reinstalar, exportar y conservar fuera de la app el respaldo de la instalación anterior.
 
@@ -34,4 +34,9 @@ El segundo ZIP contiene un archivo de código separado y una carpeta privada con
 
 La interfaz se ha rediseñado con una hoja visual coherente; ver REDISENO-VISUAL.md y TENDENCIAS-Y-DISENO.md. Se probaron directamente los proveedores con credenciales del propietario y texto sintético, sin pasar por Render ni utilizar datos del diario: chat Groq correcto, voz Gemini correcta (WAV válido de 103708 bytes), revisión avanzada Gemini rechazada con 429 AI_RATE_LIMIT. No se atribuye ese error a una causa específica no comprobada. La visión y transcripción reales no se ensayaron en esta ronda.
 
-Render continúa bloqueado por un permiso técnico guardado. No se han instalado allí las claves ni desplegado el servidor V2, y Turso no se ha verificado con sus credenciales reales. Esta APK compilada no debe presentarse como servicio plug-and-play activado. Las claves de proveedores permanecen fuera de la APK y del ZIP de código.
+El acceso a Render quedó desbloqueado y el despliegue V2 fue confirmado. No es necesario introducir claves de proveedores en el teléfono: permanecen en Render y fuera de la APK y del ZIP de código. La comprobación de arranque/configuración no equivale a probar todas las funciones desde un teléfono.
+
+
+## Comprobación pública del servidor
+
+El 22/11/2026 a las 02:19:24 (Europe/Paris), `/health` devolvió HTTP 200 `ok` y `/capabilities` HTTP 200 con API 2.0, ejecución cloud-only, inferencia local desactivada, audio remoto y las ocho rutas Groq/Gemini configuradas. `PRODUCCION-V2.json` registra la evidencia. El arranque completó la inicialización de la base configurada; no se consultaron usuarios ni se crearon cuentas. Esta comprobación no acredita inferencia de todas las rutas ni funcionamiento en un teléfono.

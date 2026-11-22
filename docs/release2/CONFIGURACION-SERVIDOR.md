@@ -2,7 +2,7 @@
 
 Actualizado el 22/11/2026. APK `versionName=2.0 beta`, `versionCode=200`, paquete `app.vera.coach.visionbeta`.
 
-**Compilar o instalar la APK no actualiza Render ni activa las APIs.** Esta entrega contiene código y pruebas locales; no despliega cambios ni modifica datos de producción. La APK exige capacidades V2 con reparto de IA versión 2 antes de enviar una solicitud de IA. Un servidor anterior bloqueará estas funciones hasta actualizarse.
+**Compilar o instalar la APK no actualiza Render ni activa las APIs.** El 22/11/2026 se publicó y desplegó V2 en https://vera-beta.onrender.com, commit 7b35db3c4991d845802da07dab1f4567d9cc70f6. Render confirmó el servicio activo a las 02:18:58 (Europe/Paris). Se conservaron las variables privadas de Groq, Gemini y la base Turso existente. La APK exige capacidades V2 con reparto de IA versión 2 antes de enviar una solicitud de IA. Un servidor anterior bloqueará estas funciones hasta actualizarse.
 
 ## Reparto fijo, sin sustitución automática
 
@@ -33,7 +33,7 @@ Configurar secretos en el entorno privado del servidor, nunca en Git, `www` o la
 - `VERA_OWNER_EMAIL` y `VERA_OWNER_PASSWORD`: credenciales privadas del panel; contraseña de al menos 16 caracteres. `VERA_ALLOW_LEGACY_OWNER_FILE=false`: mantener desactivado el antiguo archivo público `owner.json`; rotar cualquier contraseña correspondiente a hashes publicados.
 - `VERA_ORIGINS=capacitor://localhost,https://localhost`: orígenes de la app; añadir sólo dominios web concretos que se utilicen.
 
-El origen actual de la APK es `https://vera-beta.onrender.com`. Actualizar el servicio existente desde la fuente entregada con `npm ci --omit=dev` y `node server.mjs`, sin borrar tablas, cuentas, sesiones, nicks ni diarios. `render.yaml` contiene las variables de ambos proveedores y no restaura modelos locales. Antes de un despliegue real, disponer de copia de seguridad verificable y revisión anterior para reversión. No se ha realizado ese despliegue en esta entrega.
+El origen actual de la APK es `https://vera-beta.onrender.com`. Actualizar el servicio existente desde la fuente entregada con `npm ci --omit=dev` y `node server.mjs`, sin borrar tablas, cuentas, sesiones, nicks ni diarios. `render.yaml` contiene las variables de ambos proveedores y no restaura modelos locales. Antes de un despliegue real, disponer de copia de seguridad verificable y revisión anterior para reversión. En esta entrega se realizó el despliegue indicado al inicio, con Node 24.22.3, `npm ci --omit=dev` y `npm run start` (ejecuta `node server.mjs`). Se configuró `/health` como comprobación de salud. No se borraron tablas ni se sustituyeron las credenciales de Turso.
 
 ## Contrato de capacidades y solicitudes
 
@@ -88,3 +88,8 @@ Después de configurar un entorno de prueba propio: verificar capacidades, ejecu
 - [Interactions y almacenamiento](https://aistudio.google.com/docs/interactions-overview).
 - [Gemini: niveles de pensamiento](https://aistudio.google.com/docs/thinking?generate-content=true).
 - [Groq: transcripción](https://console.groq.com/docs/speech-to-text).
+
+
+## Comprobación pública del servidor
+
+El 22/11/2026 a las 02:19:24 (Europe/Paris), `/health` devolvió HTTP 200 `ok` y `/capabilities` HTTP 200 con API 2.0, ejecución cloud-only, inferencia local desactivada, audio remoto y las ocho rutas Groq/Gemini configuradas. `PRODUCCION-V2.json` registra la evidencia. El arranque completó la inicialización de la base configurada; no se consultaron usuarios ni se crearon cuentas. Esta comprobación no acredita inferencia de todas las rutas ni funcionamiento en un teléfono.

@@ -24,7 +24,7 @@ La firma V2 es nueva, autorizada por el propietario porque no conserva la anteri
 
 Requiere Node 24. Ejecuta `npm ci`, `npm test` y `npm start`. Para desarrollo, copia `.env.example` a `.env`, configura credenciales de prueba y ejecuta `node --env-file=.env server.mjs`. No subas `.env` a Git.
 
-Las claves Groq y Gemini se configuran únicamente en el servidor. Instalar la APK no despliega el backend, no crea claves ni configura facturación. Esta entrega no cambia producción. Los errores de red, configuración y cuota se muestran; no generan respuestas locales sustitutas. El prefijo `openai/` de un modelo servido por Groq no significa que se use la API de OpenAI.
+Las claves Groq y Gemini se configuran únicamente en el servidor. Instalar la APK no despliega el backend, no crea claves ni configura facturación. El 22/11/2026 se publicó y desplegó V2 en https://vera-beta.onrender.com, commit 7b35db3c4991d845802da07dab1f4567d9cc70f6. Render confirmó el servicio activo a las 02:18:58 (Europe/Paris). Se conservaron las variables privadas de Groq, Gemini y la base Turso existente. Los errores de red, configuración y cuota se muestran; no generan respuestas locales sustitutas. El prefijo `openai/` de un modelo servido por Groq no significa que se use la API de OpenAI.
 
 La voz se genera remotamente y se reproduce como audio; no utiliza TTS local. La prospección administrativa con búsqueda web no está implementada y devuelve un error explícito. Las funciones disponibles no incluyen automáticamente vídeo, lectura de PDF o todas las capacidades comerciales de los proveedores.
 

@@ -1,6 +1,6 @@
 # Control de nube y entrega V2
 
-Revisión independiente local, 22/11/2026. No se accedió a Render, no se intentó eludir el bloqueo del navegador y no se leyeron las claves privadas de trabajo.
+Revisión independiente inicial y cierre posterior del coordinador, 22/11/2026. La auditoría inicial fue local; el cierre que aparece al final incorpora el despliegue y la verificación pública posteriores.
 
 ## Resultado del código y paquetes revisados
 
@@ -11,16 +11,22 @@ Revisión independiente local, 22/11/2026. No se accedió a Render, no se intent
 - El resumen de validación existente registra 13 órdenes con código de salida 0. Corresponde a la edición previa al rediseño actual, no certifica los assets nuevos.
 - README y CONFIGURACION-SERVIDOR distinguen compilación de despliegue y no afirman que producción esté actualizada.
 
-## Bloqueo material pendiente
+## Estado inicial y resolución
 
-No hay evidencia accesible en esta revisión de que Render ejecute V2, de que las claves estén configuradas allí ni de que Turso responda con sus credenciales reales. La autorización escrita del usuario no elimina el permiso técnico guardado que bloquea el acceso al panel. Por tanto, no presentar esta entrega como servidor activado ni como aplicación completamente lista para IA en producción.
+La revisión inicial no tenía acceso al panel de Render y no podía acreditar producción. Ese bloqueo quedó resuelto posteriormente: se accedió con la sesión autorizada del propietario, se publicaron los cambios y se verificó el despliegue V2. Las credenciales existentes de Turso se conservaron; no se creó otra base ni se incluyeron claves en APK/código.
 
-El propietario debe desbloquear el acceso técnico al panel o configurar el servicio manualmente. Conservar la base actual y sus credenciales; no crear otra base para sortear el bloqueo. No incluir claves de IA/Turso en la APK ni en el ZIP público de código.
+## Cierre realizado tras el rediseño
 
-## Cierre requerido tras el rediseño
-
-Recompilar y firmar la APK después del freeze de CSS, ejecutar las verificaciones relevantes, regenerar el manual y ambos ZIP y cotejar los assets del binario con la fuente. Actualizar tamaño, SHA-256 y alcance de la evidencia. Las pruebas reales de cámara, audio, biometría, Health Connect y proveedores siguen siendo distintas de las pruebas con transporte simulado.
+La APK se recompiló y firmó después del rediseño CSS. Se comprobaron los 19 assets byte a byte contra la fuente, firma v2/v3, versión, CRC y alineación. El manual y los ZIP se regeneraron; el tamaño de la APK es 378517 bytes y su SHA-256 es 93932b8ff63c8d3f0116ac15c8f88baeb11744f29578f170d91cfd16008dcd8d. Las pruebas reales de cámara, audio, biometría, Health Connect y proveedores siguen siendo distintas de las pruebas con transporte simulado.
 
 ## Evidencia posterior del coordinador
 
 PROVEEDORES-REALES.json registra llamadas directas con datos sintéticos: chat Groq correcto, TTS Gemini correcto y coach avanzado Gemini429. Esto no verifica Render/Turso ni implica que las claves estén instaladas en producción.
+
+## Producción verificada
+
+Render confirmó `Deploy succeeded` y `Your service is live` el 22/11/2026 a las 02:18:58 (Europe/Paris), despliegue `dep-dc145p1ksfps73fpcqgg`, commit `7b35db3c4991d845802da07dab1f4567d9cc70f6`. Se utilizó Node 24.22.3, `npm ci --omit=dev` y `npm run start` (`node server.mjs`), con comprobación de salud `/health`. Las variables Groq, Gemini y Turso permanecen privadas en Render.
+
+A las 02:19:24 (Europe/Paris), `/health` respondió HTTP 200 `ok` y `/capabilities` HTTP 200, `apiVersion: 2.0`, `execution: cloud-only`, `localInference: false`, `speechOutput: remote`, sólo Groq/Gemini y ocho rutas configuradas. Evidencia: `PRODUCCION-V2.json` en el ZIP 2. El arranque espera la inicialización de la base configurada; no se consultaron datos de usuarios ni se crearon cuentas para esta comprobación.
+
+Estos resultados verifican despliegue, arranque y configuración. No prueban inferencia de cada ruta a través de Render ni uso integrado de la APK en un teléfono. Se mantiene documentado el 429 de la prueba directa de revisión avanzada Gemini.
