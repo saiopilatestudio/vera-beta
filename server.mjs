@@ -156,8 +156,18 @@ export const server = http.createServer(async (req, res) => {
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       return res.end("ok");
     }
-    if (req.method === "GET" && req.url === "/capabilities") {
-      return res.end(JSON.stringify({ apiVersion: "2.4", ai: aiConfiguration(), persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true,weeklyWorkouts:true,productCatalog:true,labelNutrition:true,gymJam:true} }));
+    if (req.method === "GET" && path === "/capabilities") {
+      const config = aiConfiguration();
+      const current = req.url === '/capabilities?contract=3' || String(req.headers.accept || '').includes('application/vnd.vera.routing-v3+json');
+      // Installed 2.4.2 clients require the original wire contract. Advertise
+      // only routes and providers those clients have permission to use.
+      const legacyRoutes = Object.fromEntries(['coach','coach_deep','intro','photo','machine','label','listen','speak'].map(key => {
+        const {provider, model, configured, fallback} = config.routes[key];
+        return [key, {provider, model, configured, ...(key === 'photo' && fallback?.provider === 'groq' ? {fallback} : {})}];
+      }));
+      const ai = current ? config : {routingVersion:2, providers:['groq','gemini'], execution:config.execution, localInference:config.localInference, verification:config.verification, speechOutput:config.speechOutput, routes:legacyRoutes};
+      res.setHeader('Vary', 'Origin, Accept');
+      return res.end(JSON.stringify({ apiVersion: "2.4", ai, persistence: "account-auto-sync", placesConfigured:Boolean(process.env.GOOGLE_PLACES_KEY), features:{diaryImport:true,weeklyTeam:true,profileSync:true,weeklyWorkouts:true,productCatalog:true,labelNutrition:true,gymJam:true} }));
     }
     if (req.method === "GET" && ["/", "/index.html"].includes(req.url)) {
       res.setHeader("Content-Type", "text/html;charset=utf-8");
