@@ -45,6 +45,12 @@ run("sessionStorage.veraUser='other-owner';applyTraining14(1)");assert.equal(run
 run("sessionStorage.veraUser='https://test/alice';editTraining14(1);sessionStorage.veraToken='new-token';applyTraining14(1)");assert.equal(run('s.logs[1].kg'),20);
 run("sessionStorage.veraToken='token-a';editTraining14(1);s=JSON.parse(JSON.stringify(s));applyTraining14(1)");assert.equal(run('s.logs[1].kg'),20,'Replaced account state must invalidate edit');
 run('editTraining14(1);s.logs.push({...s.logs[1]});applyTraining14(1)');assert.equal(run('s.logs[1].kg'),20,'Ambiguous duplicate ID must not edit');
+run("s.logs=[{id:'verify',kind:'Entrenamiento',date:day(),exercise:'Prensa',reps:[10],kg:30}];s.diaryRevisions={};VeraJournal.flush=async()=>true");
+assert.equal(await run("confirmTrainingWrite247(s.logs[0],'Serie')"),false,'A successful HTTP request without this set acknowledgement cannot confirm it');
+run("s.diaryRevisions.verify={rev:2,raw:JSON.stringify(s.logs[0])}");
+assert.equal(await run("confirmTrainingWrite247(s.logs[0],'Serie')"),true,'Exact confirmed version');
+run('s.logs[0].kg=35');
+assert.equal(await run("confirmTrainingWrite247(s.logs[0],'Corrección')"),false,'Old revision cannot acknowledge a correction');
 console.log('training23: passed (history, dates, loads, rest, validation, Health imports, double submit, escaped UI)');
 `;
 await import('data:text/javascript;base64,'+Buffer.from(harness).toString('base64'));

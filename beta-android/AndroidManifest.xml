@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="app.vera.coach.visionbeta" android:versionCode="246" android:versionName="2.4.6 beta">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="app.vera.coach.visionbeta" android:versionCode="247" android:versionName="2.4.7 beta">
 <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35"/>
 <uses-feature android:name="android.hardware.microphone" android:required="false"/>
 <uses-permission android:name="android.permission.USE_BIOMETRIC"/><uses-permission android:name="android.permission.INTERNET"/><uses-permission android:name="android.permission.RECORD_AUDIO"/>

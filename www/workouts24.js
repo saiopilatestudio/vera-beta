@@ -77,7 +77,7 @@ function workoutSignature24(){
  const week=workoutWeek24(),since=new Date(Date.parse(week+'T12:00:00Z')-42*86400000).toISOString().slice(0,10),until=new Date(Date.parse(week+'T12:00:00Z')+6*86400000).toISOString().slice(0,10);
  const keys=['goal','criteria','likes','age','level','days','time','eq','introduced'];
  const recordKeys=['id','kind','date','exercise','kg','enteredKg','loadMode','loadSchema','mode','reps','rir','trainingNote','note','value','minutes','sore','tired','muscle'];
- const records=s.logs.filter(r=>['Entrenamiento','Sueño','Sensaciones','Cardio','Peso en ayunas','Otro pesaje'].includes(r.kind)&&r.date>=since&&r.date<=until).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.id).localeCompare(String(b.id))).slice(0,80).map(r=>Object.fromEntries(recordKeys.filter(k=>r[k]!==undefined).map(k=>[k,r[k]])));
+ const records=s.logs.filter(r=>['Entrenamiento','Sueño','Sensaciones','Cardio','Peso en ayunas','Otro pesaje'].includes(r.kind)&&r.date>=since&&r.date<=until).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(a.id).localeCompare(String(b.id))).map(r=>Object.fromEntries(recordKeys.filter(k=>r[k]!==undefined).map(k=>[k,r[k]])));
  const stable=v=>Array.isArray(v)?v.map(stable):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])])):v;
  return JSON.stringify(stable({week,profile:Object.fromEntries(keys.map(k=>[k,s.profile[k]])),gym:s.gym,machines:s.machines,need:s.need,records}));
 }
@@ -85,7 +85,7 @@ async function loadWorkouts24(){workoutAccount24();if(!workoutReady24()||workout
 async function runWorkout24(readOnly=false,request,options={}){
  workoutAccount24();if(!workoutReady24()||workoutJob24)return false;if(!readOnly&&!VeraPrivacy6.allowed('cloud')){msg('Permite el análisis remoto en Perfil para generar tu tabla.');return false;}
  if(!readOnly&&options.editDate&&(!request?.trim()||!workoutPlan24?.days.some(d=>d.date===options.editDate))){msg('Selecciona un día de la tabla actual y describe el cambio.');return false;}
- const job={readOnly,editDate:!readOnly?options.editDate||'':'',owner:workoutOwner24,token:workoutToken24,state:s,week:workoutWeek24(),signature:workoutSignature24(),privacy:VeraPrivacy6.revision};workoutJob24=job;workoutError24='';
+ const job={readOnly,editDate:!readOnly?options.editDate||'':'',owner:workoutOwner24,token:workoutToken24,state:s,week:workoutWeek24(),signature:workoutSignature24(),privacy:VeraPrivacy6.revision};let settle;job.done=new Promise(resolve=>{settle=resolve;});workoutJob24=job;workoutError24='';
  const current=()=>sameVeraSession(job.owner,job.token,job.state)&&validSession&&workoutJob24===job;
  try{
   if(!readOnly){const confirmed=await VeraJournal.flush();if(!current())return false;if(!confirmed)throw Error('Confirma el guardado pendiente antes de generar una tabla con tus datos.');if(!VeraPrivacy6.allowed('cloud')||job.privacy!==VeraPrivacy6.revision)return false;}
@@ -94,11 +94,11 @@ async function runWorkout24(readOnly=false,request,options={}){
   if(!readOnly&&!response.plan)throw Error('El servidor no devolvió una tabla. Conservamos la anterior.');
   if(response.plan)workoutCheckWeek24(response.plan,job.week,options.trainingDays);
   if(response.plan&&response.plan.week!==job.week)throw Error('El servidor devolvió otra semana. Se conserva tu tabla.');workoutPlan24=response.plan;workoutRequest24=response.request||'';workoutStale24=!!response.stale;workoutLoaded24=true;
-  if(job.signature===workoutSignature24()&&!response.stale)workoutAccepted24=job.signature;else workoutStale24=true;
+  if(job.signature===workoutSignature24()&&!response.stale&&(!readOnly||!VeraJournal.pending()))workoutAccepted24=job.signature;else workoutStale24=true;
   if(!readOnly)msg(response.plan?.status==='needs_review'?'Antes de entrenar, revisa la aclaración que necesita Vera.':response.cached?'Se ha recuperado la tabla guardada; no se ha generado otra.':job.editDate?'Semana reajustada tomando como referencia el '+job.editDate+'. Revisa todas las sesiones propuestas.':'Tabla semanal preparada. Abre una sesión y registra sólo las series que realices.');
   workoutRetry24=0;return true;
  }catch(error){if(current()){workoutError24=error.message;workoutRetry24=Date.now()+Math.max(60000,Math.min(86400000,(Number(error.retryAfter)||0)*1000),Number.isFinite(Date.parse(error.resetAt))?Math.min(86400000,Date.parse(error.resetAt)-Date.now()):0);workoutLoaded24=true;if(!readOnly)msg((workoutPlan24?'Sigue visible tu tabla anterior. ':'No se ha podido generar tu tabla. ')+error.message);}return false;}
- finally{if(current()){workoutJob24=null;render();queuePlan21();}}
+ finally{settle();if(current()){workoutJob24=null;render();queuePlan21();}}
 }
 function generateWorkout24(request){
  workoutAccount24();const text=request===undefined?($('workoutRequest24')?.value??workoutDraftValue24()):String(request),selected=workoutOptionsValue24();
@@ -112,6 +112,7 @@ function generateWorkout24(request){
 }
 function requestWorkout24(text){go('Entrenamiento');workoutOptions24.set(workoutWeek24(),{editDate:'',trainingDays:''});return generateWorkout24(text);}
 queuePlan21=function(){
+ if(typeof queueTeam247==="function")queueTeam247();
  workoutAccount24();if(!workoutReady24()||document.hidden||workoutJob24||!VeraPrivacy6.allowed('cloud')||Date.now()<workoutRetry24)return;
  const signature=workoutSignature24();if(workoutPlan24&&signature===workoutAccepted24&&!workoutStale24)return;if(workoutScheduled24===signature&&workoutTimer24)return;
  clearTimeout(workoutTimer24);workoutScheduled24=signature;
@@ -119,7 +120,14 @@ queuePlan21=function(){
  // a completed session can request the update explicitly, avoiding per-set calls.
  workoutTimer24=setTimeout(()=>{workoutTimer24=null;if(sameVeraSession(workoutOwner24,workoutToken24,workoutState24)&&workoutReady24()&&!document.hidden&&!workoutJob24&&VeraPrivacy6.allowed('cloud'))runWorkout24(false);},workoutPlan24?180000:1500);
 };
-function workoutSessionDone24(){clearTimeout(workoutTimer24);workoutTimer24=null;if(!workoutPlan24)return runWorkout24(false);if(workoutSignature24()===workoutAccepted24)return msg('La tabla ya tiene en cuenta los últimos registros.');return runWorkout24(false);}
+async function workoutSessionDone24(){
+ workoutAccount24();const state=s,owner=workoutOwner24,token=workoutToken24,week=workoutWeek24();
+ clearTimeout(workoutTimer24);workoutTimer24=null;
+ if(workoutJob24)await workoutJob24.done;
+ if(!sameVeraSession(owner,token,state)||week!==workoutWeek24())return false;
+ // The server owns the confirmed diary revision and can reuse a matching week.
+ return runWorkout24(false);
+}
 function workoutExercise24(date,id){
  workoutAccount24();const exercise=workoutPlan24?.days.find(d=>d.date===date)?.exercises.find(e=>e.id===id);if(!exercise)return msg('La tabla ha cambiado. Vuelve a abrir la sesión.');
  const previous=exercise.previous;s.setDraft={exercise:exercise.name,kg:previous?.enteredKg??'',mode:previous?.mode||'total',reps:'',rir:'',note:'',date:day(),autoRest:true};s.restSeconds13=exercise.restSeconds;
@@ -137,7 +145,7 @@ function workoutPanel24(){
 const workoutAreaBefore24=areaPage;areaPage=function(){return tab==='Entrenamiento'?workoutPanel24()+workoutAreaBefore24():workoutAreaBefore24();};
 // Existing roster wrapper resolves weeklyPanel21 at call time. Replacing it
 // avoids the old four-provider-call plan and leaves its historical state intact.
-weeklyPanel21=function(){return workoutPanel24()+btn('Opinión sobre mi estado general','generalReview21()');};
+weeklyPanel21=function(){return (typeof teamPanel247==='function'?teamPanel247():'')+workoutPanel24()+btn('Opinión sobre mi estado general','generalReview21()');};
 refreshPlan21=function(){return generateWorkout24();};
 setAutoPlan21=function(){queuePlan21();};
 const workoutRenderBefore24=render;render=function(){workoutRenderBefore24();if(workoutReady24())queuePlan21();};

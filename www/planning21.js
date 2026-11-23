@@ -36,6 +36,30 @@ async function refreshPlan21(automatic=false){
  save();if(!automatic)render();msg('Plan semanal actualizado. Puedes revisar las opiniones y los cambios en Equipo.');
  }catch(e){if(sameVeraSession(owner,token,state))msg('Se conserva tu plan anterior. '+e.message);}finally{planBusy21=false;}
 }
+// The training table and specialist review have independent generation jobs.
+const reviewTeam247=refreshPlan21;
+let teamSchedule247={};
+function queueTeam247(){
+ if(!s.autoPlan21||!s.profile?.introduced||!s.logs?.length||!validSession||document.hidden||!VeraPrivacy6.allowed('cloud')||planBusy21)return;
+ const signature=planSignature21(),state=s,owner=sessionStorage.veraUser,token=sessionStorage.veraToken;
+ if(s.weeklyPlan21?.week===monday21()&&s.weeklyPlan21?.inputSignature===signature)return;
+ if(teamSchedule247.state===state&&teamSchedule247.signature===signature&&(teamSchedule247.timer||Date.now()<teamSchedule247.next))return;
+ clearTimeout(teamSchedule247.timer);
+ const job=teamSchedule247={state,signature,next:0};
+ job.timer=setTimeout(async()=>{
+  job.timer=null;
+  if(!sameVeraSession(owner,token,state)||!s.autoPlan21||document.hidden||busy||planBusy21||!VeraPrivacy6.allowed('cloud')||signature!==planSignature21())return;
+  job.next=Date.now()+300000;
+  if(typeof VeraJournal!=='undefined'&&!await VeraJournal.flush())return;
+  if(!sameVeraSession(owner,token,state)||signature!==planSignature21()||planBusy21)return;
+  await reviewTeam247(true);
+  if(sameVeraSession(owner,token,state)&&tab==='Equipo')render();
+ },tab==='Equipo'?1500:90000);
+}
+function teamPanel247(){
+ const p=s.weeklyPlan21,changed=p&&(p.inputSignature!==planSignature21()||p.week!==monday21());
+ return '<section class="weekly21"><h2>Qué te recomienda tu equipo</h2>'+(p?'<p>'+safe(p.summary)+'</p><small>'+safe(changed?'Revisión anterior · hay datos nuevos':'Revisión de tus registros')+'</small>'+p.reports.map(r=>'<details><summary>'+safe(r.role)+'</summary><p>'+safe(r.text)+'</p></details>').join(''):'<p>Tu equipo revisa las series, el cardio, la alimentación y el descanso que registras.</p>')+btn('Revisar mis registros','reviewTeam247()')+'</section>';
+}
 function markPlan21(index,key,done){const d=s.weeklyPlan21?.days[index];if(!d||!['training','nutrition','recovery'].includes(key))return;(d.done||={})[key]=done;save();}
 function weeklyPanel21(){const p=s.weeklyPlan21;return '<section class="weekly21"><h2>Tu semana, en equipo</h2><p>Un plan compartido para entrenar, alimentarte y descansar. Consulta las opiniones del equipo y los cambios de tu semana.</p>'+btn('Opinión sobre mi estado general','generalReview21()')+btn(planBusy21?'Revisando…':'Revisar y actualizar semana','refreshPlan21()',true)+'<label class="check"><input type="checkbox" '+(s.autoPlan21?'checked':'')+' onchange="setAutoPlan21(this.checked)">Revisión automática diaria con nuevos datos</label>'+(p?'<p class="pre">'+safe(p.summary)+'</p><details><summary>Qué ha cambiado y por qué</summary><p>'+safe(p.changes)+'</p>'+p.reports.map(r=>'<h4>'+safe(r.role)+'</h4><p>'+safe(r.text)+'</p>').join('')+'</details>'+p.days.map((d,i)=>'<article><h3>'+safe(d.date)+'</h3>'+[['training','Entrenamiento'],['nutrition','Nutrición'],['recovery','Recuperación']].map(([k,title])=>'<label class="check"><input type="checkbox" '+(d.done?.[k]?'checked':'')+' onchange="markPlan21('+i+',\''+k+'\',this.checked)">'+title+'</label><p>'+safe(d[k])+'</p>').join('')+'</article>').join(''):'<p>Aún no has generado una semana. Completa tus preferencias y registra tus datos para una propuesta mejor informada.</p>')+'</section>';}
 const convoBefore21=convo;convo=()=>convoBefore21()+capturePanel21();

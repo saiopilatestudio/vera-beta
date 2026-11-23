@@ -8,8 +8,8 @@ import subprocess
 from zipfile import ZipFile
 
 PACKAGE = "app.vera.coach.visionbeta"
-VERSION_NAME = "2.4.6 beta"
-VERSION_CODE = 246
+VERSION_NAME = "2.4.7 beta"
+VERSION_CODE = 247
 FORBIDDEN_ASSET_SUFFIXES = (".gguf", ".onnx", ".tflite", ".safetensors", ".wasm", ".traineddata", ".traineddata.gz", ".pt", ".pth", ".p12", ".jks", ".keystore")
 FORBIDDEN_ASSET_NAMES = {"local.js", "local-ai.js", "ort.js", "ocr.js", "ocr-worker.js", "ocr-core.js", "vision-labels.json", "eng.traineddata.gz"}
 
@@ -43,7 +43,7 @@ def verify(apk, www, tools, java="java", mode="signed", expected_cert=None):
     print(identity, flush=True)
     require(f"versionName='{VERSION_NAME}'" in identity, "Unexpected APK versionName")
     require(f"name='{PACKAGE}'" in identity and f"versionCode='{VERSION_CODE}'" in identity, "Unexpected APK package/versionCode")
-    require("application-label:'Vera 2.4.6 beta'" in manifest, "The Android launcher/install label is stale")
+    require("application-label:'Vera 2.4.7 beta'" in manifest, "The Android launcher/install label is stale")
     signer = [str(java), "-jar", str(tools / "lib/apksigner.jar"), "verify", "--verbose", "--print-certs", str(apk)]
     result = subprocess.run(signer, text=True, capture_output=True, encoding="utf-8")
     cert = None

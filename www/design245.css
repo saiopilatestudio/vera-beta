@@ -41,3 +41,11 @@ body>header .brandText14 strong{letter-spacing:-.065em}
 #view .back245{font-size:.87rem;background:transparent;border:0;box-shadow:none;padding:2px 5px;color:#266752}
 
 .today244-sleep{--tint:#e6eafa;--accent:#526689}
+
+.chart-card22 {background:linear-gradient(145deg,#fff 64%,#eefaff);border:1px solid #cadeda;border-radius:22px;padding:clamp(14px,4vw,24px);color:#142421}
+.chart22,.weight-chart21 {background:#fff;border-radius:14px}
+.chart22 line,.weight-chart21 .grid21 {stroke:#c4d9d8;stroke-dasharray:3 5}
+.chart22 text,.weight-chart21 text {fill:#304b49;font-variant-numeric:tabular-nums}
+.weight-chart21 .trend21 {stroke:#172e31;stroke-width:3;stroke-linejoin:round}
+.weight-chart21 .point21 {fill:#b5ff29;stroke:#213831;stroke-width:2}
+.bar-stick {background:linear-gradient(0deg,#59c5df,#bdff49)}

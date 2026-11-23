@@ -1,4 +1,18 @@
 /* Training uses the existing validated journal schema. Suggestions never create logs. */
+async function confirmTrainingWrite247(row,label){
+ const state=s,owner=sessionStorage.veraUser,token=sessionStorage.veraToken,id=row.id,raw=JSON.stringify(row);
+ msg(label+' pendiente de confirmar en tu cuenta…');
+ let confirmed=false;
+ try{confirmed=await VeraJournal.flush();}catch{}
+ if(!sameVeraSession(owner,token,state))return false;
+ const current=s.logs.find(r=>r.id===id);
+ if(JSON.stringify(current)!==raw)return false;
+ const revision=s.diaryRevisions?.[id];
+ if(!confirmed||!revision?.rev||revision.raw!==raw){msg(label+' pendiente de confirmar. Revisa el guardado de la cuenta y reintenta.');return false;}
+ msg(label+' guardada en tu cuenta.');
+ if(typeof queuePlan21==='function')queuePlan21();
+ return true;
+}
 function trainingKey23(value){return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();}
 function trainingRecent23(){
  const seen=new Set();return s.logs.map((row,index)=>({row,index})).filter(x=>x.row.kind==='Entrenamiento'&&trainingDate14(x.row.date)&&x.row.exercise&&x.row.reps?.length)
@@ -29,10 +43,10 @@ commitSet13=function(){
  try{record=validateTraining14({exercise:d.exercise,date:d.date,enteredKg:d.kg,mode:d.mode,reps:d.reps,rir:d.rir,note:d.note});}catch(e){return msg(e.message);}
  const rest=Number($('restSeconds13')?.value??s.restSeconds13??90);
  if(d.autoRest&&d.date===day()&&(!Number.isInteger(rest)||rest<5||rest>1800))return msg('El descanso debe durar entre 5 y 1800 segundos.');
- s.logs.push({id:uid(),kind:'Entrenamiento',...record});
+ const row={id:uid(),kind:'Entrenamiento',...record};s.logs.push(row);
  s.setDraft={...d,reps:''};
  if(d.autoRest&&d.date===day()){s.restSeconds13=rest;s.restEnds13=Date.now()+rest*1000;}
- save();render();msg('Serie registrada. Comprobando el guardado en tu cuenta…');
+ save();render();return confirmTrainingWrite247(row,'Serie');
 };
 setPanel13=function(){
  const d=s.setDraft||{},date=d.date||day(),summary=trainingSummary23(date),recent=trainingRecent23();

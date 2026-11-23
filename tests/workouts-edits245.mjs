@@ -4,7 +4,7 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 const folder=await mkdtemp(join(tmpdir(),'vera-edits245-'));process.env.VERA_DB=join(folder,'test.sqlite');
 const {db}=await import('../storage.mjs');
-const {weeklyWorkout24,workoutIntent245}=await import('../workouts24.mjs');
+const {weeklyWorkout24,workoutIntent245,workoutContext24}=await import('../workouts24.mjs');
 const dates=Array.from({length:7},(_,i)=>'2026-11-'+(16+i));const week=dates[0];
 await db.batch(['CREATE TABLE account_state(uid TEXT,field TEXT,rev INTEGER,data TEXT,PRIMARY KEY(uid,field))','CREATE TABLE diary_sync(uid TEXT,id TEXT,rev INTEGER,data TEXT,PRIMARY KEY(uid,id))'],'write');
 for(const uid of ['a','b'])for(const[k,v]of Object.entries({introduced:true,goal:'Fuerza',level:'Principiante',days:3,time:45,eq:['Mancuernas']}))await db.execute({sql:'INSERT INTO account_state VALUES(?,?,1,?)',args:[uid,'profile.'+k,JSON.stringify(v)]});
@@ -26,6 +26,15 @@ try{
  assert.deepEqual(edited.plan.days[4],first.plan.days[4],'Confirmed completed session stays literal');
  assert.deepEqual(seen.constraints.completedDates,[dates[4]]);assert.ok(seen.currentPlan);
  const count=calls;assert.equal((await weeklyWorkout24('a',{week},opts)).cached,true);assert.equal(calls,count,'Automatic refresh must not replay edit request');
+ // A correction to a later free-text set leaves weekly totals and the first sample unchanged.
+ const manual={kind:'Entrenamiento',date:dates[4],exercise:'Ejercicio puesto a mano',reps:[10],kg:20,rir:3};
+ for(const id of ['manual-a','manual-b'])await db.execute({sql:'INSERT INTO diary_sync VALUES(?,?,1,?)',args:['a',id,JSON.stringify({...manual,id})]});
+ const before=await workoutContext24(db,'a',week);
+ await db.execute({sql:'UPDATE diary_sync SET data=? WHERE uid=? AND id=?',args:[JSON.stringify({...manual,id:'manual-b',rir:2}),'a','manual-b']});
+ const after=await workoutContext24(db,'a',week);
+ assert.deepEqual(before.records,after.records);assert.deepEqual(before.weeklyProgress,after.weeklyProgress);
+ assert.notEqual(before.trainingEvidence.fingerprint,after.trainingEvidence.fingerprint);
+ assert.deepEqual(after.trainingEvidence.recentSessions[0].movements.find(([name])=>name===manual.exercise),[manual.exercise,2]);
  mode='wrong';await assert.rejects(()=>weeklyWorkout24('a',{week,request:'Nueva tabla tres días',editDate:''},opts),e=>e.code==='WORKOUT_FORMAT');
  assert.deepEqual((await weeklyWorkout24('a',{week,readOnly:true},opts)).plan,edited.plan,'Invalid count retains previous table');
  mode='review';await assert.rejects(()=>weeklyWorkout24('a',{week,request:'Dolor al mover el lunes',editDate:week},opts),e=>e.code==='WORKOUT_REVIEW_REQUIRED');
@@ -33,6 +42,6 @@ try{
  mode='custom';const custom=await weeklyWorkout24('b',{week,editDate:'',request:'Tres días',customExercises:[{name:'Remo personal con mancuerna',equipment:'dumbbell',measurement:'repetitions'}]},opts);assert.equal(custom.plan.customExercises.length,1);assert.equal(custom.plan.days[0].exercises[0].userDefined,true);assert.equal(custom.plan.days[0].exercises[0].name,'Remo personal con mancuerna');
  const customCount=calls;await weeklyWorkout24('b',{week},opts);assert.equal(calls,customCount,'Custom remains cached without resending');
  await assert.rejects(()=>weeklyWorkout24('b',{week,exerciseIds:['not-real']},opts));
- assert.equal((await db.execute('SELECT * FROM diary_sync')).rows.length,1,'No generated activity');
+ assert.equal((await db.execute('SELECT * FROM diary_sync')).rows.length,3,'No generated activity');
  console.log('PASS weekly edits245: legacy date inference, explicit whole week, exact count, coherent redistribution, completed session protection, account isolation, no edit replay, safe failures.');
 }finally{db.close();await rm(folder,{recursive:true,force:true,maxRetries:10,retryDelay:100});}

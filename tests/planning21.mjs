@@ -8,6 +8,12 @@ const output=await importDiary21({text:'Cena del día20',date:'2026-11-20'},asyn
 assert.equal(output.entries[0].protein,40);assert.deepEqual(output.entries[0].nutrients,{iron_mg:2});
 assert.throws(()=>validateCoachResult({answer:'x',entries:[{...entry,protein:-1}]}));
 assert.throws(()=>validateCoachResult({answer:'x',entries:[{kind:'Entrenamiento',date:'2026-11-20',exercise:'Press',reps:[0]}]}));
+const delivered=[];
+await weeklyPlan21({week:'2026-11-23',logs:[{kind:'Cardio',date:'2026-11-21',minutes:20},...Array.from({length:26},(_,i)=>({id:'s'+i,kind:'Entrenamiento',date:'2026-11-23',exercise:'Press'}))]},async(system,input,json)=>{
+ if(!json){delivered.push(JSON.parse(input));return 'Una propuesta.';}
+ return {summary:'Prioridad',changes:'Ajustes',days:weekDates21('2026-11-23').map(date=>({date,training:'A',nutrition:'B',recovery:'C'}))};
+});
+assert.ok(delivered[0].recentExamples.some(row=>row.kind==='Cardio'&&row.minutes===20));
 let calls=0;const ask=async(system,context,json)=>{calls++;return json?{summary:'Semana prudente',changes:'Sin cargas inventadas',days:weekDates21('2026-11-23').map(date=>({date,training:'Registrar sesión',nutrition:'Anotar comidas',recovery:'Anotar sueño'}))}:'Faltan datos para personalizar.';};
 const plan=await weeklyPlan21({week:'2026-11-23',profile:{},logs:[]},ask);assert.equal(calls,4);assert.equal(plan.reports.length,3);assert.equal(plan.days.length,7);assert.deepEqual(plan.days[0].done,{});
 await assert.rejects(weeklyPlan21({week:'2026-11-23'},async(s,c,json)=>json?{summary:'Mal',changes:'',days:[]}:'Datos'),/plan válido/);

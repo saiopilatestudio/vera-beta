@@ -9,6 +9,11 @@ ctx.weeklyFixture={version:24,week:run('workoutWeek24()'),summary:'Tabla real',a
 ctx.weeklyFixture.days=Array.from({length:7},(_,i)=>{const date=new Date(ctx.weeklyFixture.week+'T12:00:00');date.setDate(date.getDate()+i);return i===0?{...ctx.weeklyFixture.days[0],date:run('day(new Date('+JSON.stringify(date.toISOString())+'))')}:{date:run('day(new Date('+JSON.stringify(date.toISOString())+'))'),type:'rest',title:'Descanso',reason:'Recuperación',exercises:[]};});
 run("api=async(route,data)=>({plan:weeklyFixture,request:'',cached:false,stale:false,inputSignature:'server'})");
 assert.equal(await run('runWorkout24(false)'),true);assert.equal(run('s.logs.length'),0);assert.match(run('workoutPanel24()'),/Sentadilla/);
+ctx.flushed=0;ctx.remoteChecks=0;
+run("VeraJournal.flush=async()=>{flushed++;return true};api=async()=>{remoteChecks++;return {plan:weeklyFixture,cached:true,stale:false}}");
+assert.equal(await run('workoutSessionDone24()'),true);
+assert.equal(ctx.flushed,1,'Finish confirms the journal even when the last displayed week looks current');
+assert.equal(ctx.remoteChecks,1,'Finish verifies week against server-side journal');
 const compactPanel=run('workoutPanel24()');assert.match(compactPanel,/workout-overview24/);assert.ok(compactPanel.includes('<strong>1</strong> sesiones'));assert.ok(compactPanel.indexOf('Por qué esta tabla')<compactPanel.indexOf('Tabla real'),'Long summary belongs inside explanatory details');
 run("workoutExercise24(weeklyFixture.days[0].date,'test')");assert.equal(run('s.logs.length'),0);assert.equal(run('s.setDraft.exercise'),'Sentadilla');assert.equal(run('s.setDraft.kg'),'');assert.equal(run('s.setDraft.reps'),'');assert.equal(run('s.restSeconds13'),90);
 run("s.logs.push({id:'real',kind:'Entrenamiento',date:day(),exercise:'Sentadilla',kg:0,reps:[10]});queuePlan21()");assert.equal(ctx.workoutTimers.at(-1).delay,180000,'No per-set regeneration');

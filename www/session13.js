@@ -88,5 +88,5 @@ function applyTraining14(i){
  let changes;
  try{changes=validateTraining14({exercise:$('correctExercise').value,date:$('correctDate').value,enteredKg:$('correctKg').value,mode:$('correctMode').value,reps:$('correctReps').value,rir:$('correctRir').value,note:$('correctTrainingNote').value});}catch(e){return msg(e.message);}
  if(row.trainingNote==null&&!row.legacyNote)row.legacyNote=row.note;
- Object.assign(row,changes);trainingEditContext14=null;markAffected(row);save();go('Equipo');msg('Entrenamiento corregido. Las revisiones afectadas están señaladas.');
+ Object.assign(row,changes);trainingEditContext14=null;markAffected(row);save();go('Entrenamiento');return confirmTrainingWrite247(row,'Corrección');
 }
