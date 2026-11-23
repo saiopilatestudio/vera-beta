@@ -1,8 +1,14 @@
-# VERA 2.4.3 beta
+# VERA 2.4.4 beta
 
-Android build 243, paquete `app.vera.coach.visionbeta`. La IA se ejecuta en Groq, Gemini y Cloudflare Workers AI. Las credenciales de los proveedores permanecen en el servidor. La APK se construye desde `beta-android/`; los proyectos Capacitor de `android/` e `ios/` son auxiliares.
+Android build 244, paquete `app.vera.coach.visionbeta`. La IA se ejecuta en Groq, Gemini y Cloudflare Workers AI. Las credenciales de los proveedores permanecen en el servidor. La APK se construye desde `beta-android/`; los proyectos Capacitor de `android/` e `ios/` son auxiliares.
 
-## Cambios de esta entrega
+## Hoy y Salud conectada en 2.4.4
+
+La pantalla Hoy reúne los registros de la fecha local en cinco tarjetas. Una sesión compartida por Google Fit se muestra en Entrenamientos al recibirla de Health Connect, incluso con Hoy ya abierto. Las sesiones que cruzan medianoche se recortan al intervalo del día. Los permisos y el origen se consultan desde el propio resumen.
+
+VERA inicia una lectura nueva al regresar del diálogo de permisos de Android. Cada lectura pertenece a la cuenta y sesión que la solicitó. Las respuestas tardías de otra sesión se descartan.
+
+## Funciones de VERA
 
 - En Cardio se pueden grabar ciclismo urbano, carrera y paseo con GPS y registrar natación con ritmo por 100 m. Health Connect aporta sesiones y métricas que haya compartido la aplicación de origen.
 - El servidor conserva el protocolo de la APK 2.4.2. La nueva versión negocia el cambio automático de proveedor, con permiso por cuenta.

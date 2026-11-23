@@ -13,3 +13,21 @@ Los registros manuales/GPS confirmados se exportan como sesiones propias con el 
 Validación: compilación completa API35, pruebas JVM de atribución sin solapamientos, pruebas JS de normalización/deduplicación y exportación, pruebas de lectura automática y recuperación de sesión. No se dispone de dispositivo ADB verificado, por lo que permisos del fabricante, sincronización real Fit y restricciones de batería requieren prueba física.
 
 Fuentes oficiales consultadas: https://developer.android.com/health-and-fitness/health-connect/experiences/workouts y https://developer.android.com/health-and-fitness/health-connect/data-types .
+
+## Corrección de reentrada 2.4.4
+
+El retorno del diálogo de permisos ya no reutiliza sin comprobar un ticket que pudo quedar cancelado al volver a la app. Main llama healthPermissionResult244(ticket); la interfaz debe iniciar una lectura nueva. Clientes antiguos conservan la lectura del ticket original como compatibilidad. Los callbacks de paginación y cardio comprueban que el ticket siga activo; onStop lo invalida. El estado de permisos mantiene complete con los12permisos básicos, añadiendo readableTypes, writableTypes, readComplete y writeComplete para diagnóstico parcial sin inventar permisos concedidos.
+
+Las lecturas no filtran por Google Fit: cualquier aplicación autorizada puede ser origen. Sólo se excluyen registros con prefijo propio Y paquete VERA; un registro externo nunca se excluye sólo por su nombre de cliente. Sueño consulta un día extra al inicio para conservar sesiones nocturnas que cruzan el borde de los28días. Los pasos conservan la agregación oficial por días locales (no suma manual ni conversión de pasos a distancia). Las páginas tienen tope de10000registros por categoría; al superarlo se informa error, sin sustituir los datos anteriores por un subconjunto. La lectura de métricas cardio conserva ausencia/advertencia si falta cobertura, no inventa distancia.
+
+Puentes de remediación: openHealthSettings244 abre permisos de VERA en Health Connect; openGoogleFit244 abre Fit si está instalado. No conceden permisos ni activan unilateralmente el intercambio de Fit.
+
+Pruebas adicionales: HealthLifecycleAudit244 ejecuta el control real de tickets/propiedad en JVM; compilación completa contra API35. Estas pruebas no equivalen a ejecutar HealthConnectManager en un teléfono real ni acreditan que Fit haya publicado datos: esa parte depende de la configuración y del contenido del dispositivo.
+
+## Atribución con agregado de Health Connect (Redmi)
+
+Cuando los registros de distancia no cubren exactamente una sesión, se consulta DISTANCE_TOTAL mediante HealthConnectManager.aggregate con el DataOrigin de esa sesión y sus tiempos exactos. Las últimas48h permiten esta consulta incluso sin resultados del barrido inicial. Se excluyen intervalos diarios conocidos y sesiones solapadas del mismo origen; no se rellenan huecos ni se multiplica una velocidad por el tiempo para inventar distancia. Se realizan como máximo12agregaciones secuenciales por lectura, incluyendo distancia, duración y energía, con prioridad a sesiones recientes. El agregado oficial se identifica como health_connect_aggregate y su ausencia como aggregate_empty.
+
+EXERCISE_DURATION_TOTAL aporta healthDurationSeconds en milisegundos convertidos a segundos; sólo se admite dentro del intervalo de pared. La documentación describe duración agregada de sesión, no garantiza tiempo en movimiento, por lo que no se denomina duración activa. Los timestamps originales se conservan.
+
+Diagnóstico focalizado: comparar distanceOriginRecords, distanceIntersectingRecords, distanceBroadRecords y distanceMethod con la sección Distancia de Health Connect, filtrando por Google Fit y la fecha de la sesión. Que Fit muestre una distancia no prueba que haya publicado DistanceRecord. Si aggregate_empty persiste, no se inventa una equivalencia: una eventual lectura SpeedRecord requeriría READ_SPEED y sólo permitiría una estimación con cobertura explícita, nunca una distancia exacta garantizada. No se ha habilitado esa alternativa especulativa.

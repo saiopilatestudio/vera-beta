@@ -12,7 +12,6 @@ function rememberSession24(owner,token,remember=true){
 }
 async function resumeSession24(){
  if(sessionResumeJob24)return sessionResumeJob24;
- window.cancelHealthRead21?.();
  let owner=sessionStorage.veraUser,token=sessionStorage.veraToken;
  if(!token&&window.VeraNative?.restoreSession24){try{const remembered=JSON.parse(window.VeraNative.restoreSession24()||'null');if(remembered&&remembered.owner.startsWith(ACCOUNT_HOST+'/')&&/^[a-f0-9]{32}$/.test(remembered.owner.slice(ACCOUNT_HOST.length+1))&&/^[a-f0-9]{64}$/i.test(remembered.token)){owner=remembered.owner;token=remembered.token;sessionStorage.veraUser=owner;sessionStorage.veraToken=token;localStorage.veraRememberedUser=owner;s=loadVeraState(storageKey());}}catch{window.VeraNative?.forgetLogin?.();}}
  if(!owner||!token)return false;const state=s,wasValid=validSession;

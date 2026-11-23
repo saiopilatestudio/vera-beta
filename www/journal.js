@@ -10,7 +10,8 @@ const VeraJournal=(()=>{
  function setField(key,value){if(key==='weeklyPlan21')validateWeeklyPlanState21(value);const target=key.startsWith('profile.')?s.profile:s,name=key.startsWith('profile.')?key.slice(8):key;if(value===null)delete target[name];else target[name]=clone(value);}
  function pending(){
   const records=new Map(s.logs.filter(syncable).map(r=>[r.id,r])),base=s.diaryRevisions||{},localFields=fields(),fieldBase=s.profileRevisions21||{};
-  return [...new Set([...records.keys(),...Object.keys(base)])].filter(id=>signature(records.get(id))!==(base[id]?.raw??'null')).length+
+  const duplicateCount=s.logs.filter(syncable).length-records.size;
+  return duplicateCount+[...new Set([...records.keys(),...Object.keys(base)])].filter(id=>signature(records.get(id))!==(base[id]?.raw??'null')).length+
    [...new Set([...Object.keys(localFields),...Object.keys(fieldBase)])].filter(key=>signature(localFields[key])!==(fieldBase[key]?.raw??'null')).length;
  }
  function body(){const count=pending(),conflicts=s.syncConflicts21||[];
@@ -32,7 +33,15 @@ const VeraJournal=(()=>{
   const state=s,account=sessionStorage.veraUser,token=sessionStorage.veraToken,nick=s.profile.nick,active=()=>validSession&&sameVeraSession(account,token,state);
   lastError='';
   try{
-   markLogs();persist();
+   markLogs();
+   // Reimported identical IDs must not remain duplicated in totals after sync.
+   // Different contents sharing an ID are not safe to choose silently.
+   const unique=new Map(),deduplicated=[];
+   for(const record of s.logs){if(!syncable(record)){deduplicated.push(record);continue;}
+    if(unique.has(record.id)){if(signature(unique.get(record.id))!==signature(record))throw Error('Hay dos registros distintos con el mismo identificador. Revisa el respaldo antes de sincronizar; ambos se conservan.');continue;}
+    unique.set(record.id,record);deduplicated.push(record);
+   }
+   s.logs=deduplicated;persist();
    const base=s.diaryRevisions??={},local=new Map(s.logs.filter(syncable).map(r=>[r.id,r]));
    const changes=[];
    for(const id of new Set([...local.keys(),...Object.keys(base)])){
