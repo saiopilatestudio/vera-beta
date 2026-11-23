@@ -1,4 +1,4 @@
-# VERA 2.4.4 beta
+# VERA 2.4.5 beta
 
 Android build 244, paquete `app.vera.coach.visionbeta`. La IA se ejecuta en Groq, Gemini y Cloudflare Workers AI. Las credenciales de los proveedores permanecen en el servidor. La APK se construye desde `beta-android/`; los proyectos Capacitor de `android/` e `ios/` son auxiliares.
 

@@ -8,5 +8,5 @@ const validate=value=>validateWorkout24(request.decode(value),{week:dates[0],con
 assert.equal(validate(raw).days.length,7);assert.equal(validate(raw).days.filter(x=>x.type==='training').length,3);assert.equal(validate(raw).days[1].type,'rest');
 for(const bad of [{...raw,sessions:[...raw.sessions,{...raw.sessions[0],day:1}]},{...raw,sessions:[{...raw.sessions[0],day:7}]},{...raw,sessions:[raw.sessions[0],raw.sessions[0]]},{...raw,sessions:[{...raw.sessions[0],exercises:[[999,2,8,12,3,90]]}]},{...raw,sessions:[{...raw.sessions[0],exercises:[[0,2,8,31,3,90]]}]},{...raw,status:'needs_review'}])assert.throws(()=>validate(bad),{code:'WORKOUT_FORMAT'});
 assert.equal(validate({...raw,status:'needs_review',sessions:[]}).days.filter(d=>d.type==='training').length,0);
-assert.ok(request.user.includes('El lunes tren inferior'));assert.equal(request.maxTokens,1600);assert.ok(!request.user.includes(candidates[0].id));
+assert.ok(request.user.includes('El lunes tren inferior'));assert.equal(request.maxTokens,1600);assert.ok(request.user.includes(candidates[0].id));
 console.log('PASS compact Worker table decoder: safe 7-day expansion, original request, IDs/ranges/days/duplicates/needs_review validated');

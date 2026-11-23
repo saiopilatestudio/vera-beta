@@ -1,0 +1,38 @@
+import './test-env.mjs';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';import {join} from 'node:path';
+const folder=await mkdtemp(join(tmpdir(),'vera-edits245-'));process.env.VERA_DB=join(folder,'test.sqlite');
+const {db}=await import('../storage.mjs');
+const {weeklyWorkout24,workoutIntent245}=await import('../workouts24.mjs');
+const dates=Array.from({length:7},(_,i)=>'2026-11-'+(16+i));const week=dates[0];
+await db.batch(['CREATE TABLE account_state(uid TEXT,field TEXT,rev INTEGER,data TEXT,PRIMARY KEY(uid,field))','CREATE TABLE diary_sync(uid TEXT,id TEXT,rev INTEGER,data TEXT,PRIMARY KEY(uid,id))'],'write');
+for(const uid of ['a','b'])for(const[k,v]of Object.entries({introduced:true,goal:'Fuerza',level:'Principiante',days:3,time:45,eq:['Mancuernas']}))await db.execute({sql:'INSERT INTO account_state VALUES(?,?,1,?)',args:[uid,'profile.'+k,JSON.stringify(v)]});
+let calls=0;let mode='base';let seen;
+const ask=async(system,content)=>{calls++;seen=JSON.parse(content);const indices=mode==='four'?[0,1,3,5]:mode==='wrong'?[0]:mode==='rearrange'?[0,1,4]:[0,2,4];return {status:mode==='review'?'needs_review':'ready',summary:'Tabla adaptada.',adaptation:'Estímulos y recuperación coordinados.',days:dates.map((date,i)=>({date,type:mode!=='review'&&indices.includes(i)?'training':'rest',title:'Sesión '+mode+' '+i,reason:'Descanso equilibrado.',exercises:mode!=='review'&&indices.includes(i)?[{id:(mode==='custom'?seen.catalog.find(x=>x.userDefined):seen.catalog[mode==='rearrange'?1:0]).id,sets:2,reps:[8,12],rir:3,restSeconds:90,cue:'Control.',progression:'Primero técnica.'}]:[]}))};};
+const opts={db,ask};
+try{
+ assert.equal(workoutIntent245({request:'Cambia sólo el lunes 2026-11-16'},'Cambia sólo el lunes 2026-11-16',dates,3).editDate,week);
+ assert.equal(workoutIntent245({editDate:'',request:'Cambia el lunes'},'Cambia el lunes',dates,3).editDate,null);
+ assert.equal(workoutIntent245({},'Quiero cuatro días de entrenamiento',dates,3).trainingDays,4);
+ await assert.rejects(()=>weeklyWorkout24('b',{week,request:'Cambia lunes',editDate:week},opts),e=>e.code==='WORKOUT_EDIT_BASE');assert.equal(calls,0);
+ mode='four';const four=await weeklyWorkout24('b',{week,request:'Quiero cuatro días de entrenamiento'},opts);assert.equal(four.plan.days.filter(d=>d.type==='training').length,4,'Explicit request overrides three-day profile');assert.equal(seen.constraints.exactTrainingDays,4);
+ mode='base';const first=await weeklyWorkout24('a',{week},opts);
+ const ex=first.plan.days[4].exercises[0];await db.execute({sql:'INSERT INTO diary_sync VALUES(?,?,1,?)',args:['a','completed',JSON.stringify({kind:'Entrenamiento',date:dates[4],catalogId:ex.id,exercise:ex.name,reps:[10],kg:10})]});
+ mode='rearrange';const edited=await weeklyWorkout24('a',{week,request:'Cambia sólo el lunes a otro estímulo',editDate:week},opts);
+ assert.equal(edited.plan.days.filter(d=>d.type==='training').length,3);
+ assert.notDeepEqual(edited.plan.days[0],first.plan.days[0],'Focus day changes');
+ assert.equal(edited.plan.days[1].type,'training','Other pending sessions may move');assert.equal(edited.plan.days[2].type,'rest');
+ assert.deepEqual(edited.plan.days[4],first.plan.days[4],'Confirmed completed session stays literal');
+ assert.deepEqual(seen.constraints.completedDates,[dates[4]]);assert.ok(seen.currentPlan);
+ const count=calls;assert.equal((await weeklyWorkout24('a',{week},opts)).cached,true);assert.equal(calls,count,'Automatic refresh must not replay edit request');
+ mode='wrong';await assert.rejects(()=>weeklyWorkout24('a',{week,request:'Nueva tabla tres días',editDate:''},opts),e=>e.code==='WORKOUT_FORMAT');
+ assert.deepEqual((await weeklyWorkout24('a',{week,readOnly:true},opts)).plan,edited.plan,'Invalid count retains previous table');
+ mode='review';await assert.rejects(()=>weeklyWorkout24('a',{week,request:'Dolor al mover el lunes',editDate:week},opts),e=>e.code==='WORKOUT_REVIEW_REQUIRED');
+ assert.deepEqual((await weeklyWorkout24('a',{week,readOnly:true},opts)).plan,edited.plan);
+ mode='custom';const custom=await weeklyWorkout24('b',{week,editDate:'',request:'Tres días',customExercises:[{name:'Remo personal con mancuerna',equipment:'dumbbell',measurement:'repetitions'}]},opts);assert.equal(custom.plan.customExercises.length,1);assert.equal(custom.plan.days[0].exercises[0].userDefined,true);assert.equal(custom.plan.days[0].exercises[0].name,'Remo personal con mancuerna');
+ const customCount=calls;await weeklyWorkout24('b',{week},opts);assert.equal(calls,customCount,'Custom remains cached without resending');
+ await assert.rejects(()=>weeklyWorkout24('b',{week,exerciseIds:['not-real']},opts));
+ assert.equal((await db.execute('SELECT * FROM diary_sync')).rows.length,1,'No generated activity');
+ console.log('PASS weekly edits245: legacy date inference, explicit whole week, exact count, coherent redistribution, completed session protection, account isolation, no edit replay, safe failures.');
+}finally{db.close();await rm(folder,{recursive:true,force:true,maxRetries:10,retryDelay:100});}

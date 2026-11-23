@@ -1,12 +1,12 @@
 {
   "name": "vera-mobile",
   "private": true,
-  "version": "2.4.4-beta.1",
+  "version": "2.4.5-beta.1",
   "type": "module",
   "scripts": {
     "native": "npx cap sync",
     "start": "node server.mjs",
-    "test": "npm run test:legacy && npm run test:audit && npm run test:v21 && npm run test:v22 && npm run test:v23 && npm run test:v24 && npm run test:v243 && npm run test:v244",
+    "test": "npm run test:legacy && npm run test:audit && npm run test:v21 && npm run test:v22 && npm run test:v23 && npm run test:v24 && npm run test:v243 && npm run test:v244 && npm run test:v245",
     "test:legacy": "node tests/acceptance103.mjs && node tests/partners.mjs && node tests/admin103.mjs && node tests/journal.mjs",
     "test:audit": "node tests/audit-backend.mjs && node tests/audit-backend-owner.mjs && node --test --test-isolation=none tests/audit-ai.mjs && node tests/audit-http.mjs && node tests/audit-ai-http.mjs && node tests/audit-frontend-unit.mjs && node tests/audit-backup.mjs",
     "test:v21": "node tests/planning21.mjs && node tests/planning21-frontend.mjs && node tests/audit-planning21-http.mjs && node tests/audit-persistence21.mjs && node tests/metrics21.mjs && node tests/audit-health21.mjs",
@@ -14,7 +14,8 @@
     "test:v23": "node tests/compatibility23.mjs && node tests/training23.mjs && node tests/nutrition23.mjs && node tests/sleep23.mjs && node tests/nutrition23-persistence.mjs && node tests/audit-google23.mjs && node tests/audit-google-http23.mjs && node tests/audit-health-export23.mjs && node tests/audit-google-gate23.mjs",
     "test:v24": "node tests/label24.mjs && node tests/api-cooldown24.mjs && node tests/product-catalog24.mjs && node tests/efficiency24.mjs && node tests/products-label-http24.mjs && node tests/nutrition24.mjs && node tests/photo-catalog24.mjs && node tests/nutrition24-persistence.mjs && node tests/workouts24.mjs && node tests/workouts24-frontend.mjs && node tests/workouts-http24.mjs && node tests/photo-privacy24.mjs && node tests/photo-api24.mjs && node tests/photo-quota24.mjs && node tests/photo-quota-http24.mjs && node tests/photo-fallback24.mjs && node tests/session24.mjs && node tests/health-auto24.mjs && node tests/milk-lookup24.mjs && node tests/food-photo24.mjs && node tests/gym-jam24.mjs && node tests/gym-jam24-frontend.mjs && node tests/gym-jam-http24.mjs",
     "test:v243": "node tests/automatic-routing24.mjs && node tests/automatic-routing-http24.mjs && node tests/automatic-workouts-http24.mjs && node tests/automatic-worker-workouts-http24.mjs && node tests/workouts-validation-failover24.mjs && node tests/workout-compact24.mjs && node tests/cloudflare-worker24.mjs && node tests/sport24-frontend.mjs && node tests/sport24-integration.mjs && node tests/workouts-drafts24.mjs",
-    "test:v244": "node tests/today244.mjs && node tests/health-panel244.mjs && node tests/fit-today-http244.mjs && node tests/journal-health-restore-http24.mjs && node tests/health-auto24.mjs"
+    "test:v244": "node tests/today244.mjs && node tests/health-panel244.mjs && node tests/fit-today-http244.mjs && node tests/journal-health-restore-http24.mjs && node tests/health-auto24.mjs",
+    "test:v245": "node tests/workout-catalog245.mjs && node tests/exercise-search245.mjs && node tests/exercise-search-http245.mjs && node tests/workout-required245.mjs && node tests/workouts-edits245.mjs && node tests/workouts-edit-frontend24.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.0.0",

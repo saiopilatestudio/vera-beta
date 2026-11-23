@@ -1,0 +1,43 @@
+/* VERA: common surfaces and controls for the daily diary and training tools. */
+:root{--ink245:#103d37;--line245:#cdded7;--sky245:#d5eef7;--lime245:#dff89f}
+body{color:var(--ink245);background:radial-gradient(ellipse at 95% 0,#ddf2fa 0,transparent 33rem),linear-gradient(140deg,#f4fae9,#fbfdfb 50%,#edf8fb);background-attachment:fixed}
+body>header{background:transparent;border-bottom:1px solid var(--line245);align-items:center}
+body>header .brandText14 strong{letter-spacing:-.065em}
+#topTools button{border-radius:22px;background:#ffffffde;min-height:44px}
+#view h1,#view h2,#view h3{color:var(--ink245);text-wrap:balance;line-height:1.13}
+#view h1,#view>h2{letter-spacing:-.055em}
+#view :is(section,.card,.metric21,.weekly21,.workout-plan24){border-color:var(--line245);border-radius:22px;box-shadow:0 7px 24px #194b3c09}
+#view :is(button,.button){min-height:44px;border-radius:15px;max-width:100%;white-space:normal}
+#view button.primary,#view button[type=submit]{background:linear-gradient(105deg,#daf79c,#c8f0cf);color:#153d28;border:1px solid #aed397;box-shadow:0 3px 8px #335d2910}
+#view :is(input:not([type=checkbox]):not([type=radio]),textarea,select){box-sizing:border-box;max-width:100%;border-radius:12px;background:#fbfefd!important;font-size:1rem}
+#view summary{cursor:pointer;line-height:1.4}
+#view details[open]>summary{color:#165c48}
+#nav{background:#fcfffded;border-color:#c8dcd2;box-shadow:0 -5px 24px #244f3b12}
+#nav button:is(.primary,.active,.on) .icon22{background:linear-gradient(125deg,#c9f580,#bbebd9)}
+.today244-heading{align-items:center;margin:12px 0 10px}
+.today244-heading h2{font-size:clamp(1.55rem,5vw,2.45rem);letter-spacing:-.055em}
+.today245-shortcuts{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.today245-shortcuts a{display:inline-flex;align-items:center;min-height:40px;padding:0 11px;background:white;color:#215346;border:1px solid var(--line245);border-radius:25px;text-decoration:none;font-size:.8rem;font-weight:650}
+.today244-card{--tint:#e7f6d0;--accent:#44753b;scroll-margin-top:14px;background:linear-gradient(145deg,var(--tint),#fff 62%)!important;border-radius:22px!important;box-shadow:0 7px 23px #16473109;position:relative}
+.today244-steps{--tint:#d8f2ee;--accent:#207468}.today244-water{--tint:#d7edf9;--accent:#27728e}.today244-supp{--tint:#e0efe2;--accent:#426f51}
+.today244-training{--tint:#def5b5;--accent:#376649;background:radial-gradient(ellipse at 98% 0,#c7ebec,transparent 55%),linear-gradient(145deg,#e7f9bd,#f8fdf8 72%)!important}
+.today244-card header{position:static;align-items:center}
+.today244-icon{width:40px;height:40px;background:#ffffffcf!important;border:1px solid #cadfd1;color:var(--accent)!important}
+.today244-card>button{background:#fff;border:1px solid #c4d9cf;color:#225343}
+.today244-card .today244-big{font-variant-numeric:tabular-nums;font-size:2.05rem!important}
+.today244-macros>span{border:none;border-left:2px solid #bad7c3;background:#ffffff83;border-radius:0 10px 10px 0}
+.today244-activities li{border-bottom:1px solid #cadcd2}
+.today244-activities small{font-variant-numeric:tabular-nums}
+#view :focus-visible{outline:3px solid #25745c;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition-duration:0s!important}}
+
+
+.today245-feature{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(114deg,#174d42,#2e6854);border-radius:17px;padding:16px 18px;color:#fff}
+.today245-feature:before,.today245-feature:after{content:"";position:absolute;z-index:-1;width:112px;height:112px;border:13px solid #c9f88c20;border-radius:50%;right:-49px;top:-22px}
+.today245-feature:after{width:76px;height:76px;right:-30px;top:-5px;border-width:2px}
+.today245-feature>small{font-size:.74rem;color:#d8efcb}.today245-feature>strong{display:block;font-size:1.5rem;line-height:1.25;letter-spacing:-.035em}
+.today244-card .today245-feature p{color:#fff;margin:5px 0 0;font-variant-numeric:tabular-nums}
+
+#view .back245{font-size:.87rem;background:transparent;border:0;box-shadow:none;padding:2px 5px;color:#266752}
+
+.today244-sleep{--tint:#e6eafa;--accent:#526689}

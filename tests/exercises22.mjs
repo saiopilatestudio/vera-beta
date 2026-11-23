@@ -19,5 +19,9 @@ for(const q of ['Press banca','Sentadilla','Bench Press','Peso muerto','Remo','J
 }
 run("VeraCatalog.panel('exercise')");elements.lookup6.value='Press banca';await run('VeraCatalog.search()');run('VeraCatalog.pick(0);VeraCatalog.record()');
 assert.match(run('s.logs[0].exercise'),/Press de banca/);assert.ok(['Pecho','Tríceps'].includes(run('s.logs[0].group')));assert.ok(run('s.logs[0].catalogId'));
+for(const [query,expected]of [['apertura máquina','Butterfly'],['tríceps polea barra recta','Triceps_Pushdown'],['press declinado barra','Decline_Barbell_Bench_Press']]){
+ run("VeraCatalog.panel('exercise')");elements.lookup6.value=query;await run('VeraCatalog.search()');
+ run('VeraCatalog.pick(0);VeraCatalog.record()');assert.equal(run('s.logs.at(-1).catalogId'),expected,query);
+}
 run("VeraCatalog.panel('supplement')");elements.lookup6.value='Zumub whey';await run('VeraCatalog.search()');assert.match(elements.results6.innerHTML,/Zumub/);
 console.log('PASS · 876 Spanish names, preserved IDs/aliases, Spanish and English search, Spanish logged exercise/muscles, Zumub official match without NIH lookup.');

@@ -9,7 +9,8 @@ import {googleStatus23,googleStart23,googleCallback23} from './google-auth23.mjs
 import { searchProducts24, confirmProduct24, labelCatalogMatches24 } from './product-catalog24.mjs';
 import { cachedLabel24, cachedPhoto24 } from './efficiency24.mjs';
 import { labelPrompt24, validateLabel24 } from './nutrition-label24.mjs';
-import { weeklyWorkout24 } from './workouts24.mjs';
+import { weeklyWorkout24,workoutContext24 } from './workouts24.mjs';
+import { searchExercises245,validateExerciseSearch245 } from './exercise-search245.mjs';
 import { gymJamAction24 } from './gym-jam24.mjs';
 import {importDiary21,importInput21,weeklyPlan21,weekDates21} from './planning21.mjs';
 import { rows, db } from './storage.mjs';
@@ -203,6 +204,7 @@ export const server = http.createServer(async (req, res) => {
         "/diary-import",
         "/weekly-plan",
         "/workouts/weekly",
+        "/exercises/search",
         ...['create','join','state','leave','propose','start','end','music'].map(action=>'/gym-jam/'+action),
         "/products/search",
         "/products/confirm",
@@ -330,6 +332,11 @@ export const server = http.createServer(async (req, res) => {
     if(req.url.startsWith('/gym-jam/'))return res.end(JSON.stringify(await gymJamAction24(req.url,uid,d)));
     // Catalog reads and repeat results do not reserve an AI request.
     if(req.url==='/products/search')return res.end(JSON.stringify(await searchProducts24(uid,d)));
+    if(req.url==='/exercises/search'){
+      validateExerciseSearch245(d);weekDates21(d.week);
+      const context=await workoutContext24(db,uid,d.week);
+      return res.end(JSON.stringify(await searchExercises245(d,{context,uid})));
+    }
     if(req.url==='/products/confirm')return res.end(JSON.stringify(await confirmProduct24(uid,d)));
     const reserveAI24=async(feature,quotaFeature=feature)=>{
       if(['photo','label','weeklyWorkouts'].includes(feature))requireAutomaticRoute24(feature,d);else requireRoute(feature);

@@ -1,4 +1,4 @@
-VERA 2.4.4 beta · Android build 244
+VERA 2.4.5 beta · Android build 245
 
 Hoy reúne la actividad y los consumos del día local. En la tarjeta Entrenamientos aparecen las salidas que Google Fit haya compartido con Salud conectada.
 
