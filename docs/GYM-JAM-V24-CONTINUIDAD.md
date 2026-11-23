@@ -1,6 +1,6 @@
 # GymJam V2.4 — continuidad del servidor
 
-Estado: código y pruebas locales listos. SIN compilar ni desplegar.
+La entrega 2.4.3 incluye esta función en el servidor y en la APK.
 
 ## Integración
 

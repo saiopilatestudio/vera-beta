@@ -176,9 +176,9 @@ export function createAutomaticRouter24({env=process.env,fetchImpl=fetch,now=()=
       if(!/^[a-zA-Z0-9@._/-]{1,160}$/.test(route.model)||(route.provider==='gemini'&&route.model.includes('/')))continue;
       const images=parts.filter(p=>p.inlineData);
       if(route.provider==='cloudflare'&&images.length>1)continue;
-      // The final table candidate can use the remaining shared budget (Worker itself caps at 60s).
-      const finalTable=feature==='weeklyWorkouts'&&route===candidates.at(-1);
-      const callOptions={env:{...env,VERA_AI_TIMEOUT_MS:finalTable?Math.min(65000,deadline-now()):Math.min(25000,Number(env.VERA_AI_TIMEOUT_MS)||25000)},fetchImpl,deadline,attempt:1};
+      // Give the last Worker the remaining time for visual recognition or planning.
+      const finalWorker=route.provider==='cloudflare'||(feature==='weeklyWorkouts'&&route===candidates.at(-1));
+      const callOptions={env:{...env,VERA_AI_TIMEOUT_MS:finalWorker?Math.min(65000,deadline-now()):Math.min(25000,Number(env.VERA_AI_TIMEOUT_MS)||25000)},fetchImpl,deadline,attempt:1};
       try{
         let value;
         if(route.provider==='gemini'){
@@ -193,7 +193,7 @@ export function createAutomaticRouter24({env=process.env,fetchImpl=fetch,now=()=
           if(data?.choices?.[0]?.finish_reason!=='stop')throw new ServiceError('La respuesta de IA está incompleta.',502,'AI_INCOMPLETE');
           value=data.choices[0].message?.content;
         }else{
-          const data=await requestJson(workerUrl24(env)+(feature==='weeklyWorkouts'?'/v1/text':'/v1/food-photo'),{Authorization:'Bearer '+env.VERA_CF_WORKER_SECRET},options.cloudflareRequest?{system:options.cloudflareRequest.system,user:options.cloudflareRequest.user,json:true,maxTokens:options.cloudflareRequest.maxTokens}:{system,user,json,maxTokens:Math.min(options.maxTokens||5000,5000)},callOptions);
+          const data=await requestJson(workerUrl24(env)+(feature==='weeklyWorkouts'?'/v1/text':'/v1/food-photo'),{Authorization:'Bearer '+env.VERA_CF_WORKER_SECRET},options.cloudflareRequest?{system:options.cloudflareRequest.system,user:options.cloudflareRequest.user??user,json:true,maxTokens:options.cloudflareRequest.maxTokens}:{system,user,json,maxTokens:Math.min(options.maxTokens||5000,5000)},callOptions);
           value=data.text;
         }
         if(typeof value!=='string'||!value.trim()||value.length>100000)throw new ServiceError('Respuesta de IA vacía o incompleta.',502,'AI_INCOMPLETE');

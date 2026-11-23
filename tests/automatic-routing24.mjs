@@ -36,3 +36,21 @@ assert.equal((await review('s','u',true,{routingTask:'weekly',cloudFallbackConse
 let safetyCalls=0;const safety=createAutomaticRouter24({env,fetchImpl:async()=>{safetyCalls++;return Response.json({choices:[{finish_reason:'content_filter'}]});}});
 await assert.rejects(safety('s','u',true,{routingTask:'weekly',cloudFallbackConsent:true,validateCandidate:()=>{throw Error('must not run');}}),{code:'AI_INCOMPLETE'});assert.equal(safetyCalls,1);
 console.log('Weekly candidate validation: authorized failover, legacy isolation, needs_review accepted and safety stop passed');
+
+// A compact final photo request still sends the original image and user clarification.
+const visualInput = [{type:'text',text:'Un vaso pequeño'}, ...image];
+const workerOnly = createAutomaticRouter24({
+  env: {...env, GEMINI_API_KEY:'', GROQ_API_KEY:''},
+  fetchImpl: async (url, options) => {
+    assert.ok(url.endsWith('/v1/food-photo'));
+    const body = JSON.parse(options.body);
+    assert.deepEqual(body.user, visualInput);
+    assert.equal(body.system, 'Formato breve de plato');
+    assert.equal(body.maxTokens, 2000);
+    return good(url);
+  },
+});
+assert.deepEqual(await workerOnly('General', visualInput, true, {
+  feature:'photo', cloudFallbackConsent:true,
+  cloudflareRequest:{system:'Formato breve de plato',maxTokens:2000}
+}), {ok:true});

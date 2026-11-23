@@ -21,13 +21,15 @@ Procedimiento para volver a publicar este servicio en una cuenta de Cloudflare.
 3. Desde esta carpeta: `npx wrangler deploy --config wrangler.jsonc`. Se publicará `vera-ai-backup` con binding `AI`; hasta guardar el secreto todas las inferencias se rechazan.
 4. Crear un secreto aleatorio de al menos32caracteres en un gestor seguro. Guardarlo con `npx wrangler secret put VERA_SHARED_SECRET --config wrangler.jsonc`, introduciéndolo únicamente en el prompt privado. No añadirlo al repositorio, capturas, manual público ni APK.
 5. En Render guardar `VERA_CF_WORKER_URL=https://vera-ai-backup.<subdominio>.workers.dev`, `VERA_CF_WORKER_SECRET` con el mismo secreto. El Worker ignora modelos enviados por el llamante: su modelo es fijo en código.
-6. Probar primero401 sin secreto y después una llamada sintética autenticada de texto/imagen desde el servidor. Verificar que el binding devuelve `choices` con `finish_reason:stop`. No afirmar disponibilidad real hasta superar esta prueba de cuenta.
+6. Probar primero401 sin secreto y después una llamada sintética autenticada de texto/imagen desde el servidor. La visión usa `choices`. El modelo de texto también puede devolver un objeto `response`. Comprobar que las dos rutas producen datos válidos. No afirmar disponibilidad real hasta superar esta prueba de cuenta.
 7. Activar la ruta de respaldo en Render, manteniendo sus cuotas/cache y comprobación de resultados. No registrar cabeceras, prompts, fotos, respuestas ni datos de salud. La configuración desactiva observabilidad del Worker y el código no escribe logs ni KV/D1.
 
 Pruebas locales sin Cloudflare: desde la raíz `node tests/cloudflare-worker24.mjs`. Cubren autenticación, HTTPS, aislamiento servidor, forma/tamaño, SSRF por imagen, proveedor fijo, texto/imagen, JSON y terminación, rechazo y sanitización de errores. No sustituyen la prueba de despliegue real.
 
-## Modelo y límite gratuito verificados el23/11/2026
+## Modelos y cuota gratuita
 
-Se selecciona `@cf/qwen/qwen3.8-27b`, con visión y texto en la [documentación oficial Cloudflare](https://developers.cloudflare.com/workers-ai/models/qwen3.8-27b/). El [repositorio oficial de Qwen publica Apache2.0](https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/LICENSE); no requiere aceptar la licencia Meta. No se distribuyen pesos ni se ejecuta IA local.
+Las fotos y etiquetas usan `@cf/qwen/qwen3.8-27b`, descrito en la [documentación oficial Cloudflare](https://developers.cloudflare.com/workers-ai/models/qwen3.8-27b/). El [repositorio oficial de Qwen publica Apache2.0](https://huggingface.co/Qwen/Qwen3.8-27B/raw/main/LICENSE); no requiere aceptar la licencia Meta. No se distribuyen pesos ni se ejecuta IA local.
 
-Cloudflare incluye10000neuronas diarias gratuitas; Qwen3.8 no aparece en la lista de modelos que requieren pago en la [tarifa oficial](https://developers.cloudflare.com/workers-ai/platform/pricing/). Esto no equivale a uso ilimitado ni garantiza que una cuenta concreta ya tenga acceso. El consumo depende de entrada/salida y las cuotas se restablecen a00:00UTC. En Workers Paid el exceso puede facturarse: este código no cambia el plan de la cuenta ni impone un contador global de facturación; conservar Workers Free para un corte gratuito efectivo.
+Las tablas usan `@cf/mistralai/mistral-small-3.1-24b-instruct`. Render envía el catálogo disponible y valida los ejercicios elegidos antes de guardar la semana.
+
+Cloudflare incluye 10 000 neuronas diarias gratuitas; Qwen3.8 no aparece en la lista de modelos que requieren pago en la [tarifa oficial](https://developers.cloudflare.com/workers-ai/platform/pricing/). Esto no equivale a uso ilimitado ni garantiza que una cuenta concreta ya tenga acceso. El consumo depende de entrada/salida y las cuotas se restablecen a00:00UTC. En Workers Paid el exceso puede facturarse: este código no cambia el plan de la cuenta ni impone un contador global de facturación; conservar Workers Free para un corte gratuito efectivo.

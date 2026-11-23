@@ -45,7 +45,7 @@ La revisión de cada tabla se ejecuta antes de aceptar la respuesta de un provee
 
 El contexto aporta un presupuesto explícito de días y un calendario orientativo; la validación sigue imponiendo el límite. Caché semanal firma27. Prueba `workouts-validation-failover24.mjs`: Groq200 propone4días para perfil3; Gemini produce3 válidos; se persiste sólo la segunda tabla y se consume una reserva. Incluye rechazo de ambos, reembolso, concurrencia y protección ante cambios de perfil.
 
-El último candidato de tablas puede usar hasta65s del tiempo restante, dentro del plazo total75s, para dar margen al Worker cuyo límite es60s. No se amplía el presupuesto total ni el número de intentos.
+El último Worker de fotos, etiquetas o tablas puede usar hasta 65 s del tiempo restante, dentro del plazo total75s, para dar margen al Worker cuyo límite es60s. No se amplía el presupuesto total ni el número de intentos.
 
 ## Respaldo real verificado y despliegue final
 
@@ -57,6 +57,8 @@ El último candidato de tablas puede usar hasta65s del tiempo restante, dentro d
 - Mistral usa `max_tokens` y `guided_json`; su respuesta puede tener `response` como objeto JSON o texto. Se normaliza exclusivamente esa respuesta conocida o choices explícitos, rechazando tool calls/refusal/truncamiento declarado. No hay garantía de indicador de truncamiento en el formato legado; JSON completo y validación de dominio siguen siendo obligatorios.
 - Firma de caché semanal28.
 
-Prueba real autorizada en `../v243-build/check-compact.mjs`: Groq/Gemini429 SIMULADOS para forzar el respaldo; Worker Cloudflare REAL. Evidencia sin secretos `../v243-validation/WORKER-COMPACTO.json`: HTTP200,7días,3sesiones, lunes Tren inferior según petición, repetición cachétrue,5452ms. Una prueba anterior con Qwen compacto falló por timeout60s; el cambio de modelo es lo que permitió la respuesta rápida. No se enviaron datos de una cuenta real ni se escribió en producciónDB. No se hicieron más inferencias después del éxito.
+Prueba real autorizada en `../v243-build/check-compact.mjs`: Groq/Gemini429 SIMULADOS para forzar el respaldo; Worker Cloudflare REAL. Evidencia sin secretos `../v243-validation/WORKER-COMPACTO.json`: HTTP200,7días,3sesiones, lunes Tren inferior según petición, repetición cachétrue,5452ms. Una prueba anterior con Qwen compacto falló por timeout60s; el cambio de modelo es lo que permitió la respuesta rápida. No se enviaron datos de una cuenta real ni se escribió en producciónDB.
 
 Fuentes primarias: https://developers.cloudflare.com/workers-ai/models/mistral-small-3.1-24b-instruct/ y https://developers.cloudflare.com/workers-ai/models/llama-3.1-8b-instruct-fp8/.
+
+En la prueba adicional de Plato, el servidor envió una imagen pública de café con ambos servicios principales simulados como saturados. Cloudflare identificó el café, pidió confirmar leche y azúcar y la repetición llegó de caché. El ZIP de verificación incluye WORKER-FOTO.json.
