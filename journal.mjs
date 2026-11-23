@@ -2,6 +2,19 @@ import { db, rows } from './storage.mjs';
 
 await rows('CREATE TABLE IF NOT EXISTS diary_sync(uid TEXT, id TEXT, rev INTEGER NOT NULL, data TEXT, PRIMARY KEY(uid,id))');
 
+await rows('CREATE TABLE IF NOT EXISTS sleep_exclusions246(uid TEXT,id TEXT,cuts TEXT NOT NULL,PRIMARY KEY(uid,id))');
+
+function projectSleep(record,cuts){
+ if(!record||!cuts.length)return record;
+ if(record.kind!=='Sueño'||record.source!=='health')return null;
+ if(!record.sleepSpans?.length)return cuts.some(c=>c.value===record.value)?null:record;
+ let spans=record.sleepSpans;
+ for(const cut of cuts)for(const [a,b] of cut.spans||[]){
+  spans=spans.flatMap(([x,y])=>b<=x||a>=y?[[x,y]]:[[x,Math.min(y,a)],[Math.max(x,b),y]].filter(([i,j])=>i<j));
+ }
+ return spans.length?{...record,sleepSpans:spans,value:spans.reduce((n,[a,b])=>n+b-a,0)/3600000}:null;
+}
+
 const kinds = new Set(['Entrenamiento', 'Comida', 'Bebida', 'Agua', 'Suplemento',
   'Peso en ayunas', 'Otro pesaje', 'Cintura', 'Sueño', 'Pasos', 'Cardio', 'Posing', 'Sensaciones']);
 const invalid = message => { throw Object.assign(new Error(message), { status: 422 }); };
@@ -87,6 +100,25 @@ export async function journal(uid, input = {}) {
     seen.add(id);
     return { id, rev, value: validateRecord(id, record) };
   });
+  if(input.suppressSleep){
+    const {id,rev}=input.suppressSleep;
+    if(updates.length||typeof id!=='string'||id.length>100||!Number.isSafeInteger(rev)||rev<1)invalid('Descanso no válido.');
+    const [row]=await rows('SELECT rev,data FROM diary_sync WHERE uid=? AND id=?',uid,id);
+    const record=JSON.parse(row?.data||'null');
+    if(row?.rev!==rev||record?.kind!=='Sueño')throw Object.assign(new Error('El descanso cambió. Actualiza y vuelve a elegirlo.'),{status:409});
+    const cut=JSON.stringify({value:record.value,spans:record.sleepSpans||[]});
+    const result=await db.batch([
+      {sql:"INSERT INTO sleep_exclusions246 SELECT uid,id,json_array(json(?)) FROM diary_sync WHERE uid=? AND id=? AND rev=? ON CONFLICT(uid,id) DO UPDATE SET cuts=json_insert(cuts,'$[#]',json(?))",args:[cut,uid,id,rev,cut]},
+      {sql:'UPDATE diary_sync SET data=NULL,rev=rev+1 WHERE uid=? AND id=? AND rev=? RETURNING rev',args:[uid,id,rev]},
+      {sql:'SELECT cuts FROM sleep_exclusions246 WHERE uid=? AND id=?',args:[uid,id]}
+    ],'write');
+    if(!result[1].rows.length)throw Object.assign(new Error('El descanso cambió.'),{status:409});
+    return {rev:rev+1,cuts:JSON.parse(result[2].rows[0].cuts)};
+  }
+  if(prepared.length){
+    const marked=await rows('SELECT id,cuts FROM sleep_exclusions246 WHERE uid=? AND id IN ('+prepared.map(()=>'?').join(',')+')',uid,...prepared.map(x=>x.id));
+    for(const m of marked){const item=prepared.find(x=>x.id===m.id);const projected=projectSleep(JSON.parse(item.value),JSON.parse(m.cuts));if(JSON.stringify(projected)!==JSON.stringify(JSON.parse(item.value)))item.filtered=true;item.value=projected?JSON.stringify(projected):null;}
+  }
   // One transactional batch avoids partial commits and extra network trips. It
   // also avoids holding a local SQLite write lock across JS await boundaries.
   const statements = prepared.flatMap(({ id, rev, value }) => [
@@ -95,18 +127,19 @@ export async function journal(uid, input = {}) {
       : { sql: 'UPDATE diary_sync SET data=?,rev=rev+1 WHERE uid=? AND id=? AND rev=? RETURNING rev', args: [value, uid, id, rev] },
     { sql: 'SELECT rev,data FROM diary_sync WHERE uid=? AND id=?', args: [uid, id] }
   ]);
-  statements.push({ sql: 'SELECT id,rev,data FROM diary_sync WHERE uid=? AND id>? ORDER BY id LIMIT 51', args: [uid, cursor] });
+  statements.push({ sql: 'SELECT d.id,d.rev,d.data,e.cuts FROM diary_sync d LEFT JOIN sleep_exclusions246 e USING(uid,id) WHERE d.uid=? AND d.id>? ORDER BY d.id LIMIT 51', args: [uid, cursor] });
   const results = await db.batch(statements, 'write');
   const accepted = [], conflicts = [];
   for (const [i, { id, value }] of prepared.entries()) {
     const changed = results[i * 2].rows;
     const [r] = results[i * 2 + 1].rows;
-    if (changed.length) accepted.push({ id, rev: changed[0].rev });
+    if(prepared[i].filtered)conflicts.push({id,rev:r.rev,record:JSON.parse(r.data)});
+    else if (changed.length) accepted.push({ id, rev: changed[0].rev });
     else if (r && r.data === value) accepted.push({ id, rev: r.rev });
     else conflicts.push({ id, rev: r?.rev || 0, record: JSON.parse(r?.data || 'null') });
   }
   const page = results.at(-1).rows;
   return { accepted, conflicts,
-    records: page.slice(0, 50).map(r => ({ id: r.id, rev: r.rev, record: JSON.parse(r.data) })),
+    records: page.slice(0, 50).map(r => ({ id: r.id, rev: r.rev, record: JSON.parse(r.data),...(r.cuts?{sleepCuts:JSON.parse(r.cuts)}:{}) })),
     next: page.length > 50 ? page[49].id : null };
 }

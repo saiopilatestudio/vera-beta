@@ -4,7 +4,7 @@
     name="viewport"
     content="width=device-width,initial-scale=1,viewport-fit=cover"
   /><meta name="theme-color" content="#f6f5ed" /><title>
-    Vera 2.4.5 beta
+    Vera 2.4.6 beta
   </title>
   <style>
     * {
@@ -552,11 +552,11 @@
   @media(max-width:370px){.stat-grid{grid-template-columns:1fr 1fr}.stat-grid>div:last-child{grid-column:span 2}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
   </style>
-  <meta name="vera-build" content="2.4.5 beta" />
+  <meta name="vera-build" content="2.4.6 beta" />
   <script src="state14.js"></script><script src="qr.js"></script><script src="session13.js"></script><script src="edition12.js"></script><script src="vision11.js"></script><script src="vera5.js"></script><script src="partners.js"></script><script src="edition10.js"></script><script src="list7.js"></script><script src="exercises-es22.js"></script><script src="catalog6.js"></script><script src="journal.js"></script><script src="privacy6.js"></script><script src="actions6.js"></script>
   
   <header>
-    <div class="brand14" role="img" aria-label="VERA Performance 2.4.5 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.4.5 BETA</small></span></div>
+    <div class="brand14" role="img" aria-label="VERA Performance 2.4.6 beta"><span class="brandIcon14" aria-hidden="true"><img src="brand.png" alt=""></span><span class="brandText14" aria-hidden="true"><strong>VERA</strong><small>2.4.6 BETA</small></span></div>
     <div id="topTools" class="row">
       <button class="cameraShortcut" onclick="go('Cámara')">
         <svg
@@ -761,7 +761,7 @@
 
     function versionInfo() {
       const origin = location.origin || "desconocido";
-      return '<details><summary>Diagnóstico técnico · Vera 2.4.5 beta</summary><p>Build: 245</p><p>Origen: '+safe(origin)+
+      return '<details><summary>Diagnóstico técnico · Vera 2.4.6 beta</summary><p>Build: 246</p><p>Origen: '+safe(origin)+
         '</p><p>Backend: '+safe(ACCOUNT_HOST)+'</p><p>IA: Groq y Gemini en la nube. Cloudflare Workers AI puede atender fotos y tablas cuando has autorizado el respaldo y está configurado.</p><p>Sesión autenticada: '+
         (sessionStorage.veraToken ? 'sí' : 'no')+'</p><p>El diario, perfil y salud autorizada se guardan automáticamente en tu cuenta cuando hay conexión. Fotos y conversaciones permanecen en este dispositivo.</p></details>';
     }

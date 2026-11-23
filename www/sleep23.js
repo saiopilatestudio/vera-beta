@@ -37,8 +37,8 @@ function sleepSummary23(logs,date){
   const duration=(row.end-row.start)/60000,awake=numberMetric21(row.awakeMinutes)??(recorded===null?0:Math.max(0,duration-recorded));
   if(awake>=duration)continue;
   const remaining=sleepSubtract23([[row.start,row.end]],covered).reduce((n,[a,b])=>n+(b-a)/60000,0);
-  if(remaining<duration){uncertain=true;continue;} // Never invent where unlocated awake minutes occurred.
-  const value=duration-awake;minutes+=value;if(row.restType==='Siesta')nap+=value;else night+=value;covered.push([row.start,row.end]);
+  if(remaining<duration&&awake>0){uncertain=true;continue;} // Never invent where unlocated awake minutes occurred.
+  const value=remaining-awake;minutes+=value;if(row.restType==='Siesta')nap+=value;else night+=value;covered.push([row.start,row.end]);
  }
  const healthSpans=sleepUnion23(health.flatMap(r=>Array.isArray(r.sleepSpans)?r.sleepSpans:[]));
  let imported=sleepSubtract23(healthSpans,covered).reduce((n,[a,b])=>n+(b-a)/60000,0);
@@ -56,13 +56,47 @@ readiness=function(){
  if(check){const sore=numberMetric21(check.sore),tired=numberMetric21(check.tired);text+=check.group+': '+(sore===null?'agujetas sin dato':'agujetas '+sore+'/10')+', '+(tired===null?'fatiga sin dato':'fatiga '+tired+'/10')+'. ';if(summary.hours<goal-1||(sore!==null&&sore>=6)||(tired!==null&&tired>=6))text+='Revisa cómo te encuentras antes de entrenar.';}
  return {hours:summary.hours,group:check?.group,text};
 };
+let sleepView246=[],sleepRevision246=0,sleepBusy246=false;
+function sleepLabel246(row){
+ const type=row.restType||((row.source==='health'||row.source==='Health Connect')?'Health Connect':'Descanso');
+ const hours=numberMetric21(row.value)??(Number.isFinite(row.minutes)?row.minutes/60:null);
+ const clock=n=>new Date(n).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
+ const spans=Number.isFinite(row.start)&&Number.isFinite(row.end)?[[row.start,row.end]]:sleepUnion23(row.sleepSpans);
+ return type+' · '+(hours===null?'Duración desconocida':metricNumber21(hours)+' h')+(spans.length?' · '+spans.map(([a,b])=>clock(a)+'–'+clock(b)).join(', '):' · Sin horario');
+}
+function sleepHistory246(){
+ const account=sleepAccount23(),revision=++sleepRevision246;
+ sleepView246=s.logs.map((row,index)=>({row,index,state:s,account,snapshot:row.kind==='Sueño'?JSON.stringify(row):''})).filter(x=>x.row.kind==='Sueño');
+ return sleepView246.slice(-14).reverse().map(item=>{
+  const {row,index}=item,peers=sleepView246.filter(x=>x!==item&&x.row.date===row.date);
+  const keep=peers.map(x=>'<button type="button" onclick="resolveSleep246('+revision+','+index+','+x.index+')">Conservar '+safe(sleepLabel246(x.row))+'</button>').join('');
+  return '<article><b>'+safe(row.date)+' · '+safe(sleepLabel246(row))+'</b><p>'+(row.awakeMinutes?safe(row.awakeMinutes)+' min despierto':'')+'</p>'+((row.source!=='health'&&row.source!=='Health Connect'&&Number.isFinite(row.start)&&Number.isFinite(row.end))?'<button onclick="editSleep23('+index+')">Corregir</button>':'')+'<details><summary>Gestionar registro</summary><button onclick="resolveSleep246('+revision+','+index+')">Eliminar de VERA</button>'+(keep?'<details><summary>Fusionar con otro descanso</summary><p>Elige el registro del mismo día que quieres conservar. Este registro se retirará del total.</p>'+keep+'</details>':'')+'</details></article>';
+ }).join('');
+}
+async function resolveSleep246(revision,index,keepIndex){
+ if(sleepBusy246)return;
+ const resolve=i=>{
+  const entry=sleepView246.find(x=>x.index===i),account=sleepAccount23();
+  if(!entry||sleepRevision246!==revision||entry.state!==s||entry.account.owner!==account.owner||entry.account.token!==account.token)return;
+  const matches=s.logs.filter(row=>entry.row.id?row.id===entry.row.id:row===entry.row);
+  if(matches.length===1&&JSON.stringify(matches[0])===entry.snapshot)return matches[0];
+ };
+ const row=resolve(index),kept=keepIndex===undefined?null:resolve(keepIndex);
+ if(!row||(keepIndex!==undefined&&(!kept||kept===row||kept.date!==row.date)))return msg('Los registros han cambiado. Revisa la lista antes de continuar.');
+ const description=row.date+' · '+sleepLabel246(row);
+ if(!confirm(kept?'¿Fusionar estos descansos? Se conservará '+sleepLabel246(kept)+' y se retirará '+description+' de VERA.':'¿Eliminar de VERA el descanso '+description+'?'))return;
+ sleepBusy246=true;
+ try{await suppressSleep246([row]);cancelSleepEdit23();render();msg(kept?'Descansos fusionados.':'Descanso eliminado de VERA.');}
+ catch(error){msg(error.message||'No se pudo guardar el cambio.');}
+ finally{sleepBusy246=false;}
+}
 sleepPage=function(){
  if(sleepEdit23>=0){const current=currentSleepEdit23();if(current<0)cancelSleepEdit23();else sleepEdit23=current;}
  const old=s.logs[sleepEdit23],editing=old?.kind==='Sueño'&&old.source!=='health',end=editing?new Date(old.end):new Date(),start=editing?new Date(old.start):new Date(+end-Number(s.need||8)*3600000),today=day(),current=sleepSummary23(s.logs,today);
  const history=[];for(let offset=6;offset>=0;offset--){const date=new Date();date.setDate(date.getDate()-offset);const row=sleepSummary23(s.logs,day(date));history.push({...row,value:row.hasData?row.hours:null});}
  const measured=history.filter(r=>r.hasData),average=measured.length?measured.reduce((n,r)=>n+r.hours,0)/measured.length:null;
  return '<section class="sleep-summary23"><span class="eyebrow21">Tu descanso también cuenta</span><h2>Sueño y recuperación</h2><div class="metric-grid21"><div class="metric-card21"><p>Hoy · noches y siestas</p><h3>'+ (current.hasData?metricNumber21(current.hours)+' h':'Sin registro')+'</h3></div><div class="metric-card21"><p>Media · últimos 7 días</p><h3>'+ (average===null?'Sin datos':metricNumber21(average)+' h')+'</h3><small>'+measured.length+' días registrados</small></div></div><p>Objetivo personal: '+safe(s.need||8)+' h · '+btn('Cambiar en Perfil',"go('Perfil')")+'</p>'+barsGraph22(history,'value','Descanso','h')+'<p class="sub">Cada noche cuenta en la fecha en la que despiertas. Se descuentan los minutos despierto; las siestas se suman. Sin registro no equivale a cero horas.</p></section>'+
- '<form onsubmit="sleepSave(event)"><section><h3>'+(editing?'Corregir descanso':'Registrar noche o siesta')+'</h3>'+field('start','Me dormí',localtime(start),'datetime-local','required')+field('end','Me desperté',localtime(end),'datetime-local','required')+field('awake','Minutos despierto dentro del intervalo',editing?old.awakeMinutes||0:0,'number','min="0" step="1" required')+selectField('restType','Tipo de descanso',['Noche','Siesta'],editing?old.restType:'Noche')+'<details><summary>Sensaciones al despertar (opcional)</summary>'+field('muscle','Grupo muscular',editing?old.group||'':'','text','maxlength="100"')+field('sore','Agujetas (0–10)',editing?old.sore??'':'','number','min="0" max="10"')+field('tired','Fatiga (0–10)',editing?old.tired??'':'','number','min="0" max="10"')+'</details><button class="primary">'+(editing?'Guardar corrección':'Guardar descanso')+'</button>'+(editing?'<button type="button" onclick="cancelSleepEdit23();render()">Cancelar</button>':'')+'</section></form><section><h3>Tus últimos descansos</h3>'+s.logs.map((r,i)=>({r,i})).filter(({r})=>r.kind==='Sueño').slice(-14).reverse().map(({r,i})=>'<article><b>'+safe(r.date)+' · '+safe(r.restType||'Health Connect')+'</b><p>'+metricNumber21(numberMetric21(r.value))+' h'+(r.awakeMinutes?' · '+safe(r.awakeMinutes)+' min despierto':'')+'</p>'+((r.source!=='health'&&Number.isFinite(r.start)&&Number.isFinite(r.end))?'<button onclick="editSleep23('+i+')">Corregir</button>':'<small>Registro importado o sin horario</small>')+'</article>').join('')+'<p class="sub">Los intervalos manuales corrigen el mismo tramo importado sin sumarlo dos veces. Si faltan horarios, se indica que los datos requieren revisión.</p></section>';
+ '<form onsubmit="sleepSave(event)"><section><h3>'+(editing?'Corregir descanso':'Registrar noche o siesta')+'</h3>'+field('start','Me dormí',localtime(start),'datetime-local','required')+field('end','Me desperté',localtime(end),'datetime-local','required')+field('awake','Minutos despierto dentro del intervalo',editing?old.awakeMinutes||0:0,'number','min="0" step="1" required')+selectField('restType','Tipo de descanso',['Noche','Siesta'],editing?old.restType:'Noche')+'<details><summary>Sensaciones al despertar (opcional)</summary>'+field('muscle','Grupo muscular',editing?old.group||'':'','text','maxlength="100"')+field('sore','Agujetas (0–10)',editing?old.sore??'':'','number','min="0" max="10"')+field('tired','Fatiga (0–10)',editing?old.tired??'':'','number','min="0" max="10"')+'</details><button class="primary">'+(editing?'Guardar corrección':'Guardar descanso')+'</button>'+(editing?'<button type="button" onclick="cancelSleepEdit23();render()">Cancelar</button>':'')+'</section></form><section><h3>Tus últimos descansos</h3>'+sleepHistory246()+'<p class="sub">Los intervalos manuales corrigen el mismo tramo importado sin sumarlo dos veces. Si faltan horarios, se indica que los datos requieren revisión.</p></section>';
 };
 sleepSave=function(event){
  event.preventDefault();const start=+new Date($('start').value),end=+new Date($('end').value),optional=id=>$(id).value.trim()===''?null:Number($(id).value),awake=Number($('awake').value);let minutes;

@@ -109,7 +109,7 @@ function healthImport21(ticket,type,rows){
  }
  if(!healthKinds21[type]||request.received.has(type)||request.expected&&!request.expected.includes(type))return;
  try{
-  const imported=normalizeHealth21(type,rows),start=new Date();start.setDate(start.getDate()-27);const first=day(start);
+  const imported=normalizeHealth21(type,rows).flatMap(row=>filterImportedSleep246(row,s.sleepExclusions246?.[row.id])),start=new Date();start.setDate(start.getDate()-27);const first=day(start);
   // Device-only provenance: an empty local Health Connect snapshot must never
   // delete records synchronized from a different phone.
   const idsKey='vera.health21.ids.'+request.owner;let known={};try{known=JSON.parse(localStorage.getItem(idsKey)||'{}');}catch{}if(!known||typeof known!=='object'||Array.isArray(known))known={};
@@ -182,3 +182,23 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelHealt
 // Detects the first successful login without a repeated OS permission prompt.
 setInterval(()=>{if(!validSession){cancelHealthRead21();return;}if(healthReady21()&&(sessionStorage.veraUser!==healthLastOwner21||Date.now()-healthLastRequest21>=60000))refreshUnlockedHealth();},5000);
 setTimeout(()=>refreshUnlockedHealth(),1500);
+
+function filterImportedSleep246(row,cuts){
+ if(!cuts?.length||row.kind!=='Sueño')return [row];
+ if(!row.sleepSpans?.length)return cuts.some(c=>c.value===row.value)?[]:[row];
+ const spans=sleepSubtract23(row.sleepSpans,cuts.flatMap(c=>c.spans||[]));
+ return spans.length?[{...row,sleepSpans:spans,value:spans.reduce((n,[a,b])=>n+b-a,0)/3600000}]:[];
+}
+async function suppressSleep246(records){
+ if(records?.length!==1)throw Error('Elige un descanso.');
+ const row=records[0],owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s;
+ if(!state.logs.includes(row)||row.kind!=='Sueño')throw Error('Vuelve a abrir el descanso.');
+ if(!await VeraJournal.flush()||!sameVeraSession(owner,token,state))throw Error('Espera a que se guarden los cambios y vuelve a intentarlo.');
+ const base=state.diaryRevisions?.[row.id];
+ if(!base?.rev||base.raw!==JSON.stringify(row))throw Error('El descanso ha cambiado. Revisa los datos.');
+ const result=await api('diario',{suppressSleep:{id:row.id,rev:base.rev}});
+ if(!sameVeraSession(owner,token,state))return;
+ if(!Array.isArray(result.cuts))throw Error('El servidor necesita la actualización para eliminar descansos.');
+ (state.sleepExclusions246||={})[row.id]=result.cuts;
+ state.logs=state.logs.filter(r=>r.id!==row.id);state.diaryRevisions[row.id]={rev:result.rev,raw:'null'};save();render();
+}

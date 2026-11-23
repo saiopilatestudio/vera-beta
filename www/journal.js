@@ -52,12 +52,22 @@ const VeraJournal=(()=>{
     const batch=changes.slice(offset,offset+40);offset+=batch.length;
     const result=await api('diario',{updates:batch,cursor:cursor||''},false,{signal});if(!active())return false;
     for(const a of result.accepted){const sent=batch.find(r=>r.id===a.id);if(sent)base[a.id]={rev:a.rev,raw:signature(sent.record)};}
-    for(const row of [...result.records,...result.conflicts])remote.set(row.id,row);
+    for(const row of [...result.records,...result.conflicts]){if(row.sleepCuts)(s.sleepExclusions246||={})[row.id]=row.sleepCuts;remote.set(row.id,row);}
     cursor=result.next;persist();
    }while(cursor||offset<changes.length);
    for(const [id,row] of remote){
     if((base[id]?.rev||0)>=row.rev)continue;
-    const index=s.logs.findIndex(e=>e.id===id),current=s.logs[index],raw=signature(row.record);
+    const index=s.logs.findIndex(e=>e.id===id);let current=s.logs[index];
+    const cuts=s.sleepExclusions246?.[id];
+    if(cuts&&current?.kind==='Sueño'){
+     const visible=current.source==='health'?filterImportedSleep246(current,cuts):[];
+     if(!visible.length||signature(visible[0])!==signature(current)){
+      s.logs.splice(index,1,...visible);current=visible[0];
+      if(signature(current)===signature(row.record)){base[id]={rev:row.rev,raw:signature(current)};continue;}
+      if(!current){if(row.record)s.logs.push(row.record);base[id]={rev:row.rev,raw:signature(row.record)};continue;}
+     }
+    }
+    const raw=signature(row.record);
     if(signature(current)!==(base[id]?.raw??'null')&&signature(current)!==raw){conflict('record',id,current,row.record,row.rev);continue;}
     if(index>=0)s.logs.splice(index,1,...(row.record?[row.record]:[]));else if(row.record)s.logs.push(row.record);
     base[id]={rev:row.rev,raw};

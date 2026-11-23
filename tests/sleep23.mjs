@@ -6,6 +6,7 @@ for(const name of ['state14','metrics21','health21','sleep23'])vm.runInContext(r
 const date='2026-11-20',stamp=s=>+new Date(s),a=stamp('2026-11-19T23:00:00Z'),b=stamp('2026-11-20T07:00:00Z');
 let rows=[{id:'n',kind:'Sueño',date,start:a,end:b,awakeMinutes:30,restType:'Noche'}];
 assert.equal(ctx.sleepSummary23(rows,date).hours,7.5,'overnight minus awake');
+assert.equal(ctx.sleepSummary23([{...rows[0],awakeMinutes:0},{...rows[0],id:'overlap',awakeMinutes:0,start:b-3600000,end:b+3600000}],date).hours,9,'count distinct minutes of partially overlapping manual intervals');
 rows.push({id:'nap',kind:'Sueño',date,start:b+6*3600000,end:b+7*3600000,awakeMinutes:0,restType:'Siesta'});
 assert.equal(ctx.sleepSummary23(rows,date).hours,8.5);
 assert.equal(ctx.sleepSummary23(rows,date).nap,60);
@@ -33,3 +34,12 @@ ctx.sessionStorage={veraUser:'a',veraToken:'a-token'};ctx.editSleep23(1);ctx.ses
 ctx.sessionStorage.veraUser='a';ctx.editSleep23(1);ctx.sessionStorage.veraToken='renewed';ctx.sleepSave({preventDefault(){}});assert.equal(JSON.stringify(ctx.s.logs),unchanged,'session change rejects stale edit');
 ctx.editSleep23(1);ctx.s.logs[1].note='Changed remotely';const concurrent=JSON.stringify(ctx.s.logs);ctx.sleepSave({preventDefault(){}});assert.equal(JSON.stringify(ctx.s.logs),concurrent,'concurrent revision is not overwritten');
 console.log('PASS sleep23: overnight, awake, nap, dedup, HC/manual overlap, legacy warning, missing, save/edit and summary render.');
+
+const imported={kind:'Sueño',id:'hc:day',source:'health',date,value:3.3},nap={kind:'Sueño',id:'nap1',restType:'Siesta',date,value:3.4};
+ctx.s.logs=[imported,nap];let discarded=null;
+ctx.suppressSleep246=async rows=>{discarded=rows[0];};
+const history=ctx.sleepHistory246();assert.match(history,/Fusionar con otro descanso/);
+const revision=vm.runInContext('sleepRevision246',ctx);
+ctx.confirm=()=>false;await ctx.resolveSleep246(revision,0);assert.equal(discarded,null);
+ctx.confirm=()=>true;ctx.s.logs.reverse();await ctx.resolveSleep246(revision,0,1);assert.equal(discarded,imported);
+discarded=null;nap.value=4;await ctx.resolveSleep246(revision,0,1);assert.equal(discarded,null);

@@ -1,0 +1,17 @@
+import './test-env.mjs';
+import assert from 'node:assert/strict';
+import {mkdtempSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+process.env.VERA_DB=mkdtempSync(tmpdir()+'/vera-sleep-')+'/db';
+const {journal}=await import('../journal.mjs');
+const id='health_sleep_2026-11-23',base={id,kind:'Sueño',date:'2026-11-23',source:'health',healthType:'sleep',healthKey:id};
+const put=(rev,spans)=>journal('owner',{updates:[{id,rev,record:{...base,sleepSpans:spans,value:spans.reduce((n,[a,b])=>n+b-a,0)/3600000}}]});
+await put(0,[[100,200]]);
+await assert.rejects(journal('other',{suppressSleep:{id,rev:1}}));
+await journal('owner',{suppressSleep:{id,rev:1}});
+assert.equal((await journal('owner')).records[0].record,null);
+const result=await put(2,[[100,250],[300,400]]);
+assert.deepEqual(result.records[0].record.sleepSpans,[[200,250],[300,400]]);
+assert.equal(result.records[0].sleepCuts.length,1);
+await assert.rejects(journal('owner',{suppressSleep:{id,rev:1}}));
+console.log('Sleep suppression, account isolation, new intervals and revision checks passed.');
