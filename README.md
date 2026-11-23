@@ -1,11 +1,14 @@
-# VERA 2.4 beta
+# VERA 2.4.3 beta
 
-Android build 240, paquete `app.vera.coach.visionbeta`. IA exclusivamente en Groq y Gemini, con credenciales sólo en el servidor. La APK se construye desde `beta-android/`; los proyectos Capacitor de `android/` e `ios/` son auxiliares.
+Android build 243, paquete `app.vera.coach.visionbeta`. La IA se ejecuta en Groq, Gemini y Cloudflare Workers AI. Las credenciales de los proveedores permanecen en el servidor. La APK se construye desde `beta-android/`; los proyectos Capacitor de `android/` e `ios/` son auxiliares.
 
 ## Cambios de esta entrega
 
+- En Cardio se pueden grabar ciclismo urbano, carrera y paseo con GPS y registrar natación con ritmo por 100 m. Health Connect aporta sesiones y métricas que haya compartido la aplicación de origen.
+- El servidor conserva el protocolo de la APK 2.4.2. La nueva versión negocia el cambio automático de proveedor, con permiso por cuenta.
+
 - Tabla semanal estructurada con ejercicios en español, series, repeticiones, RIR y descansos. Usa perfil e historial confirmados en el servidor. Semana actual/siguiente, petición personalizada y referencias anteriores; abrir una propuesta no registra actividad.
-- Primera generación con perfil completo, Google/Health Connect y consentimiento remoto. Actualización tras cambios relevantes y tres minutos de inactividad o al finalizar sesión. Caché por cuenta/contexto/petición y una llamada a Groq con esquema estricto; se conserva la tabla anterior ante fallos.
+- Primera generación con perfil completo, Google/Health Connect y consentimiento remoto. Actualización tras cambios relevantes y tres minutos de inactividad o al finalizar sesión. Caché por cuenta, contexto y petición. El servidor valida la tabla y cambia de proveedor cuando procede. La tabla anterior sigue disponible durante la generación.
 - Catálogo persistente SQLite/Turso: ocho etiquetas oficiales Zumub y fichas privadas confirmadas de alimentos y suplementos. Búsqueda por nombre, alias, variante y código de barras. Los aciertos no llaman a la IA.
 - Fotografías conservan porción, unidad, cuatro valores de macros/energía y hasta 25 campos de micronutrientes. Caché exacta de lectura por cuenta durante 24 horas; no guarda la foto original. Las variantes propuestas requieren selección explícita.
 - Completar suplementos antiguos sin duplicarlos, conservando fecha, dosis y líquido. Agua/leche y nutrientes de la mezcla siguen sumándose. Los valores no declarados no se convierten en cero.
@@ -32,6 +35,9 @@ Play Protect pertenece a Android y no se suprime desde Vera. Google Play requier
 - [Tablas semanales e investigación](docs/WORKOUTS24.md).
 - [Nutrición y fichas reutilizables](docs/NUTRICION-V24.md).
 - [Catálogo, fuentes oficiales y ahorro](CATALOGO_AHORRO_V24.md).
-- [Google y Health Connect](GOOGLE_HEALTH_V23.md).
+- [Deportes y GPS](docs/SPORT24.md).
+- [Sincronización de actividades](docs/HEALTH-CARDIO24.md).
+- [Enrutamiento automático](docs/ENRUTAMIENTO-IA-V24.md).
+- [Worker de respaldo](cloudflare/README.md).
 
-Los documentos V2.3 y anteriores son históricos. El manual PDF y VERIFICACION.txt de los ZIPs indican el estado concreto de compilación, despliegue y comprobaciones.
+Los documentos V2.3 y anteriores son históricos. El primer ZIP contiene la APK y el manual. El segundo incluye el código y las pruebas del despliegue.

@@ -1,4 +1,4 @@
-// Server-only routing. Food photos have one explicit Groq fallback for transient Gemini failure.
+// Server-only routing; additional providers require explicit request consent.
 export class ServiceError extends Error {
   constructor(message, status = 502, code = 'AI_UNAVAILABLE', retryAfter) { super(message); Object.assign(this, { status, code, retryAfter }); }
 }
@@ -6,12 +6,16 @@ export function aiConfiguration(env = process.env) {
   const route = (provider, model) => ({provider, model, configured: Boolean(env[provider === 'groq' ? 'GROQ_API_KEY' : 'GEMINI_API_KEY']?.trim())});
   const groq = route('groq', env.GROQ_CHAT_MODEL || 'openai/gpt-oss-120b');
   const vision = route('gemini', env.GEMINI_VISION_MODEL || 'gemini-3.5-flash-lite');
-  return {routingVersion:3, providers:['groq','gemini'], execution:'cloud-only', localInference:false, verification:'configuration-only', speechOutput:'remote', routes:{
+  const cf={provider:'cloudflare',model:'@cf/qwen/qwen3.8-27b',configured:Boolean(workerUrl24(env)&&env.VERA_CF_WORKER_SECRET?.trim().length>=32),requiresCloudConsent:true};
+  const imageAlt={...route('groq',env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'),requiresCloudConsent:true};
+  const configuration={routingVersion:3, optionalProviders:['cloudflare'],requiredConsentField:'cloudFallbackConsent',  providers:['groq','gemini'], execution:'cloud-only', localInference:false, verification:'configuration-only', speechOutput:'remote', routes:{
     coach:{...groq}, coach_deep:route('gemini',env.GEMINI_DEEP_MODEL || 'gemini-3.5-flash-lite'), intro:{...groq},
-    photo:{...vision,fallback:{...route('groq',env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'),on:['AI_RATE_LIMIT','AI_BUSY','AI_TIMEOUT'],maxAttempts:1}}, machine:{...vision}, label:{...vision},
+    photo:{...vision,automatic:true,alternatives:[{...imageAlt,requiresCloudConsent:false},cf],fallback:{...route('groq',env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'),on:['AI_RATE_LIMIT','AI_BUSY','AI_TIMEOUT'],maxAttempts:1}}, machine:{...vision}, label:{...vision,automatic:true,alternatives:[imageAlt,cf]}, weeklyWorkouts:{...groq,automatic:true,alternatives:[{...vision,requiresCloudConsent:true},{...cf,model:'@cf/mistralai/mistral-small-3.1-24b-instruct'}]},
     listen:route('groq',env.GROQ_SPEECH_MODEL || 'whisper-large-v3-turbo'),
     speak:route('gemini',env.GEMINI_TTS_MODEL || 'gemini-3.8-flash-lite-tts'),
   }};
+  for(const route of Object.values(configuration.routes)){route.available=route.configured||Boolean(route.alternatives?.some(x=>x.configured));}
+  return configuration;
 }
 export function requireRoute(feature, env = process.env) {
   const route = aiConfiguration(env).routes[feature];
@@ -38,6 +42,7 @@ async function requestJson(url, headers, body, {env, fetchImpl, deadline, maxByt
         }
       }
       if (response.status === 429) { const seconds=Number(response.headers.get('retry-after')); throw new ServiceError('El proveedor ha alcanzado su límite temporal. Reintenta más tarde.',429,'AI_RATE_LIMIT',Number.isFinite(seconds)&&seconds>0?Math.min(Math.ceil(seconds),3600):30); }
+      if(response.status===422)throw new ServiceError('El proveedor no pudo completar una respuesta válida.',502,'AI_INCOMPLETE');
       if ([400,401,403,404].includes(response.status)) throw new ServiceError('La configuración o el modelo de IA requiere revisión del administrador.',503,'AI_CONFIG');
       if (response.status === 503) throw new ServiceError('Gemini o Groq está temporalmente saturado. Tu registro no se ha modificado; vuelve a intentarlo en unos instantes.',503,'AI_BUSY',15);
       throw new ServiceError('El proveedor no ha podido completar la solicitud. Puedes reintentar.',502,'AI_RESPONSE');
@@ -73,7 +78,9 @@ export function createGeminiProvider({env=process.env,fetchImpl=fetch}={}) {
 }
 const gemini=createGeminiProvider();
 export async function chat(system,user,json=false,options={}) {
-  const feature=options.feature || 'coach', route=requireRoute(feature),deadline=options.deadline??Date.now()+75000;
+  const feature=options.feature || 'coach';
+  if(['photo','label'].includes(feature)||options.routingTask==='weekly')return automaticRouter24(system,user,json,options);
+  const route=requireRoute(feature),deadline=options.deadline??Date.now()+75000;
   let value;
   if(route.provider==='groq') {
     if(Array.isArray(user))throw new ServiceError('Las imágenes requieren la ruta de visión Gemini.',400,'AI_PATH');
@@ -134,4 +141,85 @@ export async function synthesize(text,options={}) {
   if(result?.status!=='completed'||part?.mime_type!=='audio/wav'||typeof part?.data!=='string'||part.data.length>21333336||!part.data.length||!/^[A-Za-z0-9+/]+={0,2}$/.test(part.data))throw new ServiceError('La voz recibida está incompleta o no es válida.',502,'AI_AUDIO');
   const bytes=Buffer.from(part.data,'base64');if(bytes.toString('base64')!==part.data)throw new ServiceError('La voz recibida no es válida.',502,'AI_AUDIO');
   return validateWav(bytes);
+}
+// Availability state contains only provider/model identifiers and expiry timestamps.
+// Never store prompts, pictures, credentials or user identities here.
+export function routingCandidates24(feature,options={},env=process.env){
+  const route=aiConfiguration(env).routes[feature];
+  if(!route)throw new ServiceError('Función de IA no admitida.',400,'AI_PATH');
+  return [route,...(feature==='photo'&&options.photoFallback===false?[]:route.alternatives||[])].filter(x=>x.configured&&(!x.requiresCloudConsent||options.cloudFallbackConsent===true));
+}
+export function requireAutomaticRoute24(feature,options={},env=process.env){
+  if(!routingCandidates24(feature,options,env).length)throw new ServiceError('No hay un proveedor autorizado y configurado para esta función.',503,'AI_NOT_CONFIGURED');
+}
+export function createAutomaticRouter24({env=process.env,fetchImpl=fetch,now=()=>Date.now()}={}){
+  const cooldown=new Map();
+  return async function(system,user,json=false,options={}){
+    const feature=options.routingTask==='weekly'?'weeklyWorkouts':options.feature;
+    // Server-owned schema accompanies EVERY candidate, including JSON-only Workers.
+    if(json&&options.schema)system+='\nCONTRATO JSON OBLIGATORIO: devuelve todos los campos requeridos, sólo los permitidos y los enums exactos. No copies este esquema como respuesta.\n'+JSON.stringify(options.schema);
+    const candidates=routingCandidates24(feature,options,env);
+    requireAutomaticRoute24(feature,options,env);
+    const parts=typeof user==='string'?[{text:user}]:Array.isArray(user)?user.map(part=>{
+      if(part.type==='text'&&typeof part.text==='string')return {text:part.text};
+      const match=/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(part.image_url?.url||'');
+      if(!match||match[2].length>14000000)throw new ServiceError('Imagen no válida.',400,'INVALID_IMAGE');
+      return {inlineData:{mimeType:match[1],data:match[2]}};
+    }):null;
+    if(!parts)throw new ServiceError('Entrada de IA no válida.',400,'AI_PATH');
+    const deadline=Math.min(options.deadline||now()+75000,now()+75000);
+    let last,earliest=Infinity;
+    for(const route of candidates){
+      const key=route.provider+':'+route.model,until=cooldown.get(key)||0;
+      if(until>now()){earliest=Math.min(earliest,until);continue;}
+      if(deadline-now()<1000)break;
+      if(!/^[a-zA-Z0-9@._/-]{1,160}$/.test(route.model)||(route.provider==='gemini'&&route.model.includes('/')))continue;
+      const images=parts.filter(p=>p.inlineData);
+      if(route.provider==='cloudflare'&&images.length>1)continue;
+      // The final table candidate can use the remaining shared budget (Worker itself caps at 60s).
+      const finalTable=feature==='weeklyWorkouts'&&route===candidates.at(-1);
+      const callOptions={env:{...env,VERA_AI_TIMEOUT_MS:finalTable?Math.min(65000,deadline-now()):Math.min(25000,Number(env.VERA_AI_TIMEOUT_MS)||25000)},fetchImpl,deadline,attempt:1};
+      try{
+        let value;
+        if(route.provider==='gemini'){
+          const data=await requestJson('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(route.model)+':generateContent',{'x-goog-api-key':env.GEMINI_API_KEY},{systemInstruction:{parts:[{text:system}]},contents:[{role:'user',parts}],generationConfig:{maxOutputTokens:options.maxTokens||5000,thinkingConfig:{thinkingLevel:'LOW'},...(json?{responseMimeType:'application/json',...(options.schema?{responseJsonSchema:options.schema}:{})}:{})}},callOptions);
+          const candidate=data?.candidates?.[0];
+          if(candidate?.finishReason!=='STOP')throw new ServiceError('La respuesta de IA está incompleta o no disponible.',502,'AI_INCOMPLETE');
+          if(!Array.isArray(candidate.content?.parts))throw new ServiceError('Formato de respuesta no válido.',502,'AI_FORMAT');
+          value=candidate.content.parts.filter(p=>p&&!p.thought&&typeof p.text==='string').map(p=>p.text).join('');
+        }else if(route.provider==='groq'){
+          const responseFormat=options.schema?{type:'json_schema',json_schema:{name:'vera_response',strict:true,schema:options.schema}}:{type:'json_object'};
+          const data=await requestJson('https://api.groq.com/openai/v1/chat/completions',{Authorization:'Bearer '+env.GROQ_API_KEY},{model:route.model,...(route.model.startsWith('openai/gpt-oss-')?{reasoning_effort:'low'}:{}),messages:[{role:'system',content:system},{role:'user',content:user}],max_completion_tokens:options.maxTokens||5000,...(json?{response_format:responseFormat}:{})},callOptions);
+          if(data?.choices?.[0]?.finish_reason!=='stop')throw new ServiceError('La respuesta de IA está incompleta.',502,'AI_INCOMPLETE');
+          value=data.choices[0].message?.content;
+        }else{
+          const data=await requestJson(workerUrl24(env)+(feature==='weeklyWorkouts'?'/v1/text':'/v1/food-photo'),{Authorization:'Bearer '+env.VERA_CF_WORKER_SECRET},options.cloudflareRequest?{system:options.cloudflareRequest.system,user:options.cloudflareRequest.user,json:true,maxTokens:options.cloudflareRequest.maxTokens}:{system,user,json,maxTokens:Math.min(options.maxTokens||5000,5000)},callOptions);
+          value=data.text;
+        }
+        if(typeof value!=='string'||!value.trim()||value.length>100000)throw new ServiceError('Respuesta de IA vacía o incompleta.',502,'AI_INCOMPLETE');
+        cooldown.delete(key);
+        if(!json)return value;
+        let result;try{result=JSON.parse(value);if(!result||Array.isArray(result)||typeof result!=='object')throw Error();}catch{throw new ServiceError('La respuesta de IA no tiene el formato esperado.',502,'AI_FORMAT');}
+        if(route.provider==='cloudflare'&&typeof options.cloudflareRequest?.decode==='function')result=options.cloudflareRequest.decode(result);
+        if(typeof options.validateCandidate==='function')options.validateCandidate(result);
+        return result;
+      }catch(error){
+        // Only weekly domain/JSON failures may try a different authorized model.
+        // Safety/truncation never use this path; needs_review is accepted when valid.
+        if(feature==='weeklyWorkouts'&&typeof options.validateCandidate==='function'&&['WORKOUT_FORMAT','AI_FORMAT'].includes(error.code)){last=error;continue;}
+        if(!['AI_RATE_LIMIT','AI_BUSY','AI_TIMEOUT','AI_NETWORK','AI_RESPONSE','AI_CONFIG'].includes(error.code))throw error;
+        last=error;const seconds=Math.min(3600,Math.max(1,error.retryAfter||(error.code==='AI_CONFIG'?60:15)));
+        cooldown.set(key,now()+seconds*1000);earliest=Math.min(earliest,now()+seconds*1000);
+      }
+    }
+    if(last)throw last;
+    if(deadline-now()<1000)throw new ServiceError('La IA ha tardado demasiado. Puedes reintentar.',504,'AI_TIMEOUT');
+    if(earliest<Infinity)throw new ServiceError('Los proveedores autorizados están temporalmente ocupados. No se ha modificado tu registro.',429,'AI_RATE_LIMIT',Math.max(1,Math.ceil((earliest-now())/1000)));
+    throw new ServiceError('No hay un proveedor autorizado disponible para completar esta solicitud.',503,'AI_NOT_CONFIGURED');
+  };
+}
+const automaticRouter24=createAutomaticRouter24();
+
+function workerUrl24(env){
+  try{const url=new URL(env.VERA_CF_WORKER_URL||'');if(url.protocol!=='https:'||!url.hostname.endsWith('.workers.dev')||url.username||url.password||url.port||url.search||url.hash||!['','/'].includes(url.pathname))return '';return url.origin;}catch{return '';}
 }

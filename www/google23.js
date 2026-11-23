@@ -40,7 +40,7 @@ function healthRecords23(logs,revisions,owner){
  const output=[],now=Date.now();
  for(const row of logs||[]){const ack=revisions?.[row.id];if(!ack||ack.raw!==JSON.stringify(row)||!Number.isSafeInteger(ack.rev)||ack.rev<1||row.source==='health'||row.source==='Health Connect'||String(row.id).startsWith('health_'))continue;
  const noon=Date.parse(row.date+'T12:00:00'),start=Number.isFinite(row.start)?row.start:Math.min(noon,now-1000);if(!Number.isFinite(start))continue;
- const base={id:row.id,owner,source:'vera',version:ack.rev,start,end:start+1};
+ const base={id:row.id,owner,source:'vera',recordingMethod:row.source==='gps'?'active':'manual',version:ack.rev,start,end:start+1};
  const push=(type,extra)=>output.push({...base,type,...extra});
  if(['Peso en ayunas','Otro pesaje'].includes(row.kind)&&numberMetric21(row.value)>0)push('WEIGHT',{value:Number(row.value)});
  if(['Comida','Suplemento'].includes(row.kind)){
@@ -51,7 +51,8 @@ function healthRecords23(logs,revisions,owner){
  // Duration-only historical entries cannot provide reliable interval timestamps.
  if(Number.isFinite(row.start)&&Number.isFinite(row.end)&&row.end>row.start&&row.end<=now){
   if(row.kind==='Sueño'&&!Number(row.awakeMinutes))push('SLEEP',{end:row.end});
-  if(['Entrenamiento','Cardio'].includes(row.kind))push('EXERCISE',{end:row.end,cycling:/bici|ciclismo/i.test(row.note||''),title:String(row.note||'Entrenamiento Vera').slice(0,200)});
+  if(['Entrenamiento','Cardio'].includes(row.kind))push('EXERCISE',{end:row.end,sport:row.sport||'',swimmingMode:row.swimmingMode||'',cycling:row.sport==='cycling'||/bici|ciclismo/i.test(row.note||''),title:String(row.note||'Entrenamiento Vera').slice(0,200)});
+  if(row.kind==='Cardio'&&['gps','manual'].includes(row.source)&&Number.isFinite(row.distanceMeters)&&row.distanceMeters>=0&&row.distanceMeters<=1000000)push('DISTANCE',{end:row.end,value:row.distanceMeters});
   if(row.kind==='Pasos'&&Number.isInteger(row.value))push('STEPS',{end:row.end,value:row.value});
  }
  }return output;
@@ -60,14 +61,14 @@ function healthDeletions23(logs,revisions,owner,desired){
  owner=healthAccount23(owner);if(!owner)return [];
  const wanted=new Set(desired.map(r=>r.type+'_'+r.id)),current=new Map((logs||[]).map(r=>[r.id,r])),result=[];
  for(const [id,ack]of Object.entries(revisions||{})){if(id.startsWith('health_')||!Number.isSafeInteger(ack.rev)||ack.rev<1)continue;const row=current.get(id);if(ack.raw!==JSON.stringify(row??null)||row?.source==='health'||row?.source==='Health Connect')continue;
-  for(const type of ['STEPS','EXERCISE','SLEEP','WEIGHT','NUTRITION','HYDRATION'])if(!wanted.has(type+'_'+id))result.push({id,owner,source:'vera',type,version:ack.rev,deleted:true});
+  for(const type of ['STEPS','EXERCISE','SLEEP','WEIGHT','NUTRITION','HYDRATION','DISTANCE'])if(!wanted.has(type+'_'+id))result.push({id,owner,source:'vera',type,version:ack.rev,deleted:true});
  }return result;
 }
 let healthWriting23=null;const healthSent23=new Map();
 async function performHealthExport23(){
  if(healthWriting23||!validSession||!healthAccess23().complete||!window.VeraNative?.writeHealth23)return false;
  const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s;if(googleOwner23!==owner||googleToken23!==token||!googleState23?.linked)return false;
- const desired=healthRecords23(s.logs,s.diaryRevisions,owner),rows=[...healthDeletions23(s.logs,s.diaryRevisions,owner,desired),...desired].filter(r=>healthSent23.get(owner+'_'+r.type+'_'+r.id)!==r.version+(r.deleted?'D':'W')); 
+ const desired=healthRecords23(s.logs,s.diaryRevisions,owner),rows=[...healthDeletions23(s.logs,s.diaryRevisions,owner,desired),...desired].filter(r=>r.type!=='DISTANCE'||healthAccess23().granted?.includes('android.permission.health.WRITE_DISTANCE')).filter(r=>healthSent23.get(owner+'_'+r.type+'_'+r.id)!==r.version+(r.deleted?'D':'W'));
  const batches=[];for(const deleting of [true,false]){const group=rows.filter(r=>!!r.deleted===deleting);for(let i=0;i<group.length;i+=100)batches.push(group.slice(i,i+100));}
  for(const batch of batches){if(!googleActive23(owner,token)||s!==state)return false;const ticket='w'+Date.now()+'_'+Math.random().toString(36).slice(2);
   const ok=await new Promise(resolve=>{const timer=setTimeout(()=>{if(healthWriting23?.ticket===ticket)healthWriting23=null;resolve(false);},30000);healthWriting23={ticket,owner,token,state,resolve:ok=>{clearTimeout(timer);resolve(ok);}};try{const execute=()=>{const deleting=batch[0]?.deleted;if(!batch.every(r=>!!r.deleted===!!deleting))throw Error('Lote mixto');window.VeraNative[deleting?'deleteHealth23':'writeHealth23'](ticket,JSON.stringify(batch));};execute();}catch{clearTimeout(timer);healthWriting23=null;resolve(false);}});

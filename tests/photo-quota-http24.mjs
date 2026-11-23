@@ -11,6 +11,7 @@ try{
  r=await post('/photo',body);assert.equal(r.data.cache,'hit');assert.equal(upstreamCalls,1);
  bad=true;r=await post('/photo',{image,note:'bad'});assert.equal(r.status,502);assert.equal(r.data.code,'AI_PHOTO');bad=false;assert.equal((await rows('SELECT n FROM photo_quota24 WHERE uid=?',user.id))[0].n,1);
  status=429;r=await post('/photo',{image,note:'limited provider'});assert.equal(r.status,429);assert.equal(r.data.code,'AI_RATE_LIMIT');assert.equal(r.retry,'7');status=200;assert.equal((await rows('SELECT n FROM photo_quota24 WHERE uid=?',user.id))[0].n,1);
+ await new Promise(resolve=>setTimeout(resolve,7100)); // Provider Retry-After cooldown must expire before a new inference.
  r=await post('/photo',{image,note:'second actual estimate'});assert.equal(r.status,200);const previous=upstreamCalls;
  r=await post('/photo',{image,note:'third actual estimate'});assert.equal(r.status,429);assert.equal(r.data.code,'QUOTA_DAILY_PHOTO');assert.equal(r.data.limit,2);assert.ok(r.data.resetAt);assert.ok(Number(r.retry)>0);assert.equal(upstreamCalls,previous,'local budget blocks before provider');
  r=await post('/photo',body);assert.equal(r.status,200);assert.equal(r.data.cache,'hit');assert.equal(upstreamCalls,previous,'cache works despite exhausted budget');assert.equal((await rows('SELECT n FROM quota WHERE uid=?',user.id))[0].n,1,'general budget untouched');

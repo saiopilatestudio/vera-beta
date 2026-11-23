@@ -21,7 +21,8 @@ export function validateRecord(id, record) {
     invalid('Entrada no admitida.');
   if(record.source==='health'){
     const healthKinds={steps:'Pasos',sleep:'Sueño',workouts:'Entrenamiento',weight:'Otro pesaje',nutrition:'Comida',hydration:'Agua'};
-    if(!Object.hasOwn(healthKinds,record.healthType)||healthKinds[record.healthType]!==record.kind||record.healthKey!==id||!id.startsWith('health_'+record.healthType+'_'))invalid('Identidad o tipo de salud no válido.');
+    const cardio=record.healthType==='workouts'&&record.kind==='Cardio'&&['cycling','running','walking','swimming'].includes(record.sport);
+    if(!Object.hasOwn(healthKinds,record.healthType)||(!cardio&&healthKinds[record.healthType]!==record.kind)||record.healthKey!==id||!id.startsWith('health_'+record.healthType+'_'))invalid('Identidad o tipo de salud no válido.');
   }
   if (typeof record.date !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(record.date)) invalid('Fecha no válida.');
   const date = new Date(record.date + 'T00:00:00.000Z');
@@ -30,6 +31,13 @@ export function validateRecord(id, record) {
   if (!numeric(record.value, maxValue, record.kind === 'Pasos') ||
       !['kg', 'enteredKg', 'protein', 'carbs', 'fat', 'minutes'].every(key => numeric(record[key])) ||
       !numeric(record.rir, 10) || !numeric(record.rpe, 10)) invalid('Cantidad o unidad no válida.');
+  if (record.kind === 'Cardio') {
+    const metrics = ['durationSeconds','distanceMeters','avgSpeedKmh','energyKcal','paceSecondsPer100m','paceSecondsPerKm'];
+    if (metrics.some(key => !numeric(record[key]))) invalid('Métrica deportiva no válida.');
+    if (record.laps !== undefined && (!Array.isArray(record.laps) || record.laps.length > 300 ||
+        record.laps.some(lap => !object(lap) || !Number.isFinite(lap.distanceMeters) || lap.distanceMeters < 0 ||
+          !Number.isFinite(lap.durationSeconds) || lap.durationSeconds <= 0))) invalid('Parciales deportivos no válidos.');
+  }
   if (record.reps !== undefined && (!Array.isArray(record.reps) || record.reps.length > 100 ||
       record.reps.some(n => !Number.isSafeInteger(n) || n < 1 || n > 300))) invalid('Repeticiones no válidas.');
   if(record.nutrients!==undefined){

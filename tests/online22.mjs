@@ -59,6 +59,17 @@ await test('B puede recuperar su cuenta mientras termina una recuperación anter
 await test('Un ACK tardío de A no se muestra como confirmación del guardado pendiente de B',async()=>{
  const h=harness();await h.run('restoreAccount22()');h.run("accountReady22=true;s.logs.push({id:'account-a-water',kind:'Agua',date:day(),value:250})");let release,entered=false;h.network.hook=async path=>{if(path==='diario'){h.network.hook=null;entered=true;await new Promise(r=>release=r);}};const a=h.run('onlineSave22()');await tick();assert.ok(entered);h.run("sessionStorage.veraUser='https://test/second-save';sessionStorage.veraToken='token-b';s=initial();accountReady22=true;s.logs.push({id:'account-b-water',kind:'Agua',date:day(),value:500})");const b=h.run('onlineSave22()');release();await a;await b;await tick();assert.equal((await journal('second-save')).records.length,1);assert.equal(h.run('s.logs.at(-1).value'),500);
 });
+await test('Una salida de bici llegada mientras se guarda otro registro se confirma en el siguiente lote',async()=>{
+ const h=harness();await h.run('restoreAccount22()');
+ h.run("s.logs.push({id:'first-water',kind:'Agua',date:day(),value:300})");
+ let release,started;
+ const entered=new Promise(resolve=>started=resolve);
+ h.network.hook=async path=>{if(path==='diario'){h.network.hook=null;started();await new Promise(resolve=>release=resolve);}};
+ const saving=h.run('onlineSave22()');await entered;
+ h.run("s.logs.push({id:'bike-sample',kind:'Cardio',date:day(),sport:'cycling',durationSeconds:785,distanceMeters:3180,value:785/60})");
+ release();assert.equal(await saving,true);assert.equal(h.run('VeraJournal.pending()'),0);
+ assert.equal((await journal(h.account)).records.find(r=>r.id==='bike-sample').record.durationSeconds,785);
+});
 db.close();
 console.log(JSON.stringify({suite:'Online 2.2 · actual frontend and server persistence with synthetic accounts',passed:outcomes.filter(x=>x.ok).length,failed:outcomes.filter(x=>!x.ok).length,results:outcomes},null,2));
 if(outcomes.some(x=>!x.ok))process.exitCode=1;

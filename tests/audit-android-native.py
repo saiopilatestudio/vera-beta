@@ -34,6 +34,10 @@ try:
     subprocess.run([str(args.java), "-cp", str(unit), "app.vera.coach.visionbeta.AndroidOriginAudit"], check=True)
     subprocess.run(common + ["-d", str(unit), str(root / "beta-android/AssetMime.java"), str(root / "tests/audit-android-mime.java")], check=True)
     subprocess.run([str(args.java), "-cp", str(unit), "app.vera.coach.visionbeta.AndroidMimeAudit"], check=True)
+    import os
+    cardio_cp = str(native) + os.pathsep + str(args.android_jar)
+    subprocess.run(common + ["-classpath", cardio_cp, "-d", str(native), str(root / "tests/audit-health-cardio.java")], check=True)
+    subprocess.run([str(args.java), "-cp", cardio_cp, "app.vera.coach.visionbeta.HealthCardioAudit24"], check=True)
     print("PASS: all beta-android Java sources compile against the supplied Android SDK.")
 finally:
     if tmp.resolve().parent != workspace:

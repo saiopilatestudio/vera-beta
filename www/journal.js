@@ -68,6 +68,7 @@ const VeraJournal=(()=>{
    }
    if(result.nick&&s.profile.nick===nick)s.profile.nick=result.nick;
    s.diaryLastSync=new Date().toISOString();persist();
+   if(!pending()&&typeof clearConfirmedBanner22==='function')clearConfirmedBanner22();
    if(typeof window.exportHealth23==='function')queueMicrotask(()=>{if(active())window.exportHealth23();});
    if(!quiet)msg((s.syncConflicts21||[]).length?'Revisa los cambios simultáneos en Perfil → Guardado de tu cuenta.':'Registros y perfil sincronizados.');
    return true;
@@ -86,7 +87,22 @@ const VeraJournal=(()=>{
    if(validSession&&(s!==state||sessionStorage.veraUser!==owner||sessionStorage.veraToken!==token))schedule(0);else if(validSession&&sessionStorage.veraToken&&pending()>(s.syncConflicts21||[]).length)schedule(success?1000:30000);});refresh();return running;
  }
  function onSession(){lastError='';sessionView={owner:sessionStorage.veraUser,token:sessionStorage.veraToken,state:s};schedule(0);}
- async function flush(){persist();let timeout;try{const result=await Promise.race([sync({quiet:true,signal:AbortSignal.timeout(12000)}),new Promise(resolve=>{timeout=setTimeout(()=>resolve(false),12000);})]);return result&&pending()===0;}finally{clearTimeout(timeout);}}
+ async function flush(){
+  persist();
+  if(!validSession||!sessionStorage.veraToken||stateReadError)return false;
+  const owner=sessionStorage.veraUser,token=sessionStorage.veraToken,state=s;
+  const signal=AbortSignal.timeout(90000);
+  // A location/import/save can arrive while a previous batch is in flight.
+  // Wait for its acknowledgements, then send the remaining edits for this account.
+  do{
+   if(signal.aborted||!sameVeraSession(owner,token,state))return false;
+   const ok=await sync({quiet:true,signal});
+   if(!ok||!sameVeraSession(owner,token,state))return false;
+   if(!pending())return true;
+   if((s.syncConflicts21||[]).length)return false;
+  }while(!signal.aborted);
+  return false;
+ }
  function resolve(index,useRemote){const entry=s.syncConflicts21?.[index];if(!entry)return;const raw=signature(entry.remote);
   if(entry.kind==='record'){if(useRemote){const at=s.logs.findIndex(r=>r.id===entry.key);if(at>=0)s.logs.splice(at,1,...(entry.remote?[clone(entry.remote)]:[]));else if(entry.remote)s.logs.push(clone(entry.remote));}s.diaryRevisions[entry.key]={rev:entry.rev,raw};}
   else{if(useRemote)setField(entry.key,entry.remote);s.profileRevisions21[entry.key]={rev:entry.rev,raw};}
@@ -94,5 +110,5 @@ const VeraJournal=(()=>{
  }
  window.addEventListener?.('online',()=>schedule(0));
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule(0);});
- return {panel,sync,status,schedule,onSession,flush,pending,resolve};
+ return {panel,sync,status,schedule,onSession,flush,pending,resolve,error:()=>lastError};
 })();

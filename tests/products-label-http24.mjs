@@ -19,8 +19,9 @@ try{
  const hit=await post('/label',{image:image(1)},alice.token);assert.equal(hit.data.cache,'hit');assert.equal(calls,1);assert.equal(await quota(alice.id),1);
  await post('/label',{image:image(1)},bob.token);assert.equal(calls,2);assert.equal(await quota(bob.id),1);
  delay=150;const concurrent=await Promise.all(Array.from({length:8},()=>post('/label',{image:image(2)},alice.token)));delay=0;assert.ok(concurrent.every(r=>r.status===200));assert.equal(calls,3);assert.equal(await quota(alice.id),2);
- const before=await quota(alice.id);status=429;for(let n=0;n<2;n++){const response=await post('/label',{image:image(3)},alice.token);assert.equal(response.status,429);assert.ok(!JSON.stringify(response.data).includes('private upstream'));}status=200;assert.equal(calls,5);assert.equal(await quota(alice.id),before);
- assert.equal((await post('/label',{image:'broken'},alice.token)).status,400);assert.equal(calls,5);
+ const before=await quota(alice.id);status=429;for(let n=0;n<2;n++){const response=await post('/label',{image:image(3)},alice.token);assert.equal(response.status,429);assert.ok(!JSON.stringify(response.data).includes('private upstream'));}status=200;assert.equal(calls,4);assert.equal(await quota(alice.id),before);
+ assert.equal((await post('/label',{image:'broken'},alice.token)).status,400);assert.equal(calls,4);
+ await new Promise(resolve=>setTimeout(resolve,1100)); // Respect Retry-After; second failed request was served by cooldown.
  output={...output,facts:{vitaminC_mg:-1}};assert.equal((await post('/label',{image:image(4)},alice.token)).status,502);assert.equal(await quota(alice.id),before);output={...output,facts:{vitaminC_mg:60}};assert.equal((await post('/label',{image:image(4)},alice.token)).data.cache,'miss');
  const count=calls;await post('/label',{image:image(1),note:'otra variante'},alice.token);assert.equal(calls,count+1);
  console.log('PASS products/label HTTP: Google/auth gate, private catalogs, 8 official seeds, no catalog quota, miss/hit quotas, uid isolation, 8 concurrent->1, retry-after errors uncached, invalid image/label rejected, note cache isolation.');

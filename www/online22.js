@@ -43,6 +43,10 @@ function restoreAccount22(){
   finally{if(restoreJob22===job){restoreJob22=null;loadingAccount22=false;}if(activeJob22(job))render();}
  })();return job.promise;
 }
+function clearConfirmedBanner22(){
+ const status=document.getElementById('commitStatus22');
+ if(status?.dataset?.pending==='yes')status.remove();
+}
 function onlineSave22(){
  if(!validSession||!accountReady22||!sessionStorage.veraToken||!VeraJournal.pending())return Promise.resolve(false);
  if(activeJob22(commitJob22))return commitJob22.promise;
@@ -57,7 +61,9 @@ function onlineSave22(){
    const ok=await VeraJournal.flush();if(!activeJob22(job))return false;
    if(ok){const reconnect=networkDown22;networkDown22=false;status.textContent='✓ Guardado en tu cuenta';setTimeout(()=>status.remove(),2200);if(reconnect)render();}
    else{
-    status.innerHTML='No se ha confirmado el guardado. '+btn('Reintentar','retryCommit22()');
+    status.dataset.pending='yes';
+    const detail=s.syncConflicts21?.length?'Hay cambios simultáneos. Revísalos en Perfil → Guardado de tu cuenta.':VeraJournal.error?.()||'El envío sigue pendiente.';
+    status.innerHTML='No se ha confirmado el guardado. '+safe(detail)+' '+btn('Reintentar','retryCommit22()');
     msg('Envío pendiente: revisa tu conexión. No cierres ni desinstales hasta confirmar el guardado.');
     // navigator.onLine only detects a network adapter, not server reachability.
     // A conflict or validation error should not be confused with lost network.
@@ -68,7 +74,7 @@ function onlineSave22(){
   finally{if(!activeJob22(job))status.remove();if(commitJob22===job){commitJob22=null;commitPromise22=null;commitPending22=false;}}
  })();commitPromise22=job.promise;return job.promise;
 }
-function retryCommit22(){if(navigator.onLine===false)return msg('Activa tu conexión para guardar.');return onlineSave22();}
+function retryCommit22(){if(!VeraJournal.pending()){clearConfirmedBanner22();return Promise.resolve(true);}if(navigator.onLine===false)return msg('Activa tu conexión para guardar.');return onlineSave22();}
 const sessionBefore22=VeraJournal.onSession;VeraJournal.onSession=function(){accountReady22=false;onboardingSaving22=false;document.getElementById('commitStatus22')?.remove();sessionBefore22();return restoreAccount22();};
 const storeProfileBefore22=storeProfile;
 storeProfile=async function(e){

@@ -1,0 +1,9 @@
+{
+  "name": "vera-ai-backup",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-23",
+  "workers_dev": true,
+  "preview_urls": false,
+  "ai": { "binding": "AI" },
+  "observability": { "enabled": false }
+}

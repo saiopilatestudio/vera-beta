@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import worker,{validateInput,outputText} from '../cloudflare/worker.mjs';
+const secret='test-only-'.repeat(8),calls=[];let result={response:'{"ok":true}',choices:[{finish_reason:'stop',message:{content:'{"ok":true}'}}]},upstreamError=null;
+const env={VERA_SHARED_SECRET:secret,AI:{run:async(model,payload)=>{calls.push({model,payload});if(upstreamError)throw upstreamError;return result;}}};
+const text={system:'Return JSON.',user:'Synthetic test',json:true,maxTokens:200};const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aB1sAAAAASUVORK5CYII=';
+const photo={...text,user:[{type:'text',text:'Food test'},{type:'image_url',image_url:{url:png}}]};
+const request=(data=text,path='/v1/text',extra={})=>new Request('https://backup.workers.dev'+path,{method:'POST',headers:{Authorization:'Bearer '+secret,'Content-Type':'application/json',...extra},body:JSON.stringify(data)});
+let r=await worker.fetch(request(),env);assert.equal(r.status,200);assert.equal((await r.json()).text,'{"ok":true}');assert.equal(calls[0].model,'@cf/mistralai/mistral-small-3.1-24b-instruct');assert.equal(calls[0].payload.max_tokens,200);assert.deepEqual(calls[0].payload.guided_json,{type:'object'});assert.equal(calls[0].payload.stream,false);assert.equal(r.headers.get('access-control-allow-origin'),null);assert.equal(r.headers.get('cache-control'),'no-store');
+r=await worker.fetch(request(photo,'/v1/food-photo'),env);assert.equal(r.status,200);assert.equal(calls.at(-1).payload.messages[1].content[1].image_url.url,png);
+result={response:'Informe breve.'};r=await worker.fetch(request({...text,json:false}),env);assert.equal(r.status,200);assert.equal(calls.at(-1).payload.response_format,undefined);
+for(const [req,status]of [[request(text,'/v1/text',{Authorization:'wrong'}),401],[request(text,'/v1/text',{Origin:'https://phone.app'}),403],[request(text,'/v1/text',{'Content-Type':'text/plain'}),415],[new Request('https://backup.workers.dev/v1/text'),405],[request(text,'/other'),404],[request(text,'/v1/text?key=secret'),404],[new Request('http://backup.workers.dev/v1/text'),400]]){const before=calls.length;assert.equal((await worker.fetch(req,env)).status,status);assert.equal(calls.length,before);}
+for(const data of [{...text,url:'https://evil.test'},{...text,maxTokens:5001},{...text,json:'true'},{...text,system:'s'.repeat(16001)},{...text,user:'t'.repeat(64001)}])assert.equal((await worker.fetch(request(data),env)).status,400);
+for(const user of [[{type:'image_url',image_url:{url:'https://external/image.png'}}],[{type:'image_url',image_url:{url:png}},{type:'image_url',image_url:{url:png}}],[{type:'text',text:'No image'}],[{type:'image_url',image_url:{url:png.replace('image/png','image/jpeg')}}],[{type:'image_url',image_url:{url:png},tool:'forbidden'}]])assert.equal((await worker.fetch(request({...photo,user},'/v1/food-photo'),env)).status,400);
+for(const bad of [{choices:[{finish_reason:'length',message:{content:'{}'}}]},{choices:[{finish_reason:'content_filter',message:{content:'{}'}}]},{choices:[{finish_reason:'stop',message:{refusal:'blocked',content:'{}'}}]},{choices:[{finish_reason:'stop',message:{content:'[]'}}]},{choices:[{finish_reason:'stop',message:{content:'broken'}}]},{response:'legacy without finish reason'}]){result=bad;assert.equal((await worker.fetch(request(),env)).status,422);}
+upstreamError=Object.assign(Error('private upstream body must not leak'),{status:429,code:'UPSTREAM_PRIVATE'});r=await worker.fetch(request(),env);assert.equal(r.status,429);assert.equal(r.headers.get('retry-after'),'60');assert.ok(!(await r.text()).includes('private'));
+upstreamError=Error('private other failure');r=await worker.fetch(request(),env);assert.equal(r.status,503);assert.ok(!(await r.text()).includes('private'));
+const stream=new ReadableStream({start(c){c.enqueue(new Uint8Array(12000001));c.close();}});r=await worker.fetch(new Request('https://backup.workers.dev/v1/text',{method:'POST',duplex:'half',headers:{Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:stream}),env);assert.equal(r.status,413);
+assert.equal((await worker.fetch(request(),{...env,VERA_SHARED_SECRET:'short'})).status,503);
+console.log('PASS Worker: two routes, fixed Qwen vision/Mistral text models, auth/HTTPS/server-only, bounded JSON/image tasks, no remote URLs, exact output finish/safety/schema checks, quota/errors sanitized, no cache/logging/data storage. Mock binding only; no real inference/deployment.');
+
+assert.equal(outputText({response:{ok:true}},true,true),'{"ok":true}');
+assert.throws(()=>outputText({response:'{broken'},true,true));
+assert.throws(()=>outputText({response:'{}',finish_reason:'length'},true,true));
+assert.throws(()=>outputText({response:'{}',tool_calls:[{}]},true,true));

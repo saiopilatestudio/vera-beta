@@ -102,7 +102,7 @@ def main():
         shutil.copyfile(artifact, output)
         report["sourceSHA256"] = source_digests
         report["nativeRuntimeTesting"] = "not performed"
-        report["aiProviders"] = ["groq", "gemini"]
+        report["serverSupportedProviders"] = ["groq", "gemini", "cloudflare"]
         report["toolVersions"] = {"androidAPI": 35, "buildTools": "35.0.0", "ECJ": "3.38.0"}
         output.with_suffix(output.suffix + ".build.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
         print("BUILT", output, flush=True)

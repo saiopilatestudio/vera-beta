@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {compactWorkout24} from '../workout-compact24.mjs';
+import {validateWorkout24,workoutCatalog24} from '../workouts24.mjs';
+const context={profile:{days:3,level:'Principiante',eq:['Mancuernas']},records:[],coverage:{}},candidates=workoutCatalog24(context),dates=Array.from({length:7},(_,i)=>`2026-11-${23+i}`);
+const request=compactWorkout24({dates,context,request:'El lunes tren inferior',candidates,constraints:{maxTrainingDays:3,recommendedTrainingDates:[dates[0],dates[2],dates[4]]}});
+const raw={status:'ready',summary:'Propuesta semanal',adaptation:'Adaptada al perfil',sessions:[0,2,4].map(day=>({day,title:'Fuerza',exercises:[[0,2,8,12,3,90]]}))};
+const validate=value=>validateWorkout24(request.decode(value),{week:dates[0],context,candidates});
+assert.equal(validate(raw).days.length,7);assert.equal(validate(raw).days.filter(x=>x.type==='training').length,3);assert.equal(validate(raw).days[1].type,'rest');
+for(const bad of [{...raw,sessions:[...raw.sessions,{...raw.sessions[0],day:1}]},{...raw,sessions:[{...raw.sessions[0],day:7}]},{...raw,sessions:[raw.sessions[0],raw.sessions[0]]},{...raw,sessions:[{...raw.sessions[0],exercises:[[999,2,8,12,3,90]]}]},{...raw,sessions:[{...raw.sessions[0],exercises:[[0,2,8,31,3,90]]}]},{...raw,status:'needs_review'}])assert.throws(()=>validate(bad),{code:'WORKOUT_FORMAT'});
+assert.equal(validate({...raw,status:'needs_review',sessions:[]}).days.filter(d=>d.type==='training').length,0);
+assert.ok(request.user.includes('El lunes tren inferior'));assert.equal(request.maxTokens,1600);assert.ok(!request.user.includes(candidates[0].id));
+console.log('PASS compact Worker table decoder: safe 7-day expansion, original request, IDs/ranges/days/duplicates/needs_review validated');

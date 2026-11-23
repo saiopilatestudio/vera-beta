@@ -18,4 +18,9 @@ assert.equal(call("normalizeHealth21('weight',[{date:today,value:75}]).length"),
 context.s.logs.push({id:'health_nutrition_other-phone',healthKey:'health_nutrition_other-phone',healthType:'nutrition',source:'health',kind:'Comida',date:today,value:300});
 call("healthImport21(healthTicket21.id,'nutrition',[])");assert.equal(context.s.logs.length,1);assert.equal(context.s.logs[0].id,'health_nutrition_other-phone');
 assert.equal(call("normalizeHealth21('weight',[{id:'bad',date:'2026-99-99',value:75}]).length"),0);
+context.cardio={id:'cycle-a',date:today,origin:'com.google.android.apps.fitness',sport:'cycling',minutes:60,start:start-3600000,end:start,distanceMeters:20000,energyKcal:400};
+const cardio=call("normalizeHealth21('workouts',[cardio,{...cardio,id:'cycle-duplicate'}])");assert.equal(cardio.length,1);assert.equal(cardio[0].kind,'Cardio');assert.equal(cardio[0].sport,'cycling');assert.equal(cardio[0].durationSeconds,3600);assert.equal(cardio[0].avgSpeedKmh,20);assert.equal(cardio[0].healthOrigin,'com.google.android.apps.fitness');assert.equal(cardio[0].energyKcal,400);
+const swim=call("normalizeHealth21('workouts',[{...cardio,id:'swim',sport:'swimming',distanceMeters:1000,energyKcal:null}])")[0];assert.equal(swim.paceSecondsPer100m,360);assert.equal(swim.energyKcal,null);
+const missing=call("normalizeHealth21('workouts',[{...cardio,distanceMeters:null}])")[0];assert.equal(missing.distanceMeters,null);assert.equal(missing.avgSpeedKmh,null);assert.equal(call("normalizeHealth21('workouts',[{...cardio,sport:''}])")[0].kind,'Entrenamiento');
+assert.equal(call("normalizeHealth21('workouts',[cardio,{...cardio,id:'watch',origin:'watch'}]).length"),2,'Distinct sources retain provenance, are not silently merged');
 console.log('PASS Health 2.1: stable identity, snapshot replacement, no-op refresh, owner guard, in-flight guard, sleep overlap, weight semantics, missing ID rejection.');
